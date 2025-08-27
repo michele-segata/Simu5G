@@ -18,83 +18,65 @@ namespace simu5g {
 
 Define_Module(MecPlatformManager);
 
-MecPlatformManager::MecPlatformManager()
-{
-    vim = nullptr;
-    serviceRegistry = nullptr;
-    mecOrchestrator = nullptr;
-}
 
 void MecPlatformManager::initialize(int stage)
 {
     EV << "VirtualisationInfrastructureManager::initialize - stage " << stage << endl;
     cSimpleModule::initialize(stage);
     // avoid multiple initializations
-    if (stage!=inet::INITSTAGE_LOCAL)
+    if (stage != inet::INITSTAGE_LOCAL)
         return;
-    vim = check_and_cast<VirtualisationInfrastructureManager*>(getParentModule()->getSubmodule("vim"));
-    cModule* mecPlatform = getParentModule()->getSubmodule("mecPlatform");
-    if(mecPlatform->findSubmodule("serviceRegistry") != -1)
-    {
-        serviceRegistry = check_and_cast<ServiceRegistry*>(mecPlatform->getSubmodule("serviceRegistry"));
-    }
+    vim.reference(this, "vimModule", true);
+    serviceRegistry.reference(this, "serviceRegistryModule", false);
 
-    const char * mecOrche = par("mecOrchestrator").stringValue();
-    cModule* module = getSimulation()->findModuleByPath(mecOrche);
-
-    if(module != nullptr)
-        mecOrchestrator = check_and_cast<MecOrchestrator*>(module);
-    else
-    {
-        EV << "MecPlatformManager::initialize - Mec Orchestrator ["<< mecOrche << "] not found" << endl;
+    mecOrchestrator.reference(this, "mecOrchestrator", false);
+    if (!mecOrchestrator) {
+        EV << "MecPlatformManager::initialize - MEC Orchestrator [" << par("mecOrchestrator").str() << "] not found" << endl;
     }
 }
 
-
-// instancing the requested MEApp (called by handleResource)
-MecAppInstanceInfo* MecPlatformManager::instantiateMEApp(CreateAppMessage* msg)
+// instancing the requested MECApp (called by handleResource)
+MecAppInstanceInfo *MecPlatformManager::instantiateMEApp(CreateAppMessage *msg)
 {
-   MecAppInstanceInfo* res = vim->instantiateMEApp(msg);
-   delete msg;
-   return res;
+    MecAppInstanceInfo *res = vim->instantiateMEApp(msg);
+    delete msg;
+    return res;
 }
 
-bool MecPlatformManager::instantiateEmulatedMEApp(CreateAppMessage* msg)
+bool MecPlatformManager::instantiateEmulatedMEApp(CreateAppMessage *msg)
 {
     bool res = vim->instantiateEmulatedMEApp(msg);
     delete msg;
     return res;
 }
 
-bool MecPlatformManager::terminateEmulatedMEApp(DeleteAppMessage* msg)
+bool MecPlatformManager::terminateEmulatedMEApp(DeleteAppMessage *msg)
 {
     bool res = vim->terminateEmulatedMEApp(msg);
     delete msg;
     return res;
 }
 
-
-// terminating the correspondent MEApp (called by handleResource)
-bool MecPlatformManager::terminateMEApp(DeleteAppMessage* msg)
+// terminating the corresponding MECApp (called by handleResource)
+bool MecPlatformManager::terminateMEApp(DeleteAppMessage *msg)
 {
     bool res = vim->terminateMEApp(msg);
     delete msg;
     return res;
 }
 
-const std::vector<ServiceInfo>* MecPlatformManager::getAvailableMecServices() const
+const std::vector<ServiceInfo> *MecPlatformManager::getAvailableMecServices() const
 {
-    if(serviceRegistry == nullptr)
+    if (serviceRegistry == nullptr)
         return nullptr;
-    else
-    {
-       return serviceRegistry->getAvailableMecServices();
+    else {
+        return serviceRegistry->getAvailableMecServices();
     }
 }
 
 void MecPlatformManager::registerMecService(ServiceDescriptor& serviceDescriptor) const
 {
-    if(mecOrchestrator != nullptr)
+    if (mecOrchestrator != nullptr)
         mecOrchestrator->registerMecService(serviceDescriptor);
 }
 

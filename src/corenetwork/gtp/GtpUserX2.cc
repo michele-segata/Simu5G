@@ -10,10 +10,13 @@
 //
 
 #include "corenetwork/gtp/GtpUserX2.h"
-#include "inet/common/ProtocolTag_m.h"
-#include "inet/networklayer/common/L3Address.h"
-#include "inet/networklayer/common/L3AddressResolver.h"
+
 #include <iostream>
+
+#include <inet/common/ProtocolTag_m.h>
+#include <inet/networklayer/common/L3Address.h>
+#include <inet/networklayer/common/L3AddressResolver.h>
+
 #include "x2/packet/X2ControlInfo_m.h"
 
 namespace simu5g {
@@ -32,48 +35,34 @@ void GtpUserX2::initialize(int stage)
     localPort_ = par("localPort");
 
     // get reference to the binder
-    binder_ = getBinder();
+    binder_.reference(this, "binderModule", true);
 
     socket_.setOutputGate(gate("socketOut"));
     socket_.bind(localPort_);
 
     tunnelPeerPort_ = par("tunnelPeerPort");
-
-//    // get the corresponding node ID and the IP address of the X2 PPP interface
-//    X2NodeId nodeId = check_and_cast<LteMacEnb*>(getParentModule()->getSubmodule("cellularNic")->getSubmodule("mac"))->getMacNodeId();
-//
-//    const char* moduleName = getParentModule()->getFullName();
-//    char symbolicName[100];
-//    strcpy(symbolicName, moduleName);
-//    strcat(symbolicName, "%x2ppp0");
-//    L3Address addr = L3AddressResolver().resolve(symbolicName);
-//
-//    EV << " Binder::setX2Address- registering x2 interface [" << symbolicName << "] with address [" << addr.toIPv4().str() << "]" << endl;
-//    binder_->setX2Address(nodeId, addr);
 }
 
 void GtpUserX2::handleMessage(cMessage *msg)
 {
-    if (strcmp(msg->getArrivalGate()->getFullName(), "lteStackIn") == 0)
-    {
+    if (msg->arrivedOn("lteStackIn")) {
         EV << "GtpUserX2::handleMessage - message from X2 Manager" << endl;
         auto pkt = check_and_cast<Packet *>(msg);
         handleFromStack(pkt);
     }
-    else if(strcmp(msg->getArrivalGate()->getFullName(),"socketIn")==0)
-    {
-        EV << "GtpUserX2::handleMessage - message from udp layer" << endl;
+    else if (msg->arrivedOn("socketIn")) {
+        EV << "GtpUserX2::handleMessage - message from UDP layer" << endl;
         auto pkt = check_and_cast<Packet *>(msg);
         handleFromUdp(pkt);
     }
 }
 
-void GtpUserX2::handleFromStack(Packet* pkt)
+void GtpUserX2::handleFromStack(Packet *pkt)
 {
     // extract destination from the message
     auto x2Msg = pkt->peekAtFront<LteX2Message>();
-    X2NodeId destId = x2Msg->getDestinationId();
-    X2NodeId srcId = x2Msg->getSourceId();
+    X2NodeId destId = MacNodeId(x2Msg->getDestinationId());
+    X2NodeId srcId = MacNodeId(x2Msg->getSourceId());
     EV << "GtpUserX2::handleFromStack - Received a LteX2Message with destId[" << destId << "]" << endl;
 
     auto gtpMsg = makeShared<GtpUserMsg>();
@@ -85,7 +74,7 @@ void GtpUserX2::handleFromStack(Packet* pkt)
     socket_.sendTo(pkt, peerAddress, tunnelPeerPort_);
 }
 
-void GtpUserX2::handleFromUdp(Packet * pkt)
+void GtpUserX2::handleFromUdp(Packet *pkt)
 {
     EV << "GtpUserX2::handleFromUdp - Decapsulating and sending to local connection." << endl;
 
@@ -94,7 +83,7 @@ void GtpUserX2::handleFromUdp(Packet * pkt)
     pkt->addTagIfAbsent<PacketProtocolTag>()->setProtocol(&LteProtocol::x2ap);
 
     // send message to the X2 Manager
-    send(pkt,"lteStackOut");
+    send(pkt, "lteStackOut");
 }
 
 } //namespace

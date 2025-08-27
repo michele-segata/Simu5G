@@ -11,56 +11,25 @@
 
 package simu5g.apps.mec.WarningAlert;
 
-import inet.applications.contract.IApp;
-import simu5g.nodes.mec.MECPlatform.IMECApp;
+import simu5g.apps.mec.MecApps.MecAppBase;
 
 //
-//  This is a simple MEC app that receives the coordinates and the radius from the UE app
-//  and subscribes to the CircleNotificationSubscription of the Location Service. The latter
-//  periodically checks if the UE is inside/outside the area and sends a notification to the
-//  MEC App. It then notifies the UE.
-
+// This module is an application that is dynamically instantiated on a MEC host upon request
+// from a ~UEWarningAlertApp via a ~DeviceApp.
+// It receives requests from the UE to be notified when it enters a circular area defined by
+// its center and radius. This is accomplished by subscribing to the ~LocationService provided
+// by the MEC Host. This module receives a notification from the Location Service when
+// the UE enters/exits the area and, in turn, sends a message to the UE.
 //
-//  The event behavior flow of the app is:
-//  1) receive coordinates from the UE app
-//  2) subscribe to the circleNotificationSubscription
-//  3) receive the notification
-//  4) send the alert event to the UE app
-//  5) (optional) receive stop from the UE app
-//
-simple MECWarningAlertApp like IMECApp, IApp
+simple MECWarningAlertApp extends MecAppBase
 {
     parameters:
+        @class(MECWarningAlertApp);
         @display("i=block/app;is=s");
 
         int packetSize @unit(B) = default(10B);
-        string interfaceTableModule = default("");
 
-        int mecAppIndex;
-        int mecAppId;
         int localUePort;
 
-        string mp1Address = default("");
-        int mp1Port = default(10021);
-
-		 //resource required info
-        double requiredRam @unit("B");
-        double requiredDisk @unit("B");
-        double requiredCpu;
-
-        // IApp parameters
-        int timeToLive = default(-1); // if not -1, set the TTL (IPv4) or Hop Limit (IPv6) field of sent packets to this value
-        int dscp = default(-1); // if not -1, set the DSCP (IPv4/IPv6) field of sent packets to this value
-        int tos = default(-1); // if not -1, set the Type Of Service (IPv4) / Traffic Class (IPv6) field of sent packets to this value
-
         bool logger = default(false);
-
-    gates:
-        input mePlatformIn;
-        output mePlatformOut;
-
-        input socketIn;
-        output socketOut;
-
 }
-

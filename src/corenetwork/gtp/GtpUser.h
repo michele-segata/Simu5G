@@ -13,32 +13,36 @@
 #define __GTP_USER_H_
 
 #include <map>
+
 #include <omnetpp.h>
-#include "inet/transportlayer/contract/udp/UdpSocket.h"
-#include "inet/networklayer/common/L3AddressResolver.h"
-#include "corenetwork/gtp/GtpUserMsg_m.h"
 #include <inet/common/ModuleAccess.h>
-#include <inet/networklayer/common/NetworkInterface.h>
-#include <inet/networklayer/common/L3AddressResolver.h>
-#include "common/binder/Binder.h"
+#include <inet/common/ModuleRefByPar.h>
 #include <inet/linklayer/common/InterfaceTag_m.h>
+#include <inet/networklayer/common/L3AddressResolver.h>
+#include <inet/networklayer/common/NetworkInterface.h>
+#include <inet/transportlayer/contract/udp/UdpSocket.h>
+
+#include "common/binder/Binder.h"
+#include "corenetwork/gtp/GtpUserMsg_m.h"
 
 namespace simu5g {
 
+using namespace omnetpp;
+
 /**
  * GtpUser is used for building data tunnels between GTP peers.
- * GtpUser can receive two kind of packets:
- * a) IP datagram from a trafficFilter. Those packets are labeled with a tftId
+ * GtpUser can receive two kinds of packets:
+ * a) IP datagram from a traffic filter. These packets are labeled with a tftId
  * b) GtpUserMsg from Udp-IP layers.
  *
  */
-class GtpUser : public omnetpp::cSimpleModule
+class GtpUser : public cSimpleModule
 {
     inet::UdpSocket socket_;
     int localPort_;
 
     // reference to the LTE Binder module
-    Binder* binder_;
+    inet::ModuleRefByPar<Binder> binder_;
 
     // the GTP protocol Port
     unsigned int tunnelPeerPort_;
@@ -49,24 +53,26 @@ class GtpUser : public omnetpp::cSimpleModule
     // specifies the type of the node that contains this filter (it can be ENB or PGW)
     CoreNodeType ownerType_;
 
-    CoreNodeType selectOwnerType(const char * type);
+    CoreNodeType selectOwnerType(const char *type);
 
     // if this module is on BS, this variable includes the ID of the BS
     MacNodeId myMacNodeID;
 
-    inet::NetworkInterface* ie_;
+    opp_component_ptr<inet::NetworkInterface> ie_;
+
+    opp_component_ptr<cModule> networkNode_;
 
   protected:
 
-    virtual int numInitStages() const override { return inet::NUM_INIT_STAGES; }
-    virtual void initialize(int stage) override;
-    virtual void handleMessage(omnetpp::cMessage *msg) override;
+    int numInitStages() const override { return inet::NUM_INIT_STAGES; }
+    void initialize(int stage) override;
+    void handleMessage(cMessage *msg) override;
 
-    // receive and IP Datagram from the traffic filter, encapsulates it in a GTP-U packet than forwards it to the proper next hop
-    void handleFromTrafficFlowFilter(inet::Packet * datagram);
+    // receive an IP Datagram from the traffic filter, encapsulates it in a GTP-U packet then forwards it to the proper next hop
+    void handleFromTrafficFlowFilter(inet::Packet *datagram);
 
     // receive a GTP-U packet from Udp, reads the TEID and decides whether performing label switching or removal
-    void handleFromUdp(inet::Packet * gtpMsg);
+    void handleFromUdp(inet::Packet *gtpMsg);
 
     // detect outgoing interface name (CellularNic)
     inet::NetworkInterface *detectInterface();
@@ -75,3 +81,4 @@ class GtpUser : public omnetpp::cSimpleModule
 } //namespace
 
 #endif
+

@@ -10,96 +10,84 @@
 //
 
 #include "stack/mac/allocator/LteAllocationModuleFrequencyReuse.h"
-#include "stack/mac/layer/LteMacEnb.h"
+#include "stack/mac/LteMacEnb.h"
 
 namespace simu5g {
 
 using namespace inet;
 
-LteAllocationModuleFrequencyReuse::LteAllocationModuleFrequencyReuse(LteMacEnb* mac,Direction direction)
-        : LteAllocationModule(mac,direction)
+LteAllocationModuleFrequencyReuse::LteAllocationModuleFrequencyReuse(LteMacEnb *mac, Direction direction)
+    : LteAllocationModule(mac, direction)
 {
 }
 
-void LteAllocationModuleFrequencyReuse::storeAllocation( std::vector<std::vector<AllocatedRbsPerBandMapA> > allocatedRbsPerBand,std::set<Band>* untouchableBands)
+void LteAllocationModuleFrequencyReuse::storeAllocation(std::vector<std::vector<AllocatedRbsPerBandMapA>> allocatedRbsPerBand, std::set<Band> *untouchableBands)
 {
-    Plane plane = MAIN_PLANE;
+    const Plane plane = MAIN_PLANE;
     const Remote antenna = MACRO;
-    std::map<std::pair<MacNodeId,Band>,std::pair<unsigned int,unsigned int> > NodeIdRbsBytesMap;
-    NodeIdRbsBytesMap.clear();
-    // Create an empty vector
-    if(untouchableBands==nullptr)
-    {
-        std::set<Band> tempBand;
+    std::map<std::pair<MacNodeId, Band>, std::pair<unsigned int, unsigned int>> nodeIdRbsBytesMap;
+
+    std::set<Band> tempBand;
+    if (untouchableBands == nullptr)
         untouchableBands = &tempBand;
-        untouchableBands->clear();
-    }
 
-    for(unsigned int band=0;band<bands_;band++)
-    {
-        // Skip allocation if the band is untouchable (this means that the informations are already allocated)
-        if( untouchableBands->find(band) == untouchableBands->end() )
-        {
+    for (unsigned int band = 0; band < bands_; band++) {
+        // Skip allocation if the band is untouchable (this means that the information is already allocated)
+        if (untouchableBands->find(band) == untouchableBands->end()) {
             // Copy the ueAllocatedRbsMap
-            UeAllocatedBlocksMapA::iterator it_ext = allocatedRbsPerBand[plane][antenna][band].ueAllocatedRbsMap_.begin();
-            UeAllocatedBlocksMapA::iterator et_ext = allocatedRbsPerBand[plane][antenna][band].ueAllocatedRbsMap_.end();
-            UeAllocatedBytesMapA::iterator it2_ext = allocatedRbsPerBand[plane][antenna][band].ueAllocatedBytesMap_.begin();
-            UeAllocatedBytesMapA::iterator et2_ext = allocatedRbsPerBand[plane][antenna][band].ueAllocatedBytesMap_.end();
+            auto& allocInfo = allocatedRbsPerBand[plane][antenna][band];
+            auto it_ext = allocInfo.ueAllocatedRbsMap_.begin();
+            auto et_ext = allocInfo.ueAllocatedRbsMap_.end();
+            auto it2_ext = allocInfo.ueAllocatedBytesMap_.begin();
+            auto et2_ext = allocInfo.ueAllocatedBytesMap_.end();
 
-            while(it_ext!=et_ext && it2_ext!=et2_ext)
-            {
-                allocatedRbsPerBand_[plane][antenna][band].ueAllocatedRbsMap_[it_ext->first] = it_ext->second;    // Blocks
-                allocatedRbsPerBand_[plane][antenna][band].ueAllocatedBytesMap_[it_ext->first] = it2_ext->second; // Bytes
+            auto& storedAllocInfo = allocatedRbsPerBand_[plane][antenna][band];
+            while (it_ext != et_ext && it2_ext != et2_ext) {
+                storedAllocInfo.ueAllocatedRbsMap_[it_ext->first] = it_ext->second;    // Blocks
+                storedAllocInfo.ueAllocatedBytesMap_[it_ext->first] = it2_ext->second; // Bytes
 
                 // Creates a pair (a key) for the Map
-                std::pair<MacNodeId,Band> Key_pair (it_ext->first,band);
+                std::pair<MacNodeId, Band> Key_pair(it_ext->first, band);
                 // Creates a pair for the blocks and bytes values
-                std::pair<unsigned int, unsigned int> Value_pair (it_ext->second,it2_ext->second);
+                std::pair<unsigned int, unsigned int> Value_pair(it_ext->second, it2_ext->second);
                 //Store the nodeId RBs
-                NodeIdRbsBytesMap[Key_pair] = Value_pair;
+                nodeIdRbsBytesMap.insert({Key_pair, Value_pair});
                 it_ext++;
                 it2_ext++;
             }
             // Copy the allocatedRbsPerBand
-            allocatedRbsPerBand_[plane][antenna][band].allocated_ = allocatedRbsPerBand[plane][antenna][band].allocated_;
+            storedAllocInfo.allocated_ = allocInfo.allocated_;
 
-            if (allocatedRbsPerBand[plane][antenna][band].allocated_ > 0)
-                allocatedRbsMatrix_[MAIN_PLANE][MACRO] ++;
+            if (allocInfo.allocated_ > 0)
+                allocatedRbsMatrix_[MAIN_PLANE][MACRO]++;
         }
     }
 
-    std::map<std::pair<MacNodeId,Band>,std::pair<unsigned int,unsigned int> >::iterator it_rbsB = NodeIdRbsBytesMap.begin();
-    while(it_rbsB!=NodeIdRbsBytesMap.end())
-    {
-        // Skip allocation if the band is untouchable (this means that the informations are already allocated)
-        if( untouchableBands->find(it_rbsB->first.second) == untouchableBands->end() )
-        {
-            allocatedRbsUe_[it_rbsB->first.first].ueAllocatedRbsMap_[antenna][it_rbsB->first.second] = it_rbsB->second.first; //Blocks
-            allocatedRbsUe_[it_rbsB->first.first].allocatedBlocks_ += it_rbsB->second.first; //Blocks
-            allocatedRbsUe_[it_rbsB->first.first].allocatedBytes_ += it_rbsB->second.second; //Bytes
+    for (const auto &[key, value] : nodeIdRbsBytesMap) {
+        // Skip allocation if the band is untouchable (this means that the information is already allocated)
+        if (untouchableBands->find(key.second) == untouchableBands->end()) {
+            allocatedRbsUe_[key.first].ueAllocatedRbsMap_[antenna][key.second] = value.first; //Blocks
+            allocatedRbsUe_[key.first].allocatedBlocks_ += value.first; //Blocks
+            allocatedRbsUe_[key.first].allocatedBytes_ += value.second; //Bytes
 
             // Creates and store the allocation Elem
             AllocationElem elem;
-            elem.resourceBlocks_ = it_rbsB->second.first;
-            elem.bytes_ = it_rbsB->second.second;
+            elem.resourceBlocks_ = value.first;
+            elem.bytes_ = value.second;
 
-            allocatedRbsUe_[it_rbsB->first.first].allocationMap_[antenna][it_rbsB->first.second].push_back(elem);
+            allocatedRbsUe_[key.first].allocationMap_[antenna][key.second].push_back(elem);
         }
-        it_rbsB++;
     }
 
     usedInLastSlot_ = true;
 }
 
-std::set<Band>  LteAllocationModuleFrequencyReuse::getAllocatorOccupiedBands()
+std::set<Band> LteAllocationModuleFrequencyReuse::getAllocatorOccupiedBands()
 {
     // TODO add support for logical band different from the number of real bands
     std::set<Band> vectorBand;
-    vectorBand.clear();
-    for(unsigned int i=0;i<bands_;i++)
-    {
-        if( allocatedRbsPerBand_[MAIN_PLANE][MACRO][i].allocated_>0 ) vectorBand.insert(i);
-
+    for (unsigned int i = 0; i < bands_; i++) {
+        if (allocatedRbsPerBand_[MAIN_PLANE][MACRO][i].allocated_ > 0) vectorBand.insert(i);
     }
     return vectorBand;
 }

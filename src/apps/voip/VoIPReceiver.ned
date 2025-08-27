@@ -13,12 +13,18 @@ package simu5g.apps.voip;
 
 import inet.applications.contract.IApp;
 
-
+//
+// This module represents a model for the receiver of Voice-over-IP (VoIP) traffic.
+// It receives packets sent by a ~VoIPSender application via UDP and records statistics
+// such as packet loss, end-to-end latency, jitter, and throughput. Furthermore, it computes
+// and emits a MOS (Mean Opinion Score) value, which represents the Quality-of-Experience of
+// the end users.
+//
 simple VoIPReceiver like IApp
 {
     parameters:
         int localPort = default(3000);
-        int emodel_Ie_ = default(5);
+        int emodel_Ie_ = default(5);  // TODO from some ITU standard, figure it out
         int emodel_Bpl_ = default(10);
         int emodel_A_ = default(5);
         double emodel_Ro_ = default(93.2);

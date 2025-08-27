@@ -15,53 +15,31 @@ namespace simu5g {
 
 using namespace omnetpp;
 
-LteHarqProcessTx::LteHarqProcessTx(unsigned char acid, unsigned int numUnits, unsigned int numProcesses,
-    LteMacBase *macOwner, LteMacBase *dstMac)
+LteHarqProcessTx::LteHarqProcessTx(Binder *binder, unsigned char acid, unsigned int numUnits, unsigned int numProcesses,
+        LteMacBase *macOwner, LteMacBase *dstMac) : macOwner_(macOwner), numProcesses_(numProcesses), numHarqUnits_(numUnits),
+        acid_(acid),
+        numEmptyUnits_(numUnits), numSelected_(0),
+        dropped_(false)
 {
-    macOwner_ = macOwner;
-    acid_ = acid;
-    numHarqUnits_ = numUnits;
-    units_ = new UnitVector(numUnits);
-    numProcesses_ = numProcesses;
-    numEmptyUnits_ = numUnits; //++ @ insert, -- @ unit reset (ack or fourth nack)
-    numSelected_ = 0; //++ @ markSelected and insert, -- @ extract/sendDown
-    dropped_ = false;
+    units_.resize(numUnits);
 
     // H-ARQ unit instances
-    for (unsigned int i = 0; i < numHarqUnits_; i++)
-    {
-        (*units_)[i] = new LteHarqUnitTx(acid, i, macOwner_, dstMac);
+    for (unsigned int i = 0; i < numHarqUnits_; i++) {
+        units_[i] = new LteHarqUnitTx(binder, acid, i, macOwner_, dstMac);
     }
 }
 
-LteHarqProcessTx& LteHarqProcessTx::operator=(const LteHarqProcessTx& other)
+LteHarqProcessTx::~LteHarqProcessTx()
 {
-    if (&other == this)
-        return *this;
-
-    macOwner_ = other.macOwner_;
-
-    numProcesses_ = other.numProcesses_;
-    numHarqUnits_ = other.numHarqUnits_;
-    acid_ = other.acid_;
-    numEmptyUnits_ = other.numEmptyUnits_;
-    numSelected_ = other.numSelected_;
-    dropped_ = other.dropped_;
-
-    units_ = new UnitVector(numHarqUnits_);
-    for (unsigned int i = 0; i < numHarqUnits_; i++)
-        (*units_)[i] = new LteHarqUnitTx( *(*other.units_)[i] );
-
-    return *this;
+    for (auto unit : units_)
+        delete unit;
 }
 
-std::vector<UnitStatus>
-LteHarqProcessTx::getProcessStatus()
+std::vector<UnitStatus> LteHarqProcessTx::getProcessStatus()
 {
     std::vector<UnitStatus> ret(numHarqUnits_);
 
-    for (unsigned int j = 0; j < numHarqUnits_; j++)
-    {
+    for (unsigned int j = 0; j < numHarqUnits_; j++) {
         ret[j].first = j;
         ret[j].second = getUnitStatus(j);
     }
@@ -73,7 +51,7 @@ void LteHarqProcessTx::insertPdu(Packet *pkt, Codeword cw)
     auto pdu = pkt->peekAtFront<LteMacPdu>();
     numEmptyUnits_--;
     numSelected_++;
-    (*units_)[cw]->insertPdu(pkt);
+    units_[cw]->insertPdu(pkt);
     dropped_ = false;
 }
 
@@ -83,7 +61,7 @@ void LteHarqProcessTx::markSelected(Codeword cw)
         throw cRuntimeError("H-ARQ TX process: cannot select another unit because they are all already selected");
 
     numSelected_++;
-    (*units_)[cw]->markSelected();
+    units_[cw]->markSelected();
 }
 
 Packet *LteHarqProcessTx::extractPdu(Codeword cw)
@@ -92,52 +70,39 @@ Packet *LteHarqProcessTx::extractPdu(Codeword cw)
         throw cRuntimeError("H-ARQ TX process: cannot extract pdu: numSelected = 0 ");
 
     numSelected_--;
-    auto  pdu = (*units_)[cw]->extractPdu();
+    auto pdu = units_[cw]->extractPdu();
     auto tmp = pdu->peekAtFront<LteMacPdu>();
     return pdu;
 }
 
 bool LteHarqProcessTx::pduFeedback(HarqAcknowledgment fb, Codeword cw)
 {
-    bool reset = (*units_)[cw]->pduFeedback(fb);
+    bool reset = units_[cw]->pduFeedback(fb);
 
-    if (reset)
-    {
+    if (reset) {
         numEmptyUnits_++;
     }
 
     // return true if the process has become empty
-    if (numEmptyUnits_ == numHarqUnits_)
-        reset = true;
-    else
-        reset = false;
-
-    return reset;
+    return numEmptyUnits_ == numHarqUnits_;
 }
 
 bool LteHarqProcessTx::selfNack(Codeword cw)
 {
-    bool reset = (*units_)[cw]->selfNack();
+    bool reset = units_[cw]->selfNack();
 
-    if (reset)
-    {
+    if (reset) {
         numEmptyUnits_++;
     }
 
     // return true if the process has become empty
-    if (numEmptyUnits_ == numHarqUnits_)
-        reset = true;
-    else
-        reset = false;
-
-    return reset;
+    return numEmptyUnits_ == numHarqUnits_;
 }
 
 bool LteHarqProcessTx::hasReadyUnits()
 {
-    for (unsigned int i = 0; i < numHarqUnits_; i++)
-    {
-        if ((*units_)[i]->isReady())
+    for (unsigned int i = 0; i < numHarqUnits_; i++) {
+        if (units_[i]->isReady())
             return true;
     }
     return false;
@@ -147,13 +112,10 @@ simtime_t LteHarqProcessTx::getOldestUnitTxTime()
 {
     simtime_t oldestTxTime = NOW + 1;
     simtime_t curTxTime = 0;
-    for (unsigned int i = 0; i < numHarqUnits_; i++)
-    {
-        if ((*units_)[i]->isReady())
-        {
-            curTxTime = (*units_)[i]->getTxTime();
-            if (curTxTime < oldestTxTime)
-            {
+    for (unsigned int i = 0; i < numHarqUnits_; i++) {
+        if (units_[i]->isReady()) {
+            curTxTime = units_[i]->getTxTime();
+            if (curTxTime < oldestTxTime) {
                 oldestTxTime = curTxTime;
             }
         }
@@ -165,10 +127,8 @@ CwList LteHarqProcessTx::readyUnitsIds()
 {
     CwList ul;
 
-    for (Codeword i = 0; i < numHarqUnits_; i++)
-    {
-        if ((*units_)[i]->isReady())
-        {
+    for (Codeword i = 0; i < numHarqUnits_; i++) {
+        if (units_[i]->isReady()) {
             ul.push_back(i);
         }
     }
@@ -178,10 +138,8 @@ CwList LteHarqProcessTx::readyUnitsIds()
 CwList LteHarqProcessTx::emptyUnitsIds()
 {
     CwList ul;
-    for (Codeword i = 0; i < numHarqUnits_; i++)
-    {
-        if ((*units_)[i]->isEmpty())
-        {
+    for (Codeword i = 0; i < numHarqUnits_; i++) {
+        if (units_[i]->isEmpty()) {
             ul.push_back(i);
         }
     }
@@ -191,10 +149,8 @@ CwList LteHarqProcessTx::emptyUnitsIds()
 CwList LteHarqProcessTx::selectedUnitsIds()
 {
     CwList ul;
-    for (Codeword i = 0; i < numHarqUnits_; i++)
-    {
-        if ((*units_)[i]->isMarked())
-        {
+    for (Codeword i = 0; i < numHarqUnits_; i++) {
+        if (units_[i]->isMarked()) {
             ul.push_back(i);
         }
     }
@@ -203,25 +159,24 @@ CwList LteHarqProcessTx::selectedUnitsIds()
 
 bool LteHarqProcessTx::isEmpty()
 {
-    return (numEmptyUnits_ == numHarqUnits_);
+    return numEmptyUnits_ == numHarqUnits_;
 }
 
 Packet *LteHarqProcessTx::getPdu(Codeword cw)
 {
-    auto temp = (*units_)[cw]->getPdu()->peekAtFront<LteMacPdu>();
-    return (*units_)[cw]->getPdu();
+    auto temp = units_[cw]->getPdu()->peekAtFront<LteMacPdu>();
+    return units_[cw]->getPdu();
 }
 
 long LteHarqProcessTx::getPduId(Codeword cw)
 {
-    return (*units_)[cw]->getMacPduId();
+    return units_[cw]->getMacPduId();
 }
 
 void LteHarqProcessTx::forceDropProcess()
 {
-    for (unsigned int i = 0; i < numHarqUnits_; i++)
-    {
-        (*units_)[i]->forceDropUnit();
+    for (unsigned int i = 0; i < numHarqUnits_; i++) {
+        units_[i]->forceDropUnit();
     }
     numEmptyUnits_ = numHarqUnits_;
     numSelected_ = 0;
@@ -230,10 +185,10 @@ void LteHarqProcessTx::forceDropProcess()
 
 bool LteHarqProcessTx::forceDropUnit(Codeword cw)
 {
-    if ((*units_)[cw]->isMarked())
+    if (units_[cw]->isMarked())
         numSelected_--;
 
-    (*units_)[cw]->forceDropUnit();
+    units_[cw]->forceDropUnit();
     numEmptyUnits_++;
 
     // empty process?
@@ -242,43 +197,43 @@ bool LteHarqProcessTx::forceDropUnit(Codeword cw)
 
 TxHarqPduStatus LteHarqProcessTx::getUnitStatus(Codeword cw)
 {
-    return (*units_)[cw]->getStatus();
+    return units_[cw]->getStatus();
 }
 
 void LteHarqProcessTx::dropPdu(Codeword cw)
 {
-    (*units_)[cw]->dropPdu();
+    units_[cw]->dropPdu();
     numEmptyUnits_++;
 }
 
 bool LteHarqProcessTx::isUnitEmpty(Codeword cw)
 {
-    return (*units_)[cw]->isEmpty();
+    return units_[cw]->isEmpty();
 }
 
 bool LteHarqProcessTx::isUnitReady(Codeword cw)
 {
-    return (*units_)[cw]->isReady();
+    return units_[cw]->isReady();
 }
 
 unsigned char LteHarqProcessTx::getTransmissions(Codeword cw)
 {
-    return (*units_)[cw]->getTransmissions();
+    return units_[cw]->getTransmissions();
 }
 
 int64_t LteHarqProcessTx::getPduLength(Codeword cw)
 {
-    return (*units_)[cw]->getPduLength();
+    return units_[cw]->getPduLength();
 }
 
 simtime_t LteHarqProcessTx::getTxTime(Codeword cw)
 {
-    return (*units_)[cw]->getTxTime();
+    return units_[cw]->getTxTime();
 }
 
 bool LteHarqProcessTx::isUnitMarked(Codeword cw)
 {
-    return (*units_)[cw]->isMarked();
+    return units_[cw]->isMarked();
 }
 
 bool LteHarqProcessTx::isDropped()
@@ -286,34 +241,17 @@ bool LteHarqProcessTx::isDropped()
     return dropped_;
 }
 
-// @author Alessandro noferi
+// @author Alessandro Noferi
 bool LteHarqProcessTx::isHarqProcessActive()
 {
-    std::vector<UnitStatus> ues= getProcessStatus();
-    std::vector<UnitStatus>::const_iterator it = ues.begin();
-    std::vector<UnitStatus>::const_iterator end = ues.end();
+    std::vector<UnitStatus> ues = getProcessStatus();
 
-    // when a process is active? (ask professor)
-    for(; it != end; ++it){
-        if ((*it).second != TXHARQ_PDU_EMPTY)
+    // When is a process active? (ask professor)
+    for (const auto& status : ues) {
+        if (status.second != TXHARQ_PDU_EMPTY)
             return true;
     }
     return false;
-
-}
-
-
-
-LteHarqProcessTx::~LteHarqProcessTx()
-{
-    UnitVector::iterator it = units_->begin();
-    for (; it != units_->end(); ++it)
-         delete *it;
-
-    units_->clear();
-    delete units_;
-    units_ = nullptr;
-    macOwner_ = nullptr;
 }
 
 } //namespace

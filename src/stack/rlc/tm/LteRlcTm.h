@@ -18,6 +18,8 @@
 
 namespace simu5g {
 
+using namespace omnetpp;
+
 /**
  * @class LteRlcTm
  * @brief TM Module
@@ -29,66 +31,57 @@ namespace simu5g {
  *   This mode is only used for control traffic, and
  *   the corresponding port is therefore accessed only from
  *   the RRC layer. Traffic on this port is simply forwarded
- *   to lower layer on ports BCCH/PCCH/CCCH
+ *   to lower layers on ports BCCH/PCCH/CCCH
  *
  *   TM mode does not attach any header to the packet.
  *
  */
-class LteRlcTm : public omnetpp::cSimpleModule
+class LteRlcTm : public cSimpleModule
 {
-  public:
-    LteRlcTm()
-    {
-    }
-    virtual ~LteRlcTm()
-    {
-    }
-
   protected:
     /**
-     * Analyze gate of incoming packet
-     * and call proper handler
+     * Analyzes gate of incoming packet
+     * and calls proper handler
      */
-    virtual void handleMessage(omnetpp::cMessage *msg) override;
+    void handleMessage(cMessage *msg) override;
 
-    virtual void initialize() override;
-    virtual void finish() override
-    {
-    }
+    void initialize() override;
+    void finish() override {}
 
   private:
     /**
-     * handler for traffic coming
+     * Handler for traffic coming
      * from the upper layer (RRC)
      *
-     * handleUpperMessage() simply forwards packet to lower layers.
+     * handleUpperMessage() simply forwards packets to lower layers.
      * An empty header is added so that the encapsulation
-     * level is the same for all packets transversing the stack
+     * level is the same for all packets traversing the stack
      *
      * @param pkt packet to process
      */
-    void handleUpperMessage(omnetpp::cPacket *pkt);
+    void handleUpperMessage(cPacket *pkt);
 
     /**
-     * handler for traffic coming from
+     * Handler for traffic coming from
      * lower layer
      *
      * handleLowerMessage() is the function that takes care
      * of TM traffic coming from lower layer.
      * After decapsulating the fictitious
-     * header, packet is simply forwarded to the upper layer
+     * header, the packet is simply forwarded to the upper layer
      *
      * @param pkt packet to process
      */
-    void handleLowerMessage(omnetpp::cPacket *pkt);
+    void handleLowerMessage(cPacket *pkt);
 
     /**
      * Data structures
      */
 
-    omnetpp::cGate* up_[2];
-    omnetpp::cGate* down_[2];
-
+    cGate *upInGate_ = nullptr;
+    cGate *upOutGate_ = nullptr;
+    cGate *downInGate_ = nullptr;
+    cGate *downOutGate_ = nullptr;
 
     /*
      * Queue for storing PDUs to be delivered to MAC when LteMacSduRequest is received
@@ -102,14 +95,15 @@ class LteRlcTm : public omnetpp::cSimpleModule
     int queueSize_;
 
     // statistics
-    inet::simsignal_t receivedPacketFromUpperLayer;
-    inet::simsignal_t receivedPacketFromLowerLayer;
-    inet::simsignal_t sentPacketToUpperLayer;
-    inet::simsignal_t sentPacketToLowerLayer;
-    inet::simsignal_t rlcPacketLossDl;
-    inet::simsignal_t rlcPacketLossUl;
+    static inet::simsignal_t receivedPacketFromUpperLayerSignal_;
+    static inet::simsignal_t receivedPacketFromLowerLayerSignal_;
+    static inet::simsignal_t sentPacketToUpperLayerSignal_;
+    static inet::simsignal_t sentPacketToLowerLayerSignal_;
+    static inet::simsignal_t rlcPacketLossDlSignal_;
+    static inet::simsignal_t rlcPacketLossUlSignal_;
 };
 
 } //namespace
 
 #endif
+

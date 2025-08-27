@@ -12,22 +12,15 @@
 #ifndef __MecRnisTestApp_H_
 #define __MecRnisTestApp_H_
 
-#include "omnetpp.h"
-
-#include "inet/networklayer/common/L3Address.h"
-#include "inet/networklayer/common/L3AddressResolver.h"
-
-//MEWarningAlertPacket
-//#include "nodes/mec/MECPlatform/MECAppPacket_Types.h"
-#include "apps/mec/WarningAlert/packets/WarningAlertPacket_m.h"
-
-#include "nodes/mec/MECPlatform/ServiceRegistry/ServiceRegistry.h"
+#include <inet/networklayer/common/L3Address.h>
+#include <inet/networklayer/common/L3AddressResolver.h>
 
 #include "apps/mec/MecApps/MecAppBase.h"
+#include "apps/mec/WarningAlert/packets/WarningAlertPacket_m.h"
+#include "nodes/mec/MECPlatform/ServiceRegistry/ServiceRegistry.h"
 
 namespace simu5g {
 
-using namespace std;
 using namespace omnetpp;
 
 //
@@ -44,41 +37,35 @@ class MecRnisTestApp : public MecAppBase
     inet::L3Address ueAppAddress;
     int ueAppPort;
 
-    inet::TcpSocket* serviceSocket_;
-    inet::TcpSocket* mp1Socket_;
+    inet::TcpSocket *serviceSocket_ = nullptr;
+    inet::TcpSocket *mp1Socket_ = nullptr;
 
-    HttpBaseMessage* mp1HttpMessage;
-    HttpBaseMessage* serviceHttpMessage;
+    HttpBaseMessage *mp1HttpMessage = nullptr;
+    HttpBaseMessage *serviceHttpMessage = nullptr;
 
     simtime_t rnisQueryingPeriod_;
-    cMessage* rnisQueryingTimer_;
+    cMessage *rnisQueryingTimer_ = nullptr;
 
-    protected:
-        virtual int numInitStages() const override { return inet::NUM_INIT_STAGES; }
-        virtual void initialize(int stage) override;
-        virtual void finish() override;
+  protected:
+    int numInitStages() const override { return inet::NUM_INIT_STAGES; }
+    void initialize(int stage) override;
+    void finish() override;
 
-        virtual void handleProcessedMessage(omnetpp::cMessage *msg) override;
+    void handleProcessedMessage(cMessage *msg) override;
 
-        virtual void handleHttpMessage(int connId) override;
-        virtual void handleServiceMessage(int connId) override;
-        virtual void handleMp1Message(int connId) override;
-        virtual void handleUeMessage(omnetpp::cMessage *msg) override;
+    void handleHttpMessage(int connId) override;
+    void handleServiceMessage(int connId) override;
+    void handleMp1Message(int connId) override;
+    void handleUeMessage(cMessage *msg) override;
 
-        virtual void sendQuery(int cellId, std::string ueIpv4Address);
+    virtual void sendQuery(int cellId, std::string ueIpv4Address);
 
-        virtual void handleSelfMessage(cMessage *msg) override;
+    void handleSelfMessage(cMessage *msg) override;
 
-
-//        /* TCPSocket::CallbackInterface callback methods */
-       virtual void established(int connId) override;
-
-    public:
-       MecRnisTestApp();
-       virtual ~MecRnisTestApp();
-
+    void established(int connId) override;
 };
 
 } //namespace
 
 #endif
+

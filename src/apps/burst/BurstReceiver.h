@@ -34,12 +34,12 @@ class BurstReceiver : public cSimpleModule
 
     bool mInit_;
 
-    simsignal_t burstRcvdPkt_;
-    simsignal_t burstPktDelay_;
+    static simsignal_t burstRcvdPktSignal_;
+    static simsignal_t burstPktDelaySignal_;
 
   protected:
 
-    virtual int numInitStages() const override { return NUM_INIT_STAGES; }
+    int numInitStages() const override { return NUM_INIT_STAGES; }
     void initialize(int stage) override;
     void handleMessage(cMessage *msg) override;
 };

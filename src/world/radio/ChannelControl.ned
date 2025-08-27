@@ -12,8 +12,10 @@
 package simu5g.world.radio;
 
 //
-// ~ChannelControl has exactly one instance in every network model that
-// contains mobile nodes.
+// Utility module that records the position of each radio module in the network.
+// Exactly one instance of this module (or its derived extensions) must be present
+// in the network. Note that channel parameters in this module are obsolete and
+// are not utilized.
 //
 simple ChannelControl
 {
@@ -24,7 +26,6 @@ simple ChannelControl
         double alpha = default(2); // path loss coefficient
         double carrierFrequency @unit("Hz") = default(2.4GHz); // base carrier frequency of all the channels (in Hz)
         int numChannels = default(1); // number of radio channels (frequencies)
-        string propagationModel @enum("FreeSpaceModel","TwoRayGroundModel","RiceModel","RayleighModel","NakagamiModel","LogNormalShadowingModel") = default("FreeSpaceModel");
         @display("i=misc/sun");
         @labels(node);
 }

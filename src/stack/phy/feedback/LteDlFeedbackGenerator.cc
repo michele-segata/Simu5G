@@ -10,7 +10,6 @@
 //
 
 #include "stack/phy/feedback/LteDlFeedbackGenerator.h"
-#include "stack/phy/layer/LtePhyUe.h"
 
 namespace simu5g {
 
@@ -20,44 +19,42 @@ using namespace omnetpp;
 using namespace inet;
 
 /*****************************
- *    PRIVATE FUNCTIONS
- *****************************/
+*    PRIVATE FUNCTIONS
+*****************************/
 
-
-
-    /******************************
-     *    PROTECTED FUNCTIONS
-     ******************************/
+/******************************
+*    PROTECTED FUNCTIONS
+******************************/
 
 void LteDlFeedbackGenerator::initialize(int stage)
 {
     EV << "DlFeedbackGenerator stage: " << stage << endl;
-    if (stage == INITSTAGE_LOCAL)
-    {
+    if (stage == INITSTAGE_LOCAL) {
         // Read NED parameters
+        binder_.reference(this, "binderModule", true);
         fbPeriod_ = (simtime_t)(int(par("fbPeriod")) * TTI);// TTI -> seconds
         fbDelay_ = (simtime_t)(int(par("fbDelay")) * TTI);// TTI -> seconds
-        if (fbPeriod_ <= fbDelay_)
-        {
-            error("Feedback Period MUST be greater than Feedback Delay");
+        if (fbPeriod_ <= fbDelay_) {
+            throw cRuntimeError("Feedback Period MUST be greater than Feedback Delay");
         }
         fbType_ = getFeedbackType(par("feedbackType").stringValue());
         rbAllocationType_ = getRbAllocationType(
-            par("rbAllocationType").stringValue());
+                par("rbAllocationType").stringValue());
         usePeriodic_ = par("usePeriodic");
         currentTxMode_ = aToTxMode(par("initialTxMode"));
 
         generatorType_ = getFeedbackGeneratorType(
-            par("feedbackGeneratorType").stringValue());
+                par("feedbackGeneratorType").stringValue());
 
+        cModule *networkNode = getContainingNode(this);
         // TODO: find a more elegant way
         if (strcmp(getFullName(), "nrDlFbGen") == 0)
-            masterId_ = getAncestorPar("nrMasterId");
+            masterId_ = MacNodeId(networkNode->par("nrMasterId").intValue());
         else
-            masterId_ = getAncestorPar("masterId");
-        nodeId_ = getAncestorPar("macNodeId");
+            masterId_ = MacNodeId(networkNode->par("masterId").intValue());
+        nodeId_ = MacNodeId(networkNode->par("macNodeId").intValue());
 
-        /** Initialize timers **/
+        // Initialize timers
 
         tPeriodicSensing_ = new TTimer(this);
         tPeriodicSensing_->setTimerId(PERIODIC_SENSING);
@@ -75,29 +72,19 @@ void LteDlFeedbackGenerator::initialize(int stage)
         WATCH(usePeriodic_);
         WATCH(currentTxMode_);
     }
-    else if (stage == INITSTAGE_LINK_LAYER)
-    {
+    else if (stage == INITSTAGE_LINK_LAYER) {
         EV << "DLFeedbackGenerator Stage " << stage << " nodeid: " << nodeId_
            << " init" << endl;
 
-        if (masterId_ > 0)  // only if not detached
+        if (masterId_ != NODEID_NONE)                          // only if not detached
             initCellInfo();
 
-        LtePhyUe* tmp;
-        // TODO: find a more elegant way
-        if (strcmp(getFullName(), "nrDlFbGen") == 0)
-            tmp = dynamic_cast<LtePhyUe*>(getParentModule()->getSubmodule("nrPhy"));
-        else
-            tmp = dynamic_cast<LtePhyUe*>(getParentModule()->getSubmodule("phy"));
+        phy_.reference(this, "phyModule", true);
 
         EV << "DLFeedbackGenerator Stage " << stage << " nodeid: " << nodeId_
            << " phyUe taken" << endl;
-        dasFilter_ = tmp->getDasFilter();
         EV << "DLFeedbackGenerator Stage " << stage << " nodeid: " << nodeId_
            << " phyUe used" << endl;
-//        initializeFeedbackComputation(par("feedbackComputation").xmlValue());
-
-
         // TODO: remove this parameter
         feedbackComputationPisa_ = true;
 
@@ -105,8 +92,7 @@ void LteDlFeedbackGenerator::initialize(int stage)
            << " feedback computation initialize" << endl;
         WATCH(numBands_);
         WATCH(numPreferredBands_);
-        if (masterId_ > 0 && usePeriodic_)
-        {
+        if (masterId_ != NODEID_NONE && usePeriodic_) {
             tPeriodicSensing_->start(0);
         }
     }
@@ -114,24 +100,21 @@ void LteDlFeedbackGenerator::initialize(int stage)
 
 void LteDlFeedbackGenerator::handleMessage(cMessage *msg)
 {
-    TTimerMsg *tmsg = check_and_cast<TTimerMsg*>(msg);
-    FbTimerType type = (FbTimerType) tmsg->getTimerId();
+    TTimerMsg *tmsg = check_and_cast<TTimerMsg *>(msg);
+    FbTimerType type = (FbTimerType)tmsg->getTimerId();
 
-    if (type == PERIODIC_SENSING)
-    {
+    if (type == PERIODIC_SENSING) {
         EV << NOW << " Periodic Sensing" << endl;
         tPeriodicSensing_->handle();
         tPeriodicSensing_->start(fbPeriod_);
         sensing(PERIODIC);
     }
-    else if (type == PERIODIC_TX)
-    {
+    else if (type == PERIODIC_TX) {
         EV << NOW << " Periodic Tx" << endl;
         tPeriodicTx_->handle();
         sendFeedback(periodicFeedback, PERIODIC);
     }
-    else if (type == APERIODIC_TX)
-    {
+    else if (type == APERIODIC_TX) {
         EV << NOW << " Aperiodic Tx" << endl;
         tAperiodicTx_->handle();
         sendFeedback(aperiodicFeedback, APERIODIC);
@@ -141,11 +124,10 @@ void LteDlFeedbackGenerator::handleMessage(cMessage *msg)
 
 void LteDlFeedbackGenerator::initCellInfo()
 {
-    cellInfo_ = getCellInfo(masterId_);
+    cellInfo_ = getCellInfo(binder_, masterId_);
     EV << "DLFeedbackGenerator - nodeid: " << nodeId_ << " cellInfo taken" << endl;
 
-    if (cellInfo_ != NULL)
-    {
+    if (cellInfo_ != nullptr) {
         antennaCws_ = cellInfo_->getAntennaCws();
         numBands_ = cellInfo_->getPrimaryCarrierNumBands();
         numPreferredBands_ = cellInfo_->getNumPreferredBands();
@@ -157,7 +139,6 @@ void LteDlFeedbackGenerator::initCellInfo()
        << " used cellInfo: bands " << numBands_ << " preferred bands "
        << numPreferredBands_ << endl;
 }
-
 
 void LteDlFeedbackGenerator::sensing(FbPeriodicity per)
 {
@@ -172,8 +153,7 @@ void LteDlFeedbackGenerator::sensing(FbPeriodicity per)
         return;
     }
 
-    if (per == APERIODIC && tAperiodicTx_->busy())
-    {
+    if (per == APERIODIC && tAperiodicTx_->busy()) {
         /* An APERIODIC tx is already scheduled:
          * ignore this request.
          */
@@ -198,16 +178,10 @@ void LteDlFeedbackGenerator::sensing(FbPeriodicity per)
         tAperiodicTx_->start(fbDelay_);
 }
 
-        /***************************
-         *    PUBLIC FUNCTIONS
-         ***************************/
+/***************************
+*    PUBLIC FUNCTIONS
+***************************/
 
-LteDlFeedbackGenerator::LteDlFeedbackGenerator()
-{
-    tPeriodicSensing_ = nullptr;
-    tPeriodicTx_ = nullptr;
-    tAperiodicTx_ = nullptr;
-}
 
 LteDlFeedbackGenerator::~LteDlFeedbackGenerator()
 {
@@ -230,63 +204,51 @@ void LteDlFeedbackGenerator::setTxMode(TxMode newTxMode)
 }
 
 void LteDlFeedbackGenerator::sendFeedback(LteFeedbackDoubleVector fb,
-    FbPeriodicity per)
+        FbPeriodicity per)
 {
     EV << "sendFeedback() in DL" << endl;
     EV << "Periodicity: " << periodicityToA(per) << " nodeId: " << nodeId_ << endl;
 
     FeedbackRequest feedbackReq;
-    if (feedbackComputationPisa_)
-    {
+    if (feedbackComputationPisa_) {
         feedbackReq.request = true;
-        feedbackReq.genType = getFeedbackGeneratorType(
-            getAncestorPar("feedbackGeneratorType").stringValue());
-        feedbackReq.type = getFeedbackType(par("feedbackType").stringValue());
+        feedbackReq.genType = generatorType_;
+        feedbackReq.type = fbType_;
         feedbackReq.txMode = currentTxMode_;
         feedbackReq.rbAllocationType = rbAllocationType_;
     }
-    else
-    {
+    else {
         feedbackReq.request = false;
     }
 
     //use PHY function to send feedback
-    // TODO: find a more elegant way
-    if (strcmp(getFullName(), "nrDlFbGen") == 0)
-        (dynamic_cast<LtePhyUe*>(getParentModule()->getSubmodule("nrPhy")))->sendFeedback(fb, fb, feedbackReq);
-    else
-        (dynamic_cast<LtePhyUe*>(getParentModule()->getSubmodule("phy")))->sendFeedback(fb, fb, feedbackReq);
+    phy_->sendFeedback(fb, fb, feedbackReq);
 }
 
 // TODO adjust default value
-LteFeedbackComputation* LteDlFeedbackGenerator::getFeedbackComputationFromName(
-    std::string name, ParameterMap& params)
+LteFeedbackComputation *LteDlFeedbackGenerator::getFeedbackComputationFromName(std::string name, ParameterMap& params)
 {
     ParameterMap::iterator it;
-    if (name == "REAL")
-    {
+    if (name == "REAL") {
         feedbackComputationPisa_ = true;
-        return 0;
+        return nullptr;
     }
     else
-        return 0;
+        return nullptr;
 }
-
 
 void LteDlFeedbackGenerator::handleHandover(MacCellId newEnbId)
 {
     Enter_Method("LteDlFeedbackGenerator::handleHandover()");
     masterId_ = newEnbId;
-    if (masterId_ != 0)
-    {
+    if (masterId_ != NODEID_NONE) {
         initCellInfo();
         EV << NOW << " LteDlFeedbackGenerator::handleHandover - Master ID updated to " << masterId_ << endl;
-        if (tPeriodicSensing_->idle())  // resume feedback
+        if (tPeriodicSensing_->idle())                                         // resume feedback
             tPeriodicSensing_->start(0);
     }
-    else
-    {
-        cellInfo_ = NULL;
+    else {
+        cellInfo_ = nullptr;
 
         // stop measuring feedback
         tPeriodicSensing_->stop();

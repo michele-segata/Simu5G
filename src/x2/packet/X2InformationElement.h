@@ -40,10 +40,9 @@ class X2InformationElement : public X2InformationElement_Base
 
   public:
 
-    X2InformationElement() : X2InformationElement_Base() { }
-    X2InformationElement(X2InformationElementType type) : X2InformationElement_Base() { type_ = type; }
+    X2InformationElement() : X2InformationElement_Base() {}
+    X2InformationElement(X2InformationElementType type) : X2InformationElement_Base(), type_(type) { }
 
-    virtual ~X2InformationElement() {}
 
     X2InformationElement(const X2InformationElement& other) : X2InformationElement_Base()
     {
@@ -67,10 +66,11 @@ class X2InformationElement : public X2InformationElement_Base
 
     // field getter/setter methods
     virtual X2InformationElementType getType() const { return type_; }
-    // return length (in B)
+    // return length (in bytes)
     virtual int64_t getLength() const { return length_; }
 };
 
 } //namespace
 
 #endif
+

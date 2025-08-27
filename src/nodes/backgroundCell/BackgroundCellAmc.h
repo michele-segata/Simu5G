@@ -14,16 +14,19 @@
 
 #include <omnetpp.h>
 
+#include "common/binder/Binder.h"
 #include "stack/mac/amc/LteMcs.h"
 
 namespace simu5g {
+
+using namespace omnetpp;
 
 class BackgroundCellAmc
 {
   protected:
 
     // reference to the binder
-    Binder* binder_;
+    opp_component_ptr<Binder> binder_;
 
     McsTable dlMcsTable_;
     McsTable ulMcsTable_;
@@ -35,8 +38,8 @@ class BackgroundCellAmc
     void calculateMcsScale();
 
   public:
-    BackgroundCellAmc();
-    virtual ~BackgroundCellAmc();
+    BackgroundCellAmc(Binder *binder);
+    virtual ~BackgroundCellAmc() {}
 
     virtual unsigned int computeBitsPerRbBackground(Cqi cqi, const Direction dir, double carrierFrequency);
 
@@ -44,9 +47,9 @@ class BackgroundCellAmc
     unsigned int getItbsPerCqi(Cqi cqi, const Direction dir);
 
     /*
-     * Access the correct itbs2tbs conversion table given cqi and layer numer
+     * Access the correct itbs2tbs conversion table given cqi and number of layers
      */
-    const unsigned int* readTbsVect(Cqi cqi, unsigned int layers, Direction dir);
+    const unsigned int *readTbsVect(Cqi cqi, unsigned int layers, Direction dir);
 
     /*
      * given <cqi> and <layers> returns bytes allocable in <blocks>
@@ -62,3 +65,4 @@ class BackgroundCellAmc
 } //namespace
 
 #endif
+

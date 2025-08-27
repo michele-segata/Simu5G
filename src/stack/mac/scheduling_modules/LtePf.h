@@ -33,12 +33,12 @@ class LtePf : public LteScheduler
     //! Smoothing factor for proportional fair scheduler.
     double pfAlpha_;
 
-    //! Small number to slightly blur away scores.
-    const double scoreEpsilon_;
+    //! Small number to slightly blur scores.
+    const double scoreEpsilon_ = 0.000001;
 
   public:
 
-    double & pfAlpha()
+    double& pfAlpha()
     {
         return pfAlpha_;
     }
@@ -47,20 +47,21 @@ class LtePf : public LteScheduler
 
     //virtual void schedule ();
 
-    virtual void prepareSchedule();
+    void prepareSchedule() override;
 
-    virtual void commitSchedule();
+    void commitSchedule() override;
 
     // *****************************************************************************************
 
-    LtePf(double pfAlpha) :
-        scoreEpsilon_(0.000001)
+    LtePf(Binder *binder, double pfAlpha) :
+        LteScheduler(binder),
+        pfAlpha_(pfAlpha)
     {
-        pfAlpha_ = pfAlpha;
-        pfRate_.clear();
     }
+
 };
 
 } //namespace
 
 #endif // _LTE_LTEPF_H_
+

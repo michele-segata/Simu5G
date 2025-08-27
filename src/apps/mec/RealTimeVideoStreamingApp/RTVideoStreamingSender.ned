@@ -14,14 +14,19 @@ package simu5g.apps.mec.RealTimeVideoStreamingApp;
 
 import inet.applications.contract.IApp;
 
-
 //
-// This is a UE app that asks to a Device App to instantiate the MECRTVideoStreamingReceiver.
+// This application is to be instantiated on the UE side. It requires that a ~DeviceApp is
+// also instantiated on the UE. This module requests the ~DeviceApp to instantiate a
+// ~MecRTVideoStreamingReceiver in the MEC system.
+// Once the peer MEC application is up and running, this module starts sending packets
+// containing video frames as read from the trace file specified in the configuration.
 //
 simple RTVideoStreamingSender like IApp
 {
     parameters:
         @display("i=block/source");
+
+        string mobilityModule;
 
         //connection infos
         int localPort = default(4000);
@@ -45,9 +50,6 @@ simple RTVideoStreamingSender like IApp
 
         string fileName;
         bool sendAllOnOneTime = true;
-
-        bool logger = default(false);
-        string interfaceTableModule;
 
         @signal[positionX](type=double);
         @statistic[positionX](title="UE positionX"; source=positionX; record=vector);

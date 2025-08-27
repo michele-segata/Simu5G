@@ -13,14 +13,18 @@
 #define __TRAFFICFLOWFILTER_H_
 
 #include <omnetpp.h>
+#include <inet/common/ModuleRefByPar.h>
+
 #include "corenetwork/trafficFlowFilter/TftControlInfo_m.h"
 #include "common/binder/Binder.h"
 
 namespace simu5g {
 
+using namespace omnetpp;
+
 /**
- * Objective of the Traffic Flow Filter is mapping IP 4-Tuples to TFT identifiers. This commonly means identifying a bearer and
- * associating it to an ID that will be recognized by the first GTP-U entity
+ * The objective of the Traffic Flow Filter is to map IP 4-Tuples to TFT identifiers. This commonly means identifying a bearer and
+ * associating it with an ID that will be recognized by the first GTP-U entity.
  *
  * This simplified traffic filter queries the Binder to find the destination of the packet.
  * It resides at both the eNodeB and the PGW. At the PGW, when a packet comes to the traffic flow filter, the latter finds the
@@ -28,30 +32,30 @@ namespace simu5g {
  * the destination endpoint is always the PGW. However, if the fastForwarding flag is enabled and the destination of the packet
  * is within the same cell, the packet is just relayed to the Radio interface.
  */
-class TrafficFlowFilter : public omnetpp::cSimpleModule
+class TrafficFlowFilter : public cSimpleModule
 {
-    // specifies the type of the node that contains this filter (it can be ENB or PGW
+    // specifies the type of the node that contains this filter (it can be ENB or PGW)
     // the filterTable_ will be indexed differently depending on this parameter
     CoreNodeType ownerType_;
 
     // reference to the LTE Binder module
-    Binder* binder_;
+    inet::ModuleRefByPar<Binder> binder_;
 
     // if this flag is set, each packet received from the radio network, having the same radio network as destination
     // must be re-sent down without going through the Internet
     bool fastForwarding_;
 
     // store the name of the gateway node (for MEC Hosts and base stations only)
-    char* gateway_;
+    std::string gateway_;
 
-    CoreNodeType selectOwnerType(const char * type);
+    CoreNodeType selectOwnerType(const char *type);
 
     // === MEC support === //
 
-    //only if owner type is ENB or GNB
+    // only if owner type is ENB or GNB
     std::string meHost;
     inet::L3Address meHostAddress;
-    //only if owner type is GTPENDPOINT
+    // only if owner type is GTPENDPOINT
     inet::L3Address eNodeBAddress;
 
     //@author Alessandro Noferi
@@ -60,20 +64,18 @@ class TrafficFlowFilter : public omnetpp::cSimpleModule
     inet::L3Address meAppsExtAddress_;
     int meAppsExtAddressMask_;
 
-
   protected:
-    virtual int numInitStages() const override{ return inet::INITSTAGE_LAST+1; }
-    virtual void initialize(int stage) override;
+    int numInitStages() const override { return inet::INITSTAGE_LAST + 1; }
+    void initialize(int stage) override;
 
-    // TrafficFlowFilter module may receive messages only from the input interface of its compound module
-    virtual void handleMessage(omnetpp::cMessage *msg) override;
+    // The TrafficFlowFilter module may receive messages only from the input interface of its compound module
+    void handleMessage(cMessage *msg) override;
 
     // functions for managing filter tables
     TrafficFlowTemplateId findTrafficFlow(inet::L3Address srcAddress, inet::L3Address destAddress);
-
-    virtual void finish() override;
 };
 
 } //namespace
 
 #endif
+

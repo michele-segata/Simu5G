@@ -12,14 +12,16 @@
 package simu5g.stack.dualConnectivityManager;
 
 //
-// This module is responsible for bridging packets between PDCP layers
-// of two e/gNodeBs when dual connectivity is employed
+// This module is responsible for bridging data-plane packets between PDCP entities
+// of two eNodeBs or gNodeBs when Dual Connectivity is employed. The module directly interfaces
+// with the ~LteX2Manager to transfer such packets over the X2 interface.
 //
 simple DualConnectivityManager like IDualConnectivityManager
 {
     parameters:
         @display("i=block/cogwheel");
         @class("DualConnectivityManager");
+        string pdcpRrcModule = default("^.pdcpRrc");
 
     gates:
         //# connections to the X2 Manager

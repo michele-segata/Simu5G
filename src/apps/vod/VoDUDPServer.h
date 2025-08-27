@@ -27,10 +27,12 @@
 
 namespace simu5g {
 
-class VoDUDPServer : public omnetpp::cSimpleModule
+using namespace omnetpp;
+
+class VoDUDPServer : public cSimpleModule
 {
   protected:
-      inet::UdpSocket socket;
+    inet::UdpSocket socket;
     /* Server parameters */
 
     int serverPort;
@@ -41,10 +43,8 @@ class VoDUDPServer : public omnetpp::cSimpleModule
     std::fstream outfile;
     double TIME_SLOT;
 
-    const char * clientsIP;
     int clientsPort;
     double clientsStartStreamTime;
-    const char * clientsReqTime;
 
     std::vector<std::string> vclientsIP;
 
@@ -63,15 +63,16 @@ class VoDUDPServer : public omnetpp::cSimpleModule
         uint32_t trec_time;
         uint32_t trec_size;
     };
+
     struct svcPacket
     {
-        int tid;
-        int lid;
-        int qid;
-        int length;
-        int frameNumber;
-        int timestamp;
-        int currentFrame;
+        int tid = -1;
+        int lid = -1;
+        int qid = -1;
+        int length = -1;
+        int frameNumber = -1;
+        int timestamp = -1;
+        int currentFrame = -1;
         std::string memoryAdd;
         std::string isDiscardable;
         std::string isTruncatable;
@@ -79,33 +80,25 @@ class VoDUDPServer : public omnetpp::cSimpleModule
         std::string frameType;
         long int index;
 
-        svcPacket() {
-            tid = lid = qid = -1;
-            length = -1;
-            frameNumber = -1;
-            currentFrame = -1;
-            timestamp = -1;
+        svcPacket()  {
+
         }
     };
     unsigned int nrec_;
 
-    tracerec* trace_;
+    tracerec *trace_ = nullptr;
 
     std::vector<svcPacket> svcTrace_;
 
-  public:
-    VoDUDPServer();
-    virtual ~VoDUDPServer();
-
   protected:
-
-    void initialize(int stage);
-    virtual int numInitStages() const { return inet::NUM_INIT_STAGES; }
-    virtual void finish();
-    virtual void handleMessage(omnetpp::cMessage*);
-    virtual void handleSVCMessage(omnetpp::cMessage*);
+    void initialize(int stage) override;
+    int numInitStages() const override { return inet::NUM_INIT_STAGES; }
+    void finish() override;
+    void handleMessage(cMessage *msg) override;
+    virtual void handleSVCMessage(cMessage *msg);
 };
 
 } //namespace
 
 #endif
+

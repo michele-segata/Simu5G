@@ -17,8 +17,9 @@
 
 #include "nodes/mec/MECPlatform/MECServices/packets/HttpRequestMessage/Serializers/HttpRequestMessageSerializer.h"
 
+#include <inet/common/packet/serializer/ChunkSerializerRegistry.h>
+
 #include "nodes/mec/MECPlatform/MECServices/packets/HttpRequestMessage/HttpRequestMessage.h"
-#include "inet/common/packet/serializer/ChunkSerializerRegistry.h"
 #include "nodes/mec/utils/httpUtils/httpUtils.h"
 
 namespace simu5g {
@@ -32,10 +33,8 @@ void HttpRequestMessageSerializer::serialize(MemoryOutputStream& stream, const P
     EV << "HttpRequestMessageSerializer::serialize" << endl;
     auto startPosition = stream.getLength();
     const auto& applicationPacket = staticPtrCast<const HttpRequestMessage>(chunk);
-    stream.writeBytes((const uint8_t*)applicationPacket->getPayload().c_str(), B(applicationPacket->getPayload().size()));
+    stream.writeBytes((const uint8_t *)applicationPacket->getPayload().c_str(), B(applicationPacket->getPayload().size()));
 
-//    stream.writeUint32Be(B(applicationPacket->getChunkLength()).get());
-//    stream.writeUint32Be(applicationPacket->getSequenceNumber());
     int64_t remainders = B(applicationPacket->getChunkLength() - (stream.getLength() - startPosition)).get();
     if (remainders < 0)
         throw cRuntimeError("ApplicationPacket length = %d smaller than required %d bytes", (int)B(applicationPacket->getChunkLength()).get(), (int)B(stream.getLength() - startPosition).get());
@@ -47,12 +46,9 @@ const Ptr<Chunk> HttpRequestMessageSerializer::deserialize(MemoryInputStream& st
     EV << "HttpRequestMessageSerializer::deserialize" << endl;
     auto startPosition = stream.getPosition();
     auto applicationPacket = makeShared<HttpRequestMessage>();
-//    B dataLength = B(stream.readUint32Be());
-
     std::string data = stream.readString();
-    applicationPacket = check_and_cast<HttpRequestMessage*>(Http::parseHeader(data));
+    applicationPacket = check_and_cast<HttpRequestMessage *>(Http::parseHeader(data));
 
-//    EV << "PR: " << applicationPacket->getPayload();
     B remainders = stream.getLength() - (stream.getPosition() - startPosition);
     ASSERT(remainders >= B(0));
     stream.readByteRepeatedly('?', B(remainders).get());

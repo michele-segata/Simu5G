@@ -15,12 +15,8 @@ namespace simu5g {
 
 using namespace omnetpp;
 
-LteMacBuffer::LteMacBuffer()
+LteMacBuffer::LteMacBuffer() : processed_(0), queueOccupancy_(0), queueLength_(0)
 {
-    queueOccupancy_ = 0;
-    queueLength_ = 0;
-    processed_ = 0;
-    Queue_.clear();
 }
 
 LteMacBuffer::LteMacBuffer(const LteMacQueue& queue)
@@ -28,10 +24,7 @@ LteMacBuffer::LteMacBuffer(const LteMacQueue& queue)
     operator=(queue);
 }
 
-LteMacBuffer::~LteMacBuffer()
-{
-    Queue_.clear();
-}
+
 
 LteMacBuffer& LteMacBuffer::operator=(const LteMacBuffer& queue)
 {
@@ -41,7 +34,7 @@ LteMacBuffer& LteMacBuffer::operator=(const LteMacBuffer& queue)
     return *this;
 }
 
-LteMacBuffer* LteMacBuffer::dup() const
+LteMacBuffer *LteMacBuffer::dup() const
 {
     return new LteMacBuffer(*this);
 }
@@ -63,7 +56,7 @@ void LteMacBuffer::pushFront(PacketInfo pkt)
 PacketInfo LteMacBuffer::popFront()
 {
     if (queueLength_ <= 0)
-        throw cRuntimeError("Packet queue empty");
+        throw cRuntimeError("Packet queue is empty");
 
     PacketInfo pkt = Queue_.front();
     Queue_.pop_front();
@@ -76,7 +69,7 @@ PacketInfo LteMacBuffer::popFront()
 PacketInfo LteMacBuffer::popBack()
 {
     if (queueLength_ <= 0)
-        throw cRuntimeError("Packet queue empty");
+        throw cRuntimeError("Packet queue is empty");
 
     PacketInfo pkt = Queue_.back();
     Queue_.pop_back();
@@ -88,14 +81,14 @@ PacketInfo LteMacBuffer::popBack()
 PacketInfo& LteMacBuffer::front()
 {
     if (queueLength_ <= 0)
-        throw cRuntimeError("Packet queue empty");
+        throw cRuntimeError("Packet queue is empty");
     return Queue_.front();
 }
 
 PacketInfo LteMacBuffer::back() const
 {
     if (queueLength_ <= 0)
-        throw cRuntimeError("Packet queue empty");
+        throw cRuntimeError("Packet queue is empty");
     return Queue_.back();
 }
 
@@ -107,7 +100,7 @@ void LteMacBuffer::setProcessed(unsigned int i)
 simtime_t LteMacBuffer::getHolTimestamp() const
 {
     if (queueLength_ <= 0)
-        throw cRuntimeError("Packet queue empty");
+        throw cRuntimeError("Packet queue is empty");
     return Queue_.front().second;
 }
 
@@ -116,8 +109,7 @@ unsigned int LteMacBuffer::getProcessed() const
     return processed_;
 }
 
-const std::list<PacketInfo>*
-LteMacBuffer::getPacketlist() const
+const std::list<PacketInfo> *LteMacBuffer::getPacketlist() const
 {
     return &Queue_;
 }
@@ -134,10 +126,10 @@ int LteMacBuffer::getQueueLength() const
 
 bool LteMacBuffer::isEmpty() const
 {
-    return (queueLength_ == 0);
+    return queueLength_ == 0;
 }
 
-std::ostream& operator << (std::ostream &stream, const LteMacBuffer* queue)
+std::ostream& operator<<(std::ostream& stream, const LteMacBuffer *queue)
 {
     stream << "LteMacBuffer-> Length: " << queue->getQueueLength() <<
         " Occupancy: " << queue->getQueueOccupancy() <<

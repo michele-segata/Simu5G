@@ -22,8 +22,8 @@ namespace simu5g {
  */
 class AmcPilotD2D : public AmcPilot
 {
-    bool usePreconfiguredTxParams_;
-    UserTxParams* preconfiguredTxParams_;
+    bool usePreconfiguredTxParams_ = false;
+    UserTxParams *preconfiguredTxParams_ = nullptr;
 
   public:
 
@@ -31,30 +31,30 @@ class AmcPilotD2D : public AmcPilot
      * Constructor
      * @param amc LteAmc owner module
      */
-    AmcPilotD2D(LteAmc *amc) :
-        AmcPilot(amc)
+    AmcPilotD2D(Binder *binder, LteAmc *amc) :
+        AmcPilot(binder, amc)
     {
         name_ = "D2D";
         mode_ = MIN_CQI;
-        usePreconfiguredTxParams_ = false;
-        preconfiguredTxParams_ = nullptr;
     }
+
     /**
      * Assign logical bands for given nodeId and direction
      * @param id The mobile node ID.
      * @param dir The link direction.
      * @return The user transmission parameters computed.
      */
-    const UserTxParams& computeTxParams(MacNodeId id, const Direction dir, double carrierFrequency);
+    const UserTxParams& computeTxParams(MacNodeId id, const Direction dir, double carrierFrequency) override;
 
     void setPreconfiguredTxParams(Cqi cqi);
 
     // TODO reimplement these functions
-    virtual std::vector<Cqi>  getMultiBandCqi(MacNodeId id, const Direction dir, double carrierFrequency){ std::vector<Cqi> result; return result; }
-    virtual void setUsableBands(MacNodeId id , UsableBands usableBands){}
-    virtual bool getUsableBands(MacNodeId id, UsableBands*& uBands){ return false; }
+    std::vector<Cqi> getMultiBandCqi(MacNodeId id, const Direction dir, double carrierFrequency) override { std::vector<Cqi> result; return result; }
+    void setUsableBands(MacNodeId id, UsableBands usableBands) override {}
+    UsableBands *getUsableBands(MacNodeId id) override { return nullptr; }
 };
 
 } //namespace
 
 #endif
+

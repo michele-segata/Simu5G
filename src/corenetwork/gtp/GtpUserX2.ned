@@ -12,11 +12,20 @@
 package simu5g.corenetwork.gtp;
 
 //
-// Implements a simplified version of the GTP-U protocol for tunneling packets over X2 (for handover)
+// This module implements a simplified version of the user plane of the GPRS Tunneling
+// Protocol (GTP) used for handover procedures. In particular, it is employed to transfer
+// data packets from the source e/gNodeB to the target e/gNodeB during a handover (i.e.,
+// packets destined for a UE that is undergoing a handover).
+// On one hand, this module encapsulates incoming IP datagrams from the local ~LteX2Manager
+// into GTP packets and sends them over the X2 interface. On the other hand, it receives GTP
+// packets from other e/gNodeBs and decapsulates the included IP datagrams, which are then
+// forwarded to the local ~LteX2Manager.
 //
 simple GtpUserX2
 {
     parameters:
+        string binderModule = default("binder");
+
         int localPort = default(32);
         int tunnelPeerPort = default(32);
 

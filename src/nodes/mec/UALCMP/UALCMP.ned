@@ -18,12 +18,20 @@ import inet.networklayer.contract.INetworkLayer;
 import inet.transportlayer.tcp.Tcp;
 import inet.transportlayer.udp.Udp;
 
-
+//
+// This module represents a host performing the functions of the User Application Lifecycle Management
+// Proxy (UALCMP) defined by the ETSI Multi-access Edge Computing (MEC) specifications. It includes a
+// complete network protocol stack and a ~UalcmpApp application module that implements the logic of the
+// UALCMP entity. It is typically connected directly to a MEC orchestrator, and forwards to it the
+// creation and deletion requests from the Device App modules of User Equipment. It can be configured to receive
+// packets from a real, external Device App application via the external Ethernet interface submodule.
+//
+//
 module UALCMP
 {
     parameters:
         @networkNode();
-        @display("i=device/mainframe;bgb=1006.50995,692.76");
+        @display("i=device/mainframe;bgb=1006,692");
 
         //# Node specs
         string nodeType = "MECOrchestrator";						// DO NOT CHANGE
@@ -40,7 +48,6 @@ module UALCMP
         int numExtEthInterfaces = default(0); //
 
     gates:
-
         //to external networks (internet)
         inout ppp[];
 
@@ -50,7 +57,7 @@ module UALCMP
     submodules:
 
         interfaceTable: InterfaceTable {
-            @display("p=61.344,74.976;is=s");
+            @display("p=61,74;is=s");
         }
 
         //#
@@ -60,13 +67,13 @@ module UALCMP
         //            @display("p=550,508");
         //        }
         pppIf: PppInterface {
-            @display("p=446.832,506.688");
+            @display("p=446,506");
         }
 
         // ethernet interface used for communicating with external applications in emulation mode
         extEth[numExtEthInterfaces]: <default("ExtLowerEthernetInterface")> like IEthernetInterface {
             parameters:
-                @display("p=641.712,506.688,row,150;q=txQueue");
+                @display("p=641,506,row,150;q=txQueue");
         }
 
         //#
@@ -74,11 +81,11 @@ module UALCMP
         //#
         ipv4: <default("Ipv4NetworkLayer")> like INetworkLayer if hasIpv4 {
             parameters:
-                @display("p=420.28,372.88;q=queue");
+                @display("p=420,372;q=queue");
         }
         ipv6: <default("Ipv6NetworkLayer")> like INetworkLayer if hasIpv6 {
             parameters:
-                @display("p=657.28,374.46;q=queue");
+                @display("p=657,374;q=queue");
         }
 
         //#
@@ -86,11 +93,13 @@ module UALCMP
         //#
 		// =============== UDP ============== //
         ualcmpApp: UALCMPApp {
-            @display("p=549.69,74.045,row");
+                    // hostname of the reference orchestrator
+            mecOrchestratorHostname = parent.mecOrchestratorHostname;
+            @display("p=549,74,row");
         }
 
         udp: Udp {
-            @display("p=459,217");
+            @display("p=460,217");
         }
 
         tcp: Tcp {
@@ -105,7 +114,7 @@ module UALCMP
         // message dispatcher for SAP between transport and network layer
         tn: MessageDispatcher {
             parameters:
-                @display("p=550,296;b=600,5,,,,1");
+                @display("p=550,300;b=600,5,,,,1");
         }
         // message dispatcher for SAP to link layer
         nl: MessageDispatcher {

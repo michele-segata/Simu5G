@@ -24,13 +24,15 @@ class LteMaxCi : public virtual LteScheduler
     typedef std::priority_queue<ScoreDesc> ScoreList;
 
   public:
+    LteMaxCi(Binder *binder) : LteScheduler(binder) {}
 
-    virtual void prepareSchedule();
+    void prepareSchedule() override;
 
-    virtual void commitSchedule();
+    void commitSchedule() override;
 
 };
 
 } //namespace
 
 #endif // _LTE_LTEMAXCI_H_
+

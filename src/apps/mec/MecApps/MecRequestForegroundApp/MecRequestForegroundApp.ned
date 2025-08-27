@@ -11,50 +11,33 @@
 
 package simu5g.apps.mec.MecApps.MecRequestForegroundApp;
 
-import inet.applications.contract.IApp;
-import simu5g.nodes.mec.MECPlatform.IMECApp;
-
+import simu5g.apps.mec.MecApps.MecAppBase;
 
 //
-// This app simulates a MEC app that sends GET requests to the Location Service
-// every 500ms. It used when the user wants to evaluate MEC host related statistics,
-// without the need of using UEs to instantiate MEC apps through the MEC orchestrator.
-// It has been used, for instance, to evaluate the loadgenerator model of the MEC service
-// to see the execution time differences.
+// This module implements a MEC application that issues periodic GET requests to the
+// ~LocationService. This application can be utilized as an "independent MEC app" (see
+// ~MecHost module), hence it does not require instantiation via the MEC orchestrator
+// upon request from a User Equipment. Essentially, this application provides a quick
+// way to generate configurable load to the Location Service and simulate different
+// (and potentially more realistic) response times from the latter.
 //
-simple MecRequestForegroundApp like IMECApp, IApp
+// For now, this application does not consume resources of the MEC Host (i.e., resource
+// parameters are not used). 
+// 
+// TODO consider resources used by this app in the VIM
+//
+simple MecRequestForegroundApp extends MecAppBase
 {
     parameters:
-        bool allocateHostResources = default(false);
+        @class(MecRequestForegroundApp);
 
-        int packetSize @unit(B) = default(10B);
-        string interfaceTableModule = default("");
-        int mecAppIndex = default(0);
-        int mecAppId = default(0); // it will be override by getId() in initialize
-        int localUePort = default(0); // not used in MecRequestBackgroundGeneratorApp
-
-        string mp1Address = default("");
-        int mp1Port = default(10021);
-
-		 //resource required info
-        double requiredRam @unit("B") = default(10MB);
-        double requiredDisk @unit("B") = default(100MB);
-        double requiredCpu = default(15000);
-
-        double lambda @unit(s) = default(10ms);
-
-        // IApp parameters
-        int timeToLive = default(-1); // if not -1, set the TTL (IPv4) or Hop Limit (IPv6) field of sent packets to this value
-        int dscp = default(-1); // if not -1, set the DSCP (IPv4/IPv6) field of sent packets to this value
-        int tos = default(-1); // if not -1, set the Type Of Service (IPv4) / Traffic Class (IPv6) field of sent packets to this value
-
-        bool logger = default(false);
-
-    gates:
-        input socketIn @labels(TcpCommand/up);
-        output socketOut @labels(TcpCommand/down);
-
-        input mePlatformIn;
-        output mePlatformOut;
-
+        mecAppId = default(0); // it will be overridden by module ID in initialize()
+        
+        // resource usage (not used so far)
+        requiredRam = default(10MB);
+        requiredDisk = default(100MB);
+        requiredCpu = default(15000);
+        
+        double meanRequestTime @unit(s) = default(0.5s);    // mean time between consecutive requests to the LocationService
+        bool exponentialDist = default(false);              // if true, requests are generated according to the exponential distribution with meanRequestTime as mean. If false, requests are periodic, every meanRequestTime
 }

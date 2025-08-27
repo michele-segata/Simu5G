@@ -27,14 +27,14 @@ using namespace inet;
 class BurstSender : public cSimpleModule
 {
     UdpSocket socket;
-    //has the sender been initialized?
-    bool initialized_;
+    // has the sender been initialized?
+    bool initialized_ = false;
 
     // timers
-    cMessage* selfBurst_;
-    cMessage* selfPacket_;
+    cMessage *selfBurst_ = nullptr;
+    cMessage *selfPacket_ = nullptr;
 
-    //sender
+    // sender
     int idBurst_;
     int idFrame_;
 
@@ -44,11 +44,10 @@ class BurstSender : public cSimpleModule
     simtime_t interBurstTime_;
     simtime_t intraBurstTime_;
 
-    simsignal_t burstSentPkt_;
+    static simsignal_t burstSentPktSignal_;
     // ----------------------------
 
-    cMessage *selfSender_;
-    cMessage *initTraffic_;
+    cMessage *initTraffic_ = nullptr;
 
     simtime_t timestamp_;
     int localPort_;
@@ -60,12 +59,11 @@ class BurstSender : public cSimpleModule
     void sendPacket();
 
   public:
-    ~BurstSender();
-    BurstSender();
+    ~BurstSender() override;
 
   protected:
 
-    virtual int numInitStages() const override { return NUM_INIT_STAGES; }
+    int numInitStages() const override { return NUM_INIT_STAGES; }
     void initialize(int stage) override;
     void handleMessage(cMessage *msg) override;
 };

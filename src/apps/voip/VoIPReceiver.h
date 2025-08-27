@@ -24,47 +24,49 @@
 
 namespace simu5g {
 
-class VoIPReceiver : public omnetpp::cSimpleModule
+using namespace omnetpp;
+
+class VoIPReceiver : public cSimpleModule
 {
     inet::UdpSocket socket;
 
-    ~VoIPReceiver();
+    ~VoIPReceiver() override;
 
     int emodel_Ie_;
     int emodel_Bpl_;
     int emodel_A_;
     double emodel_Ro_;
 
-    typedef std::list<VoipPacket*> PacketsList;
+    typedef std::list<VoipPacket *> PacketsList;
     PacketsList mPacketsList_;
     PacketsList mPlayoutQueue_;
     unsigned int mCurrentTalkspurt_;
     unsigned int mBufferSpace_;
-    omnetpp::simtime_t mSamplingDelta_;
-    omnetpp::simtime_t mPlayoutDelay_;
+    simtime_t mSamplingDelta_;
+    simtime_t mPlayoutDelay_;
 
     bool mInit_;
 
     unsigned int totalRcvdBytes_;
-    omnetpp::simtime_t warmUpPer_;
+    simtime_t warmUpPer_;
 
-    omnetpp::simsignal_t voIPFrameLossSignal_;
-    omnetpp::simsignal_t voIPFrameDelaySignal_;
-    omnetpp::simsignal_t voIPPlayoutDelaySignal_;
-    omnetpp::simsignal_t voIPMosSignal_;
-    omnetpp::simsignal_t voIPTaildropLossSignal_;
-    omnetpp::simsignal_t voIPPlayoutLossSignal_;
-    omnetpp::simsignal_t voIPJitterSignal_;
-    omnetpp::simsignal_t voIPReceivedThroughput_;
+    static simsignal_t voIPFrameLossSignal_;
+    static simsignal_t voIPFrameDelaySignal_;
+    static simsignal_t voIPPlayoutDelaySignal_;
+    static simsignal_t voIPMosSignal_;
+    static simsignal_t voIPTaildropLossSignal_;
+    static simsignal_t voIPPlayoutLossSignal_;
+    static simsignal_t voIPJitterSignal_;
+    static simsignal_t voIPReceivedThroughputSignal_;
 
-    virtual void finish() override;
+    void finish() override;
 
   protected:
 
-    virtual int numInitStages() const override { return inet::NUM_INIT_STAGES; }
+    int numInitStages() const override { return inet::NUM_INIT_STAGES; }
     void initialize(int stage) override;
-    void handleMessage(omnetpp::cMessage *msg) override;
-    double eModel(omnetpp::simtime_t delay, double loss);
+    void handleMessage(cMessage *msg) override;
+    double eModel(simtime_t delay, double loss);
     void playout(bool finish);
 };
 

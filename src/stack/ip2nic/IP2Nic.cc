@@ -28,7 +28,7 @@
 #include <inet/linklayer/common/InterfaceTag_m.h>
 
 #include "stack/ip2nic/IP2Nic.h"
-#include "stack/mac/layer/LteMacBase.h"
+#include "stack/mac/LteMacBase.h"
 #include "common/binder/Binder.h"
 #include "common/cellInfo/CellInfo.h"
 
@@ -42,53 +42,53 @@ Define_Module(IP2Nic);
 
 void IP2Nic::initialize(int stage)
 {
-    if (stage == inet::INITSTAGE_LOCAL)
-    {
+    if (stage == inet::INITSTAGE_LOCAL) {
         stackGateOut_ = gate("stackNic$o");
         ipGateOut_ = gate("upperLayerOut");
 
         setNodeType(par("nodeType").stdstringValue());
 
-        hoManager_ = nullptr;
+        hoManager_.reference(this, "handoverManagerModule", false);
 
         ueHold_ = false;
 
-        binder_ = getBinder();
+        binder_.reference(this, "binderModule", true);
 
-        dualConnectivityEnabled_ = getAncestorPar("dualConnectivityEnabled").boolValue();
+        NetworkInterface *nic = getContainingNicModule(this);
+        dualConnectivityEnabled_ = nic->par("dualConnectivityEnabled").boolValue();
         if (dualConnectivityEnabled_)
             sbTable_ = new SplitBearersTable();
 
-        if (nodeType_ == ENODEB || nodeType_ == GNODEB)
-        {
-            // TODO not so elegant
-            cModule *bs = getParentModule()->getParentModule();
-            MacNodeId masterId = getAncestorPar("masterId");
-            MacNodeId cellId = binder_->registerNode(bs, nodeType_,masterId);
+        if (nodeType_ == ENODEB || nodeType_ == GNODEB) {
+            // TODO: not so elegant
+            cModule *bs = getContainingNode(this);
+            MacNodeId masterId = MacNodeId(bs->par("masterId").intValue());
+            MacNodeId cellId = binder_->registerNode(bs, nodeType_, masterId);
             nodeId_ = cellId;
-            nrNodeId_ = 0;
+            nrNodeId_ = NODEID_NONE;
         }
     }
     else if (stage == INITSTAGE_PHYSICAL_ENVIRONMENT) {
-        if(nodeType_ == ENODEB || nodeType_ == GNODEB) {
+        if (nodeType_ == ENODEB || nodeType_ == GNODEB) {
             registerInterface();
-        } else if (nodeType_ == UE) {
-            cModule *ue = getParentModule()->getParentModule();
+        }
+        else if (nodeType_ == UE) {
+            cModule *ue = getContainingNode(this);
 
-            masterId_ = ue->par("masterId");
+            masterId_ = MacNodeId(ue->par("masterId").intValue());
             nodeId_ = binder_->registerNode(ue, nodeType_, masterId_);
 
-            if (ue->hasPar("nrMasterId") && (int)ue->par("nrMasterId") != 0)   // register also the NR MacNodeId
-            {
-                nrMasterId_ = ue->par("nrMasterId");
-                nrNodeId_ = binder_->registerNode(ue, nodeType_,nrMasterId_, true);
+            if (ue->hasPar("nrMasterId") && ue->par("nrMasterId").intValue() != 0) { // register also the NR MacNodeId
+                nrMasterId_ = MacNodeId(ue->par("nrMasterId").intValue());
+                nrNodeId_ = binder_->registerNode(ue, nodeType_, nrMasterId_, true);
             }
             else
-                nrNodeId_ = 0;
+                nrNodeId_ = NODEID_NONE;
 
             registerInterface();
-        } else {
-            throw cRuntimeError("unhandled node type: %i", nodeType_);
+        }
+        else {
+            throw cRuntimeError("Unhandled node type: %i", nodeType_);
         }
     }
     else if (stage == inet::INITSTAGE_STATIC_ROUTING) {
@@ -98,11 +98,11 @@ void IP2Nic::initialize(int stage)
             // otherwise we are not able to reach devices outside the cellular network
             if (NOW > 0) {
                 /**
-                 * TODO:might need a bit more care, if interface has changed, the query might, too
+                 * TODO: might need a bit more care, if the interface has changed, the query might, too
                  */
                 IIpv4RoutingTable *irt = getModuleFromPar<IIpv4RoutingTable>(
                         par("routingTableModule"), this);
-                Ipv4Route * defaultRoute = new Ipv4Route();
+                Ipv4Route *defaultRoute = new Ipv4Route();
                 defaultRoute->setDestination(
                         Ipv4Address(inet::Ipv4Address::UNSPECIFIED_ADDRESS));
                 defaultRoute->setNetmask(
@@ -120,60 +120,51 @@ void IP2Nic::initialize(int stage)
                 networkIf->setBroadcast(false);
             }
         }
-    } else if (stage == inet::INITSTAGE_TRANSPORT_LAYER) {
+    }
+    else if (stage == inet::INITSTAGE_TRANSPORT_LAYER) {
         registerMulticastGroups();
     }
 }
 
-
 void IP2Nic::handleMessage(cMessage *msg)
 {
-    if( nodeType_ == ENODEB || nodeType_ == GNODEB)
-    {
+    if (nodeType_ == ENODEB || nodeType_ == GNODEB) {
         // message from IP Layer: send to stack
-        if (msg->getArrivalGate()->isName("upperLayerIn"))
-        {
+        if (msg->getArrivalGate()->isName("upperLayerIn")) {
             auto ipDatagram = check_and_cast<Packet *>(msg);
             fromIpBs(ipDatagram);
         }
         // message from stack: send to peer
-        else if(msg->getArrivalGate()->isName("stackNic$i"))
-        {
+        else if (msg->getArrivalGate()->isName("stackNic$i")) {
             auto pkt = check_and_cast<Packet *>(msg);
             pkt->removeTagIfPresent<SocketInd>();
-    		removeAllSimu5GTags(pkt);
+            removeAllSimu5GTags(pkt);
 
             toIpBs(pkt);
         }
-        else
-        {
+        else {
             // error: drop message
             EV << "IP2Nic::handleMessage - (E/GNODEB): Wrong gate " << msg->getArrivalGate()->getName() << endl;
             delete msg;
         }
     }
-
-    else if( nodeType_ == UE )
-    {
+    else if (nodeType_ == UE) {
         // message from transport: send to stack
-        if (msg->getArrivalGate()->isName("upperLayerIn"))
-        {
+        if (msg->getArrivalGate()->isName("upperLayerIn")) {
 
             auto ipDatagram = check_and_cast<Packet *>(msg);
             EV << "LteIp: message from transport: send to stack" << endl;
             fromIpUe(ipDatagram);
         }
-        else if(msg->getArrivalGate()->isName("stackNic$i"))
-        {
+        else if (msg->getArrivalGate()->isName("stackNic$i")) {
             // message from stack: send to transport
             EV << "LteIp: message from stack: send to transport" << endl;
             auto pkt = check_and_cast<Packet *>(msg);
             pkt->removeTagIfPresent<SocketInd>();
-    		removeAllSimu5GTags(pkt);
-    		toIpUe(pkt);
+            removeAllSimu5GTags(pkt);
+            toIpUe(pkt);
         }
-        else
-        {
+        else {
             // error: drop message
             EV << "IP2Nic (UE): Wrong gate " << msg->getArrivalGate()->getName() << endl;
             delete msg;
@@ -181,17 +172,15 @@ void IP2Nic::handleMessage(cMessage *msg)
     }
 }
 
-
 void IP2Nic::setNodeType(std::string s)
 {
     nodeType_ = aToNodeType(s);
     EV << "Node type: " << s << " -> " << nodeType_ << endl;
 }
 
-
-void IP2Nic::fromIpUe(Packet * datagram)
+void IP2Nic::fromIpUe(Packet *datagram)
 {
-    EV << "IP2Nic::fromIpUe - message from IP layer: send to stack: "  << datagram->str() << std::endl;
+    EV << "IP2Nic::fromIpUe - message from IP layer: send to stack: " << datagram->str() << std::endl;
     // Remove control info from IP datagram
     datagram->removeTagIfPresent<SocketInd>();
     removeAllSimu5GTags(datagram);
@@ -199,15 +188,12 @@ void IP2Nic::fromIpUe(Packet * datagram)
     // Remove InterfaceReq Tag (we already are on an interface now)
     datagram->removeTagIfPresent<InterfaceReq>();
 
-    if (ueHold_)
-    {
+    if (ueHold_) {
         // hold packets until handover is complete
         ueHoldFromIp_.push_back(datagram);
     }
-    else
-    {
-        if (masterId_ == 0 && nrMasterId_ == 0)  // UE is detached
-        {
+    else {
+        if (masterId_ == NODEID_NONE && nrMasterId_ == NODEID_NONE) { // UE is detached
             EV << "IP2Nic::fromIpUe - UE is not attached to any serving node. Delete packet." << endl;
             delete datagram;
         }
@@ -216,16 +202,16 @@ void IP2Nic::fromIpUe(Packet * datagram)
     }
 }
 
-void IP2Nic::toStackUe(Packet * pkt)
+void IP2Nic::toStackUe(Packet *pkt)
 {
     auto ipHeader = pkt->peekAtFront<Ipv4Header>();
-    auto srcAddr  = ipHeader->getSrcAddress();
+    auto srcAddr = ipHeader->getSrcAddress();
     auto destAddr = ipHeader->getDestAddress();
     short int tos = ipHeader->getTypeOfService();
     int headerSize = ipHeader->getHeaderLength().get();
     int transportProtocol = ipHeader->getProtocolId();
 
-    // TODO Add support to IPv6 (=> see L3Tools.cc of INET)
+    // TODO: Add support for IPv6 (=> see L3Tools.cc of INET)
 
     // inspect packet depending on the transport protocol type
     // TODO: needs refactoring (redundant code, see toStackBs())
@@ -247,17 +233,16 @@ void IP2Nic::toStackUe(Packet * pkt)
     printControlInfo(pkt);
 
     // mark packet for using NR
-    if (!markPacket(pkt->getTagForUpdate<FlowControlInfo>()))
-    {
+    if (!markPacket(pkt->getTagForUpdate<FlowControlInfo>())) {
         EV << "IP2Nic::toStackUe - UE is not attached to any serving node. Delete packet." << endl;
         delete pkt;
     }
 
-    //** Send datagram to lte stack or LteIp peer **
-    send(pkt,stackGateOut_);
+    //** Send datagram to LTE stack or LteIp peer **
+    send(pkt, stackGateOut_);
 }
 
-void IP2Nic::prepareForIpv4(Packet *datagram, const Protocol *protocol){
+void IP2Nic::prepareForIpv4(Packet *datagram, const Protocol *protocol) {
     // add DispatchProtocolRequest so that the packet is handled by the specified protocol
     datagram->addTagIfAbsent<DispatchProtocolReq>()->setProtocol(protocol);
     datagram->addTagIfAbsent<PacketProtocolTag>()->setProtocol(protocol);
@@ -273,10 +258,10 @@ void IP2Nic::toIpUe(Packet *pkt)
     networkProtocolInd->setNetworkProtocolHeader(ipHeader);
     prepareForIpv4(pkt);
     EV << "IP2Nic::toIpUe - message from stack: send to IP layer" << endl;
-    send(pkt,ipGateOut_);
+    send(pkt, ipGateOut_);
 }
 
-void IP2Nic::fromIpBs(Packet * pkt)
+void IP2Nic::fromIpBs(Packet *pkt)
 {
     EV << "IP2Nic::fromIpBs - message from IP layer: send to stack" << endl;
     // Remove control info from IP datagram
@@ -286,26 +271,23 @@ void IP2Nic::fromIpBs(Packet * pkt)
     // Remove InterfaceReq Tag (we already are on an interface now)
     pkt->removeTagIfPresent<InterfaceReq>();
 
-    // TODO Add support to Ipv6
+    // TODO: Add support for IPv6
     auto ipHeader = pkt->peekAtFront<Ipv4Header>();
     const Ipv4Address& destAddr = ipHeader->getDestAddress();
 
     // handle "forwarding" of packets during handover
     MacNodeId destId = binder_->getMacNodeId(destAddr);
-    if (hoForwarding_.find(destId) != hoForwarding_.end())
-    {
+    if (hoForwarding_.find(destId) != hoForwarding_.end()) {
         // data packet must be forwarded (via X2) to another eNB
         MacNodeId targetEnb = hoForwarding_.at(destId);
         sendTunneledPacketOnHandover(pkt, targetEnb);
         return;
     }
 
-    // handle incoming packets destined to UEs that is completing handover
-    if (hoHolding_.find(destId) != hoHolding_.end())
-    {
+    // handle incoming packets destined to UEs that are completing handover
+    if (hoHolding_.find(destId) != hoHolding_.end()) {
         // hold packets until handover is complete
-        if (hoFromIp_.find(destId) == hoFromIp_.end())
-        {
+        if (hoFromIp_.find(destId) == hoFromIp_.end()) {
             IpDatagramQueue queue;
             hoFromIp_[destId] = queue;
         }
@@ -317,7 +299,7 @@ void IP2Nic::fromIpBs(Packet * pkt)
     toStackBs(pkt);
 }
 
-void IP2Nic::toIpBs(Packet* pkt)
+void IP2Nic::toIpBs(Packet *pkt)
 {
     auto ipHeader = pkt->peekAtFront<Ipv4Header>();
     auto networkProtocolInd = pkt->addTagIfAbsent<NetworkProtocolInd>();
@@ -325,21 +307,20 @@ void IP2Nic::toIpBs(Packet* pkt)
     networkProtocolInd->setNetworkProtocolHeader(ipHeader);
     prepareForIpv4(pkt, &LteProtocol::ipv4uu);
     EV << "IP2Nic::toIpBs - message from stack: send to IP layer" << endl;
-    send(pkt,ipGateOut_);
+    send(pkt, ipGateOut_);
 }
 
-void IP2Nic::toStackBs(Packet* pkt)
+void IP2Nic::toStackBs(Packet *pkt)
 {
     EV << "IP2Nic::toStackBs - packet is forwarded to stack" << endl;
     auto ipHeader = pkt->peekAtFront<Ipv4Header>();
     int transportProtocol = ipHeader->getProtocolId();
-    auto srcAddr  = ipHeader->getSrcAddress();
+    auto srcAddr = ipHeader->getSrcAddress();
     auto destAddr = ipHeader->getDestAddress();
     short int tos = ipHeader->getTypeOfService();
     int headerSize = ipHeader->getHeaderLength().get();
 
-    switch(transportProtocol)
-    {
+    switch (transportProtocol) {
         case IP_PROT_TCP: {
             auto tcpHeader = pkt->peekDataAt<tcp::TcpHeader>(ipHeader->getChunkLength());
             headerSize += B(tcpHeader->getHeaderLength()).get();
@@ -361,20 +342,17 @@ void IP2Nic::toStackBs(Packet* pkt)
     pkt->addTagIfAbsent<FlowControlInfo>()->setHeaderSize(headerSize);
 
     // mark packet for using NR
-    if (!markPacket(pkt->getTagForUpdate<FlowControlInfo>()))
-    {
+    if (!markPacket(pkt->getTagForUpdate<FlowControlInfo>())) {
         EV << "IP2Nic::toStackBs - UE is not attached to any serving node. Delete packet." << endl;
         delete pkt;
     }
-    else
-    {
+    else {
         printControlInfo(pkt);
-        send(pkt,stackGateOut_);
+        send(pkt, stackGateOut_);
     }
 }
 
-
-void IP2Nic::printControlInfo(Packet* pkt)
+void IP2Nic::printControlInfo(Packet *pkt)
 {
     EV << "Src IP : " << Ipv4Address(pkt->getTag<FlowControlInfo>()->getSrcAddr()) << endl;
     EV << "Dst IP : " << Ipv4Address(pkt->getTag<FlowControlInfo>()->getDstAddr()) << endl;
@@ -391,9 +369,9 @@ void IP2Nic::registerInterface()
 
     networkIf = getContainingNicModule(this);
     networkIf->setInterfaceName(par("interfaceName").stdstringValue().c_str());
-    // TODO configure MTE size from NED
+    // TODO: configure MTE size from NED
     networkIf->setMtu(1500);
-    //disable broadcast (not supported in cellularNic), enable multicast
+    // Disable broadcast (not supported in cellular NIC), enable multicast
     networkIf->setBroadcast(false);
     networkIf->setMulticast(true);
     networkIf->setLoopback(false);
@@ -410,15 +388,14 @@ void IP2Nic::registerInterface()
 void IP2Nic::registerMulticastGroups()
 {
     // get all the multicast addresses where the node is enrolled
-    NetworkInterface* iface;
+    NetworkInterface *iface;
     IInterfaceTable *ift = getModuleFromPar<IInterfaceTable>(par("interfaceTableModule"), this);
     if (!ift)
         return;
     iface = ift->findInterfaceByName(par("interfaceName").stdstringValue().c_str());
     unsigned int numOfAddresses = iface->getProtocolData<Ipv4InterfaceData>()->getNumOfJoinedMulticastGroups();
 
-    for (unsigned int i=0; i<numOfAddresses; ++i)
-    {
+    for (unsigned int i = 0; i < numOfAddresses; ++i) {
         Ipv4Address addr = iface->getProtocolData<Ipv4InterfaceData>()->getJoinedMulticastGroup(i);
         // get the group id and add it to the binder
         uint32_t address = addr.getInt();
@@ -426,38 +403,36 @@ void IP2Nic::registerMulticastGroups()
         uint32_t groupId = address & mask;
         binder_->registerMulticastGroup(nodeId_, groupId);
         // register also the NR stack, if any
-        if (nrNodeId_ > 0)
+        if (nrNodeId_ != NODEID_NONE)
             binder_->registerMulticastGroup(nrNodeId_, groupId);
     }
 }
 
 bool IP2Nic::markPacket(inet::Ptr<FlowControlInfo> ci)
 {
-    // In the current version, the Ip2Nic module of the master eNB (the UE) selects which path
+    // In the current version, the IP2Nic module of the master eNB (the UE) selects which path
     // to follow based on the Type of Service (TOS) field:
     // - use master eNB if tos < 10
     // - use secondary gNB if 10 <= tos < 20
     // - use split bearer if tos >= 20
     //
-    // To change the policy, change the implementation of the Ip2Nic::markPacket() function
+    // To change the policy, change the implementation of the IP2Nic::markPacket() function
     //
     // TODO use a better policy
     // TODO make it configurable from INI or XML?
 
-    if (nodeType_ == ENODEB || nodeType_ == GNODEB)
-    {
+    if (nodeType_ == ENODEB || nodeType_ == GNODEB) {
         MacNodeId ueId = binder_->getMacNodeId((Ipv4Address)ci->getDstAddr());
         MacNodeId nrUeId = binder_->getNrMacNodeId((Ipv4Address)ci->getDstAddr());
-        bool ueLteStack = (binder_->getNextHop(ueId) > 0) ? true:false;
-        bool ueNrStack = (binder_->getNextHop(nrUeId) > 0) ? true:false;
+        bool ueLteStack = (binder_->getNextHop(ueId) != NODEID_NONE);
+        bool ueNrStack = (binder_->getNextHop(nrUeId) != NODEID_NONE);
 
-        if (dualConnectivityEnabled_ && ueLteStack && ueNrStack && ci->getTypeOfService() >= 20)  // use split bearer TODO fix threshold
-        {
+        if (dualConnectivityEnabled_ && ueLteStack && ueNrStack && ci->getTypeOfService() >= 20) { // use split bearer TODO fix threshold
             // even packets go through the LTE eNodeB
             // odd packets go through the gNodeB
 
             int sentPackets;
-            if ((sentPackets = sbTable_->find_entry(ci->getSrcAddr(), ci->getDstAddr(), ci->getTypeOfService()) ) < 0)
+            if ((sentPackets = sbTable_->find_entry(ci->getSrcAddr(), ci->getDstAddr(), ci->getTypeOfService())) < 0)
                 sentPackets = sbTable_->create_entry(ci->getSrcAddr(), ci->getDstAddr(), ci->getTypeOfService());
 
             if (sentPackets % 2 == 0)
@@ -465,13 +440,11 @@ bool IP2Nic::markPacket(inet::Ptr<FlowControlInfo> ci)
             else
                 ci->setUseNR(true);
         }
-        else
-        {
-            if (ueLteStack && ueNrStack)
-            {
-                if (ci->getTypeOfService() >= 10)   // use secondary cell group bearer TODO fix threshold
+        else {
+            if (ueLteStack && ueNrStack) {
+                if (ci->getTypeOfService() >= 10)                                                     // use secondary cell group bearer TODO fix threshold
                     ci->setUseNR(true);
-                else                             // use master cell group bearer
+                else                                                  // use master cell group bearer
                     ci->setUseNR(false);
             }
             else if (ueLteStack)
@@ -483,14 +456,12 @@ bool IP2Nic::markPacket(inet::Ptr<FlowControlInfo> ci)
         }
     }
 
-    if (nodeType_ == UE)
-    {
-        bool ueLteStack = (binder_->getNextHop(nodeId_) > 0) ? true:false;
-        bool ueNrStack = (binder_->getNextHop(nrNodeId_) > 0) ? true:false;
-        if (dualConnectivityEnabled_ && ueLteStack && ueNrStack && ci->getTypeOfService() >= 20)  // use split bearer TODO fix threshold
-        {
+    if (nodeType_ == UE) {
+        bool ueLteStack = (binder_->getNextHop(nodeId_) != NODEID_NONE);
+        bool ueNrStack = (binder_->getNextHop(nrNodeId_) != NODEID_NONE);
+        if (dualConnectivityEnabled_ && ueLteStack && ueNrStack && ci->getTypeOfService() >= 20) { // use split bearer TODO fix threshold
             int sentPackets;
-            if ((sentPackets = sbTable_->find_entry(ci->getSrcAddr(), ci->getDstAddr(), ci->getTypeOfService()) ) < 0)
+            if ((sentPackets = sbTable_->find_entry(ci->getSrcAddr(), ci->getDstAddr(), ci->getTypeOfService())) < 0)
                 sentPackets = sbTable_->create_entry(ci->getSrcAddr(), ci->getDstAddr(), ci->getTypeOfService());
 
             if (sentPackets % 2 == 0)
@@ -498,18 +469,16 @@ bool IP2Nic::markPacket(inet::Ptr<FlowControlInfo> ci)
             else
                 ci->setUseNR(true);
         }
-        else
-        {
-            if (masterId_ == 0 && nrMasterId_ != 0)
+        else {
+            if (masterId_ == NODEID_NONE && nrMasterId_ != NODEID_NONE)
                 ci->setUseNR(true);
-            else if (masterId_ != 0 && nrMasterId_ == 0)
+            else if (masterId_ != NODEID_NONE && nrMasterId_ == NODEID_NONE)
                 ci->setUseNR(false);
-            else
-            {
+            else {
                 // both != 0
-                if (ci->getTypeOfService() >= 10)   // use secondary cell group bearer TODO fix threshold
+                if (ci->getTypeOfService() >= 10)                                                     // use secondary cell group bearer TODO fix threshold
                     ci->setUseNR(true);
-                else                                  // use master cell group bearer
+                else                                                       // use master cell group bearer
                     ci->setUseNR(false);
             }
         }
@@ -523,10 +492,10 @@ void IP2Nic::triggerHandoverSource(MacNodeId ueId, MacNodeId targetEnb)
 
     hoForwarding_[ueId] = targetEnb;
 
-    if (hoManager_ == nullptr)
-        hoManager_ = check_and_cast<LteHandoverManager*>(getParentModule()->getSubmodule("handoverManager"));
+    if (!hoManager_)
+        hoManager_.reference(this, "handoverManagerModule", true);
 
-    if (targetEnb != 0)
+    if (targetEnb != NODEID_NONE)
         hoManager_->sendHandoverCommand(ueId, targetEnb, true);
 }
 
@@ -538,22 +507,21 @@ void IP2Nic::triggerHandoverTarget(MacNodeId ueId, MacNodeId sourceEnb)
     hoHolding_.insert(ueId);
 }
 
-void IP2Nic::sendTunneledPacketOnHandover(Packet* datagram, MacNodeId targetEnb)
+void IP2Nic::sendTunneledPacketOnHandover(Packet *datagram, MacNodeId targetEnb)
 {
     EV << "IP2Nic::sendTunneledPacketOnHandover - destination is handing over to eNB " << targetEnb << ". Forward packet via X2." << endl;
-    if (hoManager_ == nullptr)
-        hoManager_ = check_and_cast<LteHandoverManager*>(getParentModule()->getSubmodule("handoverManager"));
+    if (!hoManager_)
+        hoManager_.reference(this, "handoverManagerModule", true);
     hoManager_->forwardDataToTargetEnb(datagram, targetEnb);
 }
 
-void IP2Nic::receiveTunneledPacketOnHandover(Packet* datagram, MacNodeId sourceEnb)
+void IP2Nic::receiveTunneledPacketOnHandover(Packet *datagram, MacNodeId sourceEnb)
 {
-    EV << "IP2lte::receiveTunneledPacketOnHandover - received packet via X2 from " << sourceEnb << endl;
+    EV << "IP2Nic::receiveTunneledPacketOnHandover - received packet via X2 from " << sourceEnb << endl;
     const auto& hdr = datagram->peekAtFront<Ipv4Header>();
     const Ipv4Address& destAddr = hdr->getDestAddress();
     MacNodeId destId = binder_->getMacNodeId(destAddr);
-    if (hoFromX2_.find(destId) == hoFromX2_.end())
-    {
+    if (hoFromX2_.find(destId) == hoFromX2_.end()) {
         IpDatagramQueue queue;
         hoFromX2_[destId] = queue;
     }
@@ -572,20 +540,18 @@ void IP2Nic::signalHandoverCompleteTarget(MacNodeId ueId, MacNodeId sourceEnb)
     Enter_Method("signalHandoverCompleteTarget");
 
     // signal the event to the source eNB
-    if (hoManager_ == nullptr)
-        hoManager_ = check_and_cast<LteHandoverManager*>(getParentModule()->getSubmodule("handoverManager"));
+    if (!hoManager_)
+        hoManager_.reference(this, "handoverManagerModule", true);
     hoManager_->sendHandoverCommand(ueId, sourceEnb, false);
 
     // send down buffered packets in the following order:
     // 1) packets received from X2
     // 2) packets received from IP
 
-    if (hoFromX2_.find(ueId) != hoFromX2_.end())
-    {
+    if (hoFromX2_.find(ueId) != hoFromX2_.end()) {
         IpDatagramQueue& queue = hoFromX2_[ueId];
-        while (!queue.empty())
-        {
-            Packet* pkt = queue.front();
+        while (!queue.empty()) {
+            Packet *pkt = queue.front();
             queue.pop_front();
 
             // send pkt down
@@ -595,12 +561,10 @@ void IP2Nic::signalHandoverCompleteTarget(MacNodeId ueId, MacNodeId sourceEnb)
         }
     }
 
-    if (hoFromIp_.find(ueId) != hoFromIp_.end())
-    {
+    if (hoFromIp_.find(ueId) != hoFromIp_.end()) {
         IpDatagramQueue& queue = hoFromIp_[ueId];
-        while (!queue.empty())
-        {
-            Packet* pkt = queue.front();
+        while (!queue.empty()) {
+            Packet *pkt = queue.front();
             queue.pop_front();
 
             // send pkt down
@@ -610,40 +574,34 @@ void IP2Nic::signalHandoverCompleteTarget(MacNodeId ueId, MacNodeId sourceEnb)
     }
 
     hoHolding_.erase(ueId);
-
 }
 
 void IP2Nic::triggerHandoverUe(MacNodeId newMasterId, bool isNr)
 {
     EV << NOW << " IP2Nic::triggerHandoverUe - start holding packets" << endl;
 
-    if (newMasterId!=0)
-    {
+    if (newMasterId != NODEID_NONE) {
         ueHold_ = true;
         if (isNr)
             nrMasterId_ = newMasterId;
         else
             masterId_ = newMasterId;
     }
-    else
-    {
+    else {
         if (isNr)
-            nrMasterId_ = 0;
+            nrMasterId_ = NODEID_NONE;
         else
-            masterId_ = 0;
+            masterId_ = NODEID_NONE;
     }
 }
-
 
 void IP2Nic::signalHandoverCompleteUe(bool isNr)
 {
     Enter_Method("signalHandoverCompleteUe");
 
-    if ( (!isNr && masterId_ != 0) || (isNr && nrMasterId_ != 0))
-    {
+    if ((!isNr && masterId_ != NODEID_NONE) || (isNr && nrMasterId_ != NODEID_NONE)) {
         // send held packets
-        while (!ueHoldFromIp_.empty())
-        {
+        while (!ueHoldFromIp_.empty()) {
             auto pkt = ueHoldFromIp_.front();
             ueHoldFromIp_.pop_front();
 
@@ -653,28 +611,22 @@ void IP2Nic::signalHandoverCompleteUe(bool isNr)
         }
         ueHold_ = false;
     }
-
 }
 
 IP2Nic::~IP2Nic()
 {
-    std::map<MacNodeId, IpDatagramQueue>::iterator it;
-    for (it = hoFromX2_.begin(); it != hoFromX2_.end(); ++it)
-    {
-        while (!it->second.empty())
-        {
-            Packet* pkt = it->second.front();
-            it->second.pop_front();
+    for (auto &[macNodeId, ipDatagramQueue] : hoFromX2_) {
+        while (!ipDatagramQueue.empty()) {
+            Packet *pkt = ipDatagramQueue.front();
+            ipDatagramQueue.pop_front();
             delete pkt;
         }
     }
 
-    for (it = hoFromIp_.begin(); it != hoFromIp_.end(); ++it)
-    {
-        while (!it->second.empty())
-        {
-            Packet* pkt = it->second.front();
-            it->second.pop_front();
+    for (auto &[macNodeId, ipDatagramQueue] : hoFromIp_) {
+        while (!ipDatagramQueue.empty()) {
+            Packet *pkt = ipDatagramQueue.front();
+            ipDatagramQueue.pop_front();
             delete pkt;
         }
     }
@@ -685,8 +637,7 @@ IP2Nic::~IP2Nic()
 
 void IP2Nic::finish()
 {
-    if (getSimulation()->getSimulationStage() != CTX_FINISH)
-    {
+    if (getSimulation()->getSimulationStage() != CTX_FINISH) {
         // do this only at deletion of the module during the simulation
         binder_->unregisterNode(nodeId_);
         binder_->unregisterNode(nrNodeId_);

@@ -28,57 +28,53 @@ class LteDrr : public LteScheduler
     struct DrrDesc
     {
         //! DRR quantum, in bytes.
-        unsigned int quantum_;
+        unsigned int quantum_ = 0;
         //! Deficit, in bytes.
-        unsigned int deficit_;
-        //! Flag indicating whether the connection consumed all the previous quantum and need another one
-        bool addQuantum_;
+        unsigned int deficit_ = 0;
+        //! Flag indicating whether the connection consumed all the previous quantum and needs another one.
+        bool addQuantum_ = true;
         //! True if this descriptor is in the active list.
-        bool active_;
+        bool active_ = false;
         //! True if this connection is eligible for service.
-        bool eligible_;
+        bool eligible_ = false;
 
         //! Create an inactive DRR descriptor.
         DrrDesc()
         {
-            quantum_ = 0;
-            deficit_ = 0;
-            addQuantum_ = true;
-            active_ = false;
-            eligible_ = false;
         }
     };
 
     typedef std::map<MacCid, DrrDesc> DrrDescMap;
     typedef CircularList<MacCid> ActiveList;
 
-    //! Deficit round-robin Active List
+    //! Deficit round-robin Active List.
     ActiveList activeList_;
 
-    //! Deficit round-robin Active List. Temporary variable used in the two phase scheduling operations
+    //! Deficit round-robin Active List. Temporary variable used in the two-phase scheduling operations.
     ActiveList activeTempList_;
 
     //! Deficit round-robin descriptor per-connection map.
     DrrDescMap drrMap_;
 
-    //! Deficit round-robin descriptor per-connection map. Temporary variable used in the two phase scheduling operations
+    //! Deficit round-robin descriptor per-connection map. Temporary variable used in the two-phase scheduling operations.
     DrrDescMap drrTempMap_;
 
   public:
+    LteDrr(Binder *binder) : LteScheduler(binder) {}
 
     // Scheduling functions ********************************************************************
 
     //virtual void schedule ();
 
-    virtual void prepareSchedule();
+    void prepareSchedule() override;
 
-    virtual void commitSchedule();
+    void commitSchedule() override;
 
     // *****************************************************************************************
 
-    void notifyActiveConnection(MacCid cid);
+    void notifyActiveConnection(MacCid cid) override;
 
-    void updateSchedulingInfo();
+    void updateSchedulingInfo() override;
 };
 
 } //namespace

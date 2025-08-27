@@ -13,12 +13,19 @@
 package simu5g.stack.mac;
 
 //
-// eNodeB MAC layer of LTE stack
+// This module extends the ~LteMacBase module by providing specific MAC functions
+// on the eNodeB side. Specifically, it initializes and manages the scheduling classes
+// responsible for resource allocation operations in both uplink and downlink directions,
+// while also supporting Carrier Aggregation (CA).
+// It manages the Random Access procedure (RAC) and the reception of Buffer Status
+// Reports (BSRs) from UEs, as well as the transmission of scheduling grants to UEs allocated
+// within the uplink bandwidth. For downlink connections, it notifies the Radio Link Control (RLC)
+// layer when it is ready to receive MAC Service Data Units (SDUs) to build MAC
+// Protocol Data Units (PDUs) and transmit them to the physical layer.
 //
 simple LteMacEnb extends LteMacBase
 {
     parameters:
-
         @class("LteMacEnb");
 
         //# volatile xml optSolution = default(xmldoc("solution.sol"));
@@ -32,9 +39,6 @@ simple LteMacEnb extends LteMacBase
 
         // AMC Mode:  "auto", "piloted", "multi", "das", "D2D"
         string amcMode @enum(AUTO,D2D) = default("AUTO");
-
-        //Min disance used to pair two MuMimo UE
-        int muMimoMinDistance = default(50);
 
         // resource allocation type ("distributed" or "localized")
         string rbAllocationType @enum(distributed,localized) = default("localized");
@@ -74,6 +78,10 @@ simple LteMacEnb extends LteMacBase
         double pfAlpha = default(0.95);
 
         string pilotMode @enum(IN_CQI,MAX_CQI,AVG_CQI,MEDIAN_CQI,ROBUST_CQI) = default("ROBUST_CQI");
+
+        string cellInfoModule;
+        string rlcUmModule = default("^.rlc.um");
+        string pdcpRrcModule = default("^.pdcpRrc");
 
         //#
         //# Statistics related to resource blocks occupancy

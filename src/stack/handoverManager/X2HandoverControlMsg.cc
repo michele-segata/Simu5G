@@ -10,8 +10,10 @@
 //
 
 #include "X2HandoverControlMsg.h"
+
+#include <inet/common/packet/serializer/ChunkSerializerRegistry.h>
+
 #include "x2/packet/LteX2MsgSerializer.h"
-#include "inet/common/packet/serializer/ChunkSerializerRegistry.h"
 
 namespace simu5g {
 
@@ -21,29 +23,26 @@ using namespace inet;
 Register_Serializer(X2HandoverControlMsg, LteX2MsgSerializer);
 
 X2HandoverControlMsg::X2HandoverControlMsg() :
-        LteX2Message() {
+    LteX2Message() {
     type_ = X2_HANDOVER_CONTROL_MSG;
 }
 
 X2HandoverControlMsg::X2HandoverControlMsg(const X2HandoverControlMsg& other) :
-        LteX2Message() {
+    LteX2Message() {
     operator=(other);
 }
 
-X2HandoverControlMsg& X2HandoverControlMsg::operator=(
-        const X2HandoverControlMsg& other) {
+X2HandoverControlMsg& X2HandoverControlMsg::operator=(const X2HandoverControlMsg& other) {
     if (&other == this)
         return *this;
     LteX2Message::operator=(other);
     return *this;
 }
 
-X2HandoverControlMsg* X2HandoverControlMsg::dup() const {
+X2HandoverControlMsg *X2HandoverControlMsg::dup() const {
     return new X2HandoverControlMsg(*this);
 }
 
-X2HandoverControlMsg::~X2HandoverControlMsg() {
-}
 
 } //namespace
 

@@ -21,7 +21,7 @@ namespace simu5g {
  * @class X2HandoverControlMsg
  *
  * Class derived from LteX2Message
- * It defines the message exchanged between Handover managers
+ * It defines the messages exchanged between Handover managers
  */
 class X2HandoverControlMsg : public LteX2Message
 {
@@ -34,9 +34,8 @@ class X2HandoverControlMsg : public LteX2Message
 
     X2HandoverControlMsg& operator=(const X2HandoverControlMsg& other);
 
-    virtual X2HandoverControlMsg* dup() const;
+    X2HandoverControlMsg *dup() const override;
 
-    virtual ~X2HandoverControlMsg();
 };
 
 } //namespace

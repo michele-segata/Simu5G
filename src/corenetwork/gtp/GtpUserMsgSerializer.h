@@ -12,7 +12,7 @@
 #ifndef __INET_GTPUSERMSGSERIALIZER_H
 #define __INET_GTPUSERMSGSERIALIZER_H
 
-#include "inet/common/packet/serializer/FieldsChunkSerializer.h"
+#include <inet/common/packet/serializer/FieldsChunkSerializer.h>
 
 namespace simu5g {
 
@@ -22,13 +22,11 @@ namespace simu5g {
 class GtpUserMsgSerializer : public inet::FieldsChunkSerializer
 {
   protected:
-    virtual void serialize(inet::MemoryOutputStream& stream, const inet::Ptr<const inet::Chunk>& chunk) const override;
-    virtual const inet::Ptr<inet::Chunk> deserialize(inet::MemoryInputStream& stream) const override;
-
-  public:
-    GtpUserMsgSerializer() : FieldsChunkSerializer() {}
+    void serialize(inet::MemoryOutputStream& stream, const inet::Ptr<const inet::Chunk>& chunk) const override;
+    const inet::Ptr<inet::Chunk> deserialize(inet::MemoryInputStream& stream) const override;
 };
 
 } //namespace
 
 #endif // ifndef __INET_GTPUSERMSGSERIALIZER_H
+

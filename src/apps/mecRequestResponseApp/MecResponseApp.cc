@@ -13,7 +13,7 @@
 
 namespace simu5g {
 
-simsignal_t MecResponseApp::recvRequestSno_ = registerSignal("recvRequestSno");
+simsignal_t MecResponseApp::recvRequestSnoSignal_ = registerSignal("recvRequestSno");
 
 Define_Module(MecResponseApp);
 
@@ -22,13 +22,11 @@ void MecResponseApp::initialize(int stage)
     EV << "MecResponseApp::initialize - stage " << stage << endl;
 
     cSimpleModule::initialize(stage);
-    if (stage == inet::INITSTAGE_APPLICATION_LAYER)
-    {
+    if (stage == inet::INITSTAGE_APPLICATION_LAYER) {
         coreNetworkDelay_ = par("coreNetworkDelay");
         int port = par("localPort");
         EV << "CbrReceiver::initialize - binding to port: local:" << port << endl;
-        if (port != -1)
-        {
+        if (port != -1) {
             socket.setOutputGate(gate("socketOut"));
             socket.bind(port);
             int tos = par("tos");
@@ -41,62 +39,54 @@ void MecResponseApp::initialize(int stage)
 void MecResponseApp::handleMessage(cMessage *msg)
 {
     EV << "MecResponseApp::handleMessage - \n";
-     if (msg->isSelfMessage())
+    if (msg->isSelfMessage())
         sendResponse(msg);
     else
         handleRequest(msg);
 }
 
-
-void MecResponseApp::handleRequest(cMessage* msg)
+void MecResponseApp::handleRequest(cMessage *msg)
 {
-    inet::Packet* packet = check_and_cast<inet::Packet*>(msg);
-    if (packet == 0)
-        throw cRuntimeError("MecResponseApp::handleRequest - FATAL! Error when casting to inet packet");
+    inet::Packet *packet = check_and_cast<inet::Packet *>(msg);
     packet->removeControlInfo();
 
     auto reqPkt = packet->peekAtFront<MecRequestResponsePacket>();
 
-    simtime_t delay = simTime()-reqPkt->getReqTimestamp();
+    simtime_t delay = simTime() - reqPkt->getReqTimestamp();
     int bits = (reqPkt->getChunkLength().get()) * 8;
-    EV << simTime() << "MecResponseApp::handleRequest - Received packet with number " << reqPkt->getSno() << ": delay: "<< delay << endl;
+    EV << simTime() << "MecResponseApp::handleRequest - Received packet with number " << reqPkt->getSno() << ": delay: " << delay << endl;
 
     unsigned int ueAppId = reqPkt->getAppId();
-    unsigned ueBsId = reqPkt->getBsId();
+    MacNodeId ueBsId = reqPkt->getBsId();
 
     double responseTime = 0.0;
-    if (ueAppId != ueBsId)
-    {
+    if (ueAppId != num(ueBsId)) {  //TODO type mismatch
         // add delay
         responseTime += uniform(0.015, 0.035);
     }
 
     // extract random response time according to some distribution (paper INTEL)
-    int cyclesPerBit = intuniform(100,300);
+    int cyclesPerBit = intuniform(100, 300);
     long long int cpuFreq = 9000000000;  // 9 Gcycles/sec
-    responseTime += double(bits * cyclesPerBit)/cpuFreq;
+    responseTime += double(bits * cyclesPerBit) / cpuFreq;
 
     EV << simTime() << "MecResponseApp::handleRequest - sending response in " << responseTime << " seconds " << endl;
 
     scheduleAt(simTime() + responseTime, packet);
 
-    emit(recvRequestSno_, (long)reqPkt->getSno());
+    emit(recvRequestSnoSignal_, (long)reqPkt->getSno());
 }
 
-void MecResponseApp::sendResponse(cMessage* msg)
+void MecResponseApp::sendResponse(cMessage *msg)
 {
-    inet::Packet* packet = check_and_cast<inet::Packet*>(msg);
-    if (packet == 0)
-        throw cRuntimeError("MecResponseApp::sendResponse - FATAL! Error when casting to inet packet");
-
+    inet::Packet *packet = check_and_cast<inet::Packet *>(msg);
     auto pkt = packet->popAtFront<MecRequestResponsePacket>();
     auto respPkt = inet::makeShared<MecRequestResponsePacket>();
 
-    char* reqSourceAddress = new char[strlen(pkt->getSrcAddress())+1];
-    strcpy(reqSourceAddress, pkt->getSrcAddress());
+    const char *reqSourceAddress = pkt->getSrcAddress();
     int reqSourcePort = pkt->getSrcPort();
 
-    EV << simTime() << "MecResponseApp::sendResponse - Send response for packet with number " << pkt->getSno() << " to " << reqSourceAddress << "(port " << reqSourcePort << ")" << endl;
+    EV << simTime() << "MecResponseApp::sendResponse - Sending response for packet with number " << pkt->getSno() << " to " << reqSourceAddress << "(port " << reqSourcePort << ")" << endl;
 
     respPkt->setRespTimestamp(simTime().dbl());
     respPkt->setSrcAddress(pkt->getDestAddress());

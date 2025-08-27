@@ -24,24 +24,22 @@ class UserTxParams;
 
 class LteSchedulingGrant : public LteSchedulingGrant_Base
 {
-private:
+  private:
     void copy(const LteSchedulingGrant& other) {
-        if (other.userTxParams != nullptr)
-        {
-            const UserTxParams* txParams = check_and_cast<const UserTxParams*>(other.userTxParams);
-            userTxParams = txParams->dup();
+        if (other.userTxParams != nullptr) {
+            userTxParams = other.userTxParams->dup();
         }
-        else
-        {
+        else {
             userTxParams = nullptr;
         }
         grantedBlocks = other.grantedBlocks;
         grantedCwBytes = other.grantedCwBytes;
         direction_ = other.direction_;
     }
+
   protected:
 
-    const UserTxParams* userTxParams;
+    const UserTxParams *userTxParams = nullptr;
     RbMap grantedBlocks;
     std::vector<unsigned int> grantedCwBytes;
     Direction direction_;
@@ -50,21 +48,14 @@ private:
   public:
 
     LteSchedulingGrant() :
-        LteSchedulingGrant_Base()
+        LteSchedulingGrant_Base(),  grantId(getChunkId())
     {
-        userTxParams = nullptr;
         grantedCwBytes.resize(MAX_CODEWORDS);
-
-        grantId = getChunkId();
     }
 
-    ~LteSchedulingGrant()
+    ~LteSchedulingGrant() override
     {
-        if (userTxParams != nullptr)
-        {
-            delete userTxParams;
-            userTxParams = nullptr;
-        }
+        delete userTxParams;
     }
 
     LteSchedulingGrant(const LteSchedulingGrant& other) : LteSchedulingGrant_Base(other)
@@ -80,26 +71,26 @@ private:
         return *this;
     }
 
-    virtual LteSchedulingGrant *dup() const override
+    LteSchedulingGrant *dup() const override
     {
         return new LteSchedulingGrant(*this);
     }
 
-    void setUserTxParams(const UserTxParams* arg)
+    void setUserTxParams(const UserTxParams *arg)
     {
-        if(userTxParams){
+        if (userTxParams) {
             delete userTxParams;
         }
         userTxParams = arg;
     }
 
-    const UserTxParams* getUserTxParams() const
+    const UserTxParams *getUserTxParams() const
     {
         return userTxParams;
     }
 
     const unsigned int getBlocks(Remote antenna, Band b) const
-        {
+    {
         return grantedBlocks.at(antenna).at(b);
     }
 
@@ -118,30 +109,35 @@ private:
         grantedBlocks = rbMap;
     }
 
-    virtual void setGrantedCwBytesArraySize(size_t size) override
+    void setGrantedCwBytesArraySize(size_t size) override
     {
         grantedCwBytes.resize(size);
     }
-    virtual size_t getGrantedCwBytesArraySize() const override
+
+    size_t getGrantedCwBytesArraySize() const override
     {
         return grantedCwBytes.size();
     }
-    virtual unsigned int getGrantedCwBytes(size_t k) const override
+
+    unsigned int getGrantedCwBytes(size_t k) const override
     {
         return grantedCwBytes.at(k);
     }
-    virtual void setGrantedCwBytes(size_t k, unsigned int grantedCwBytes_var) override
+
+    void setGrantedCwBytes(size_t k, unsigned int grantedCwBytes_var) override
     {
         grantedCwBytes[k] = grantedCwBytes_var;
     }
 
-    virtual void appendGrantedCwBytes(unsigned int grantedCwBytes) override {
+    void appendGrantedCwBytes(unsigned int grantedCwBytes) override {
         throw cRuntimeError("insertGrantedCwBytes not implemented");
     }
-    virtual void insertGrantedCwBytes(size_t k, unsigned int grantedCwBytes) override {
+
+    void insertGrantedCwBytes(size_t k, unsigned int grantedCwBytes) override {
         throw cRuntimeError("insertGrantedCwBytes not implemented");
     }
-    virtual void eraseGrantedCwBytes(size_t k) override {
+
+    void eraseGrantedCwBytes(size_t k) override {
         throw cRuntimeError("eraseGrantedCwBytes not implemented");
     }
 
@@ -149,12 +145,13 @@ private:
     {
         direction_ = dir;
     }
+
     Direction getDirection() const
     {
         return direction_;
     }
 
-    unsigned int getGrandId() const
+    unsigned int getGrantId() const
     {
         return grantId;
     }
@@ -164,3 +161,4 @@ private:
 } //namespace
 
 #endif // _LTESCHEDULINGGRANT_H_
+

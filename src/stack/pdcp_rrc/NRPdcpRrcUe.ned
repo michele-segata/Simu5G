@@ -9,11 +9,12 @@
 // and cannot be removed from it.
 //
 
-
 package simu5g.stack.pdcp_rrc;
 
 //
-// UE PDCP/RRC layer of NR stack
+// The NRPdcpRrcUe module implements the PDCP/RRC layer for an NR NIC employed at
+// a User Equipment. It extends the ~LtePdcpRrcUeD2D module to enable Dual Connectivity
+// and Split Bearer functionalities at the UE.
 //
 simple NRPdcpRrcUe extends LtePdcpRrcUeD2D
 {

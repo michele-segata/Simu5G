@@ -23,18 +23,17 @@ namespace simu5g {
  *
  * Class derived from base class contained
  * in msg declaration: define common fields for UM/AM PDU
- * A Data PDU contains a list of SDUs: a SDU can be
+ * A Data PDU contains a list of SDUs: an SDU can be
  * a whole SDU or a fragment
  */
-class LteRlcDataPdu : public LteRlcDataPdu_Base {
-private:
+class LteRlcDataPdu : public LteRlcDataPdu_Base
+{
+  private:
     void copy(const LteRlcDataPdu& other) {
-        // "the copy constructor of a container should dup() the owned objects and take() the copies"
+        // "The copy constructor of a container should dup() the owned objects and take() the copies"
         sduList_.clear();
-        RlcSduList::const_iterator sit;
-        for (sit = other.sduList_.begin(); sit != other.sduList_.end(); ++sit)
-        {
-            auto newPkt = (*sit)->dup();
+        for (const auto& sdu : other.sduList_) {
+            auto newPkt = sdu->dup();
             take(newPkt);
             sduList_.push_back(newPkt);
         }
@@ -44,25 +43,26 @@ private:
         pduSequenceNumber_ = other.pduSequenceNumber_;
         rlcPduLength_ = other.rlcPduLength_;
     }
-protected:
+
+  protected:
 
     /// List Of MAC SDUs
     RlcSduList sduList_;
     RlcSduListSizes sduSizes_;
 
-    // number of SDU stored in the message
-    unsigned int numSdu_;
+    // number of SDUs stored in the message
+    unsigned int numSdu_ = 0;
 
     // define the segmentation info for the PDU
-    FramingInfo fi_;
+    FramingInfo fi_ = 0;
 
     // Sequence number of the PDU
-    unsigned int pduSequenceNumber_;
+    unsigned int pduSequenceNumber_ = 0;
 
     // Length of the PDU
-    int64_t rlcPduLength_;
+    int64_t rlcPduLength_ = 0;
 
-public:
+  public:
 
     /**
      * Constructor
@@ -70,19 +70,13 @@ public:
     LteRlcDataPdu() : LteRlcDataPdu_Base()
     {
         this->setChunkLength(inet::b(1));
-        numSdu_ = 0;
-        pduSequenceNumber_ = 0;
-        fi_ = 0;
-        rlcPduLength_ = 0;
     }
 
-    virtual ~LteRlcDataPdu()
+    ~LteRlcDataPdu() override
     {
-
         // Needs to delete all contained packets
-        RlcSduList::iterator sit;
-        for (sit = sduList_.begin(); sit != sduList_.end(); sit++)
-            dropAndDelete(*sit);
+        for (auto& sdu : sduList_)
+            dropAndDelete(sdu);
     }
 
     LteRlcDataPdu(const LteRlcDataPdu& other) : LteRlcDataPdu_Base(other)
@@ -100,7 +94,7 @@ public:
         return *this;
     }
 
-    virtual LteRlcDataPdu *dup() const override
+    LteRlcDataPdu *dup() const override
     {
         return new LteRlcDataPdu(*this);
     }
@@ -113,25 +107,25 @@ public:
 
     unsigned int getNumSdu() const { return numSdu_; }
 
-    // @author Alessandro noferi
-    virtual const RlcSduList* getRlcSduList()
+    // @author Alessandro Noferi
+    virtual const RlcSduList *getRlcSduList()
     {
-       return &sduList_;
-    }
-    virtual const RlcSduListSizes* getRlcSduSizes()
-    {
-       return &sduSizes_;
+        return &sduList_;
     }
 
+    virtual const RlcSduListSizes *getRlcSduSizes()
+    {
+        return &sduSizes_;
+    }
 
     /**
      * pushSdu() gets ownership of the packet
-     * and stores it inside the rlc sdu list
+     * and stores it inside the RLC SDU list
      * in back position
      *
      * @param pkt packet to store
      */
-    virtual void pushSdu(inet::Packet* pkt)
+    virtual void pushSdu(inet::Packet *pkt)
     {
         take(pkt);
         rlcPduLength_ += pkt->getByteLength();
@@ -140,7 +134,7 @@ public:
         numSdu_++;
     }
 
-    virtual void pushSdu(inet::Packet* pkt, int size)
+    virtual void pushSdu(inet::Packet *pkt, int size)
     {
         take(pkt);
         rlcPduLength_ += size;
@@ -150,23 +144,24 @@ public:
     }
 
     /**
-     * popSdu() pops a packet from front of
-     * the sdu list and drops ownership before
+     * popSdu() pops a packet from the front of
+     * the SDU list and drops ownership before
      * returning it
      *
      * @return popped packet
      */
-    virtual inet::Packet* popSdu(size_t &size)
+    virtual inet::Packet *popSdu(size_t& size)
     {
         auto pkt = sduList_.front();
         sduList_.pop_front();
         size = sduSizes_.front();
-        rlcPduLength_ -= (sduSizes_.front());
+        rlcPduLength_ -= sduSizes_.front();
         sduSizes_.pop_front();
         numSdu_--;
         drop(pkt);
         return pkt;
     }
+
 };
 
 /**
@@ -175,13 +170,13 @@ public:
  *
  * Define additional fields for UM PDU
  */
-class LteRlcUmDataPdu : public LteRlcDataPdu {
-private:
-    void copy(const LteRlcUmDataPdu &other) {
-
+class LteRlcUmDataPdu : public LteRlcDataPdu
+{
+  private:
+    void copy(const LteRlcUmDataPdu& other) {
     }
 
-public:
+  public:
 
     LteRlcUmDataPdu() : LteRlcDataPdu()
     {
@@ -189,7 +184,6 @@ public:
         this->setChunkLength(inet::B(rlcPduLength_));
     }
 
-    virtual ~LteRlcUmDataPdu() {}
 
     LteRlcUmDataPdu(const LteRlcUmDataPdu& other) : LteRlcDataPdu(other)
     {
@@ -204,10 +198,11 @@ public:
         return *this;
     }
 
-    virtual LteRlcUmDataPdu *dup() const
+    LteRlcUmDataPdu *dup() const override
     {
         return new LteRlcUmDataPdu(*this);
     }
+
 };
 
 /**
@@ -216,17 +211,19 @@ public:
  *
  * Define additional fields for AM PDU
  */
-class LteRlcAmDataPdu : public LteRlcDataPdu {
-private:
-    void copy(const LteRlcAmDataPdu &other) {
+class LteRlcAmDataPdu : public LteRlcDataPdu
+{
+  private:
+    void copy(const LteRlcAmDataPdu& other) {
         pollStatus_ = other.pollStatus_;
     }
-protected:
+
+  protected:
 
     // if true, a status PDU is required
     bool pollStatus_;
 
-public:
+  public:
 
     LteRlcAmDataPdu() : LteRlcDataPdu()
     {
@@ -249,12 +246,9 @@ public:
     }
 
 
-    virtual ~LteRlcAmDataPdu() {}
-
     void setPollStatus(bool p) { pollStatus_ = p; }
     bool getPollStatus() const { return pollStatus_; }
 };
-
 
 Register_Class(LteRlcDataPdu);
 Register_Class(LteRlcUmDataPdu);
@@ -263,3 +257,4 @@ Register_Class(LteRlcAmDataPdu);
 } //namespace
 
 #endif /* LTERLCDATAPDU_H_ */
+

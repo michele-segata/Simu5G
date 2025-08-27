@@ -10,96 +10,80 @@
 //
 
 #include "nodes/mec/MECPlatform/MECServices/LocationService/resources/CircleNotificationSubscription.h"
-#include "nodes/mec/MECPlatform/MECServices/LocationService/resources/CurrentLocation.h"
+
+#include <inet/mobility/base/MovingMobilityBase.h>
+
 #include "common/LteCommon.h"
 #include "common/cellInfo/CellInfo.h"
 #include "common/binder/Binder.h"
-#include "inet/mobility/base/MovingMobilityBase.h"
 #include "nodes/mec/MECPlatform/EventNotification/CircleNotificationEvent.h"
+#include "nodes/mec/MECPlatform/MECServices/LocationService/resources/CurrentLocation.h"
 
 namespace simu5g {
 using namespace omnetpp;
 
-CircleNotificationSubscription::CircleNotificationSubscription()
+CircleNotificationSubscription::CircleNotificationSubscription(Binder *binder_) : binder(binder_), lastNotification(0), firstNotificationSent(false)
 {
- binder = getBinder();
- firstNotificationSent = false;
- lastNotification = 0;
 }
 
-CircleNotificationSubscription::CircleNotificationSubscription(unsigned int subId, inet::TcpSocket *socket , const std::string& baseResLocation, std::set<cModule*, simu5g::utils::cModule_LessId>& eNodeBs):
-SubscriptionBase(subId,socket,baseResLocation, eNodeBs){
-    binder = getBinder();
-    baseResLocation_+= "area/circle";
-    firstNotificationSent = false;
-};
+CircleNotificationSubscription::CircleNotificationSubscription(Binder *binder_, unsigned int subId, inet::TcpSocket *socket, const std::string& baseResLocation, std::set<cModule *, simu5g::utils::cModule_LessId>& eNodeBs):
+    SubscriptionBase(subId, socket, baseResLocation, eNodeBs), binder(binder_), firstNotificationSent(false) {
+    baseResLocation_ += "area/circle";
+}
 
-CircleNotificationSubscription::CircleNotificationSubscription(unsigned int subId, inet::TcpSocket *socket , const std::string& baseResLocation, std::set<cModule*, simu5g::utils::cModule_LessId>& eNodeBs, bool firstNotSent, omnetpp::simtime_t lastNot):
-SubscriptionBase(subId,socket,baseResLocation, eNodeBs){
-    binder = getBinder();
-    baseResLocation_+= "area/circle";
-    firstNotificationSent = firstNotSent;
-    lastNotification = lastNot;
-};
-
-CircleNotificationSubscription::~CircleNotificationSubscription(){
+CircleNotificationSubscription::CircleNotificationSubscription(Binder *binder_, unsigned int subId, inet::TcpSocket *socket, const std::string& baseResLocation, std::set<cModule *, simu5g::utils::cModule_LessId>& eNodeBs, bool firstNotSent, simtime_t lastNot):
+    SubscriptionBase(subId, socket, baseResLocation, eNodeBs), binder(binder_), lastNotification(lastNot), firstNotificationSent(firstNotSent) {
+    baseResLocation_ += "area/circle";
 }
 
 
-void CircleNotificationSubscription::sendSubscriptionResponse(){}
-
+void CircleNotificationSubscription::sendSubscriptionResponse()
+{
+}
 
 void CircleNotificationSubscription::sendNotification(EventNotification *event)
 {
     EV << "CircleNotificationSubscription::sendNotification" << endl;
 
     EV << firstNotificationSent << " last " << lastNotification << " now " << simTime() << " frequency" << frequency << endl;
-    if(firstNotificationSent && (simTime() - lastNotification) <= frequency)
-    {
-        EV <<"CircleNotificationSubscription::sendNotification - notification event occured near the last one. Frequency for notifications is: " << frequency << endl;
+    if (firstNotificationSent && (simTime() - lastNotification) <= frequency) {
+        EV << "CircleNotificationSubscription::sendNotification - notification event occurred near the last one. Frequency for notifications is: " << frequency << endl;
         return;
     }
 
-    CircleNotificationEvent *circleEvent = check_and_cast<CircleNotificationEvent*>(event);
+    CircleNotificationEvent *circleEvent = check_and_cast<CircleNotificationEvent *>(event);
 
     nlohmann::ordered_json val;
     nlohmann::ordered_json terminalLocationArray;
 
-
-    val["enteringLeavingCriteria"] = actionCriteria == LocationUtils::Entering? "Entering" : "Leaving";
+    val["enteringLeavingCriteria"] = actionCriteria == LocationUtils::Entering ? "Entering" : "Leaving";
     val["isFinalNotification"] = "false";
     val["link"]["href"] = resourceURL;
     val["link"]["rel"] = subscriptionType_;
 
-    // std::vector<TerminalLocation>::const_iterator it = terminalLocations.begin();
     std::vector<TerminalLocation> terminalLoc = circleEvent->getTerminalLocations();
 
-    for(auto it : terminalLoc)
-    {
-        terminalLocationArray.push_back(it.toJson());
+    for (const auto& terminalLocation : terminalLoc) {
+        terminalLocationArray.push_back(terminalLocation.toJson());
     }
-    if(terminalLocationArray.size() > 1)
+    if (terminalLocationArray.size() > 1)
         val["terminalLocationList"] = terminalLocationArray;
     else
         val["terminalLocationList"] = terminalLocationArray[0];
 
-
     nlohmann::ordered_json notification;
     notification["subscriptionNotification"] = val;
 
-//    if(socket_->getState())
-//        throw cRuntimeError("%d", socket_->getState());
     Http::sendPostRequest(socket_, notification.dump(2).c_str(), clientHost_.c_str(), clientUri_.c_str());
 
     // update last notification sent
     lastNotification = simTime();
-    if(firstNotificationSent == false)
+    if (!firstNotificationSent)
         firstNotificationSent = true;
 }
 
 bool CircleNotificationSubscription::fromJson(const nlohmann::ordered_json& body)
 {
-
     // ues; // optional: NO
     //
     ////callbackReference
@@ -115,150 +99,117 @@ bool CircleNotificationSubscription::fromJson(const nlohmann::ordered_json& body
     // trackingAccuracy; // optional: NO
     // EnteringLeavingCriteria; // optional: NO
 
-    if(body.contains("circleNotificationSubscription")) // mandatory attribute
-    {
-
+    if (body.contains("circleNotificationSubscription")) { // mandatory attribute
         subscriptionType_ = "circleNotificationSubscription";
     }
-    else
-    {
+    else {
         EV << "1" << endl;
         Http::send400Response(socket_, "circleNotificationSubscription JSON name is mandatory");
         return false;
     }
     nlohmann::ordered_json jsonBody = body["circleNotificationSubscription"];
 
-    if(jsonBody.contains("callbackReference"))
-    {
+    if (jsonBody.contains("callbackReference")) {
         nlohmann::ordered_json callbackReference = jsonBody["callbackReference"];
-        if(callbackReference.contains("callbackData"))
+        if (callbackReference.contains("callbackData"))
             callbackData = callbackReference["callbackData"];
-        if(callbackReference.contains("notifyURL"))
-        {
+        if (callbackReference.contains("notifyURL")) {
             notifyURL = callbackReference["notifyURL"];
-            // parse it to retreive the resource uri and
+            // parse it to retrieve the resource uri and
             // the host
             std::size_t found = notifyURL.find("/");
-          if (found!=std::string::npos)
-          {
-              clientHost_ = notifyURL.substr(0, found);
-              clientUri_ = notifyURL.substr(found);
-          }
-
+            if (found != std::string::npos) {
+                clientHost_ = notifyURL.substr(0, found);
+                clientUri_ = notifyURL.substr(found);
+            }
         }
-        else
-        {
+        else {
             EV << "2" << endl;
 
             Http::send400Response(socket_); //notifyUrl is mandatory
             return false;
         }
-
     }
-    else
-    {
+    else {
         // callbackReference is mandatory and takes exactly 1 value
         Http::send400Response(socket_, "callbackReference JSON name is mandatory");
         return false;
     }
 
-    if(jsonBody.contains("checkImmediate"))
-    {
+    if (jsonBody.contains("checkImmediate")) {
         std::string check = jsonBody["checkImmediate"];
-        checkImmediate = check.compare("true") == 0 ? true : false;
+        checkImmediate = (check == "true");
     }
-    else
-    {
+    else {
         checkImmediate = false;
     }
 
-    if(jsonBody.contains("clientCorrelator"))
-    {
-       clientCorrelator = jsonBody["clientCorrelator"];
+    if (jsonBody.contains("clientCorrelator")) {
+        clientCorrelator = jsonBody["clientCorrelator"];
     }
 
-    if(jsonBody.contains("frequency"))
-    {
-       frequency = jsonBody["frequency"];
+    if (jsonBody.contains("frequency")) {
+        frequency = jsonBody["frequency"];
     }
-    else
-   {
+    else {
         EV << "4" << endl;
         Http::send400Response(socket_, "frequency JSON name is mandatory");
-       return false;
-   }
+        return false;
+    }
 
-    if(jsonBody.contains("radius"))
-    {
+    if (jsonBody.contains("radius")) {
         radius = jsonBody["radius"];
     }
-    else
-    {
+    else {
         Http::send400Response(socket_, "radius JSON name is mandatory");
         return false;
     }
 
-    if(jsonBody.contains("center") || (jsonBody.contains("latitude") && jsonBody.contains("longitude")))
-    {
-        if(jsonBody.contains("center"))
-        {
+    if (jsonBody.contains("center") || (jsonBody.contains("latitude") && jsonBody.contains("longitude"))) {
+        if (jsonBody.contains("center")) {
             center.x = jsonBody["center"]["x"];
             center.y = jsonBody["center"]["y"];
             center.z = jsonBody["center"]["z"];
         }
-
-        else
-        {
+        else {
             latitude = jsonBody["latitude"]; //  y in the simulator
             longitude = jsonBody["longitude"]; // x in the simulator
         }
-
     }
-    else
-   {
-       Http::send400Response(socket_, "Position coordinates JSON names are mandatory");
-       return false;
-   }
+    else {
+        Http::send400Response(socket_, "Position coordinates JSON names are mandatory");
+        return false;
+    }
 
-    if(jsonBody.contains("trackingAccuracy"))
-    {
+    if (jsonBody.contains("trackingAccuracy")) {
         trackingAccuracy = jsonBody["trackingAccuracy"];
     }
-    else
-   {
+    else {
         Http::send400Response(socket_, "trackingAccuracy JSON name is mandatory");//trackingAccuracy is mandatory
         return false;
     }
 
-    if(jsonBody.contains("enteringLeavingCriteria"))
-    {
+    if (jsonBody.contains("enteringLeavingCriteria")) {
         std::string criteria = jsonBody["enteringLeavingCriteria"];
-        if(criteria.compare("Entering") == 0)
-        {
+        if (criteria == "Entering") {
             actionCriteria = LocationUtils::Entering;
         }
-        else if(criteria.compare("Leaving") == 0)
-        {
+        else if (criteria == "Leaving") {
             actionCriteria = LocationUtils::Leaving;
         }
 
         //get the current state of the ue
-
     }
-    else
-   {
-       Http::send400Response(socket_, "enteringLeavingCriteria JSON name is mandatory");//trackingAccuracy is mandatory
-       return false;
-   }
+    else {
+        Http::send400Response(socket_, "enteringLeavingCriteria JSON name is mandatory");//trackingAccuracy is mandatory
+        return false;
+    }
 
-    if(jsonBody.contains("address"))
-    {
-        if(jsonBody["address"].is_array())
-        {
+    if (jsonBody.contains("address")) {
+        if (jsonBody["address"].is_array()) {
             nlohmann::json addressVector = jsonBody["address"];
-            for(int i = 0; i < addressVector.size(); ++i)
-            {
-                std::string add =  addressVector.at(i);
+            for (const auto & i : addressVector) {
+                std::string add = i;
                 MacNodeId id = binder->getMacNodeId(inet::Ipv4Address(add.c_str()));
                 /*
                  * check if the address is already present in the network.
@@ -266,132 +217,106 @@ bool CircleNotificationSubscription::fromJson(const nlohmann::ordered_json& body
                  * OR make a 400 response telling one address is not available?
                  */
 
-                if(id == 0 || !findUe(id))
-                {
-                    EV << "IP NON ESISTE" << endl;
+                if (id == NODEID_NONE || !findUe(id)) {
+                    EV << "IP DOES NOT EXIST" << endl;
                     Http::send400Response(socket_); //address is mandatory
                     return false;
-                   //TODO cosa fare in caso in cui un address non esiste?
+                    //TODO what to do in case an address does not exist?
                 }
-                else
-                {
-                // set the initial state
-                    inet::Coord coord = LocationUtils::getCoordinates(id);
-                    inet::Coord center = inet::Coord(latitude,longitude,0.);
-                    EV << "center: [" << latitude << ";"<<longitude << "]"<<endl;
-                    EV << "coord: [" << coord.x << ";"<<coord.y << "]"<<endl;
-                    EV << "distance: " << coord.distance(center) <<endl;
+                else {
+                    // set the initial state
+                    inet::Coord coord = LocationUtils::getCoordinates(binder, id);
+                    inet::Coord center = inet::Coord(latitude, longitude, 0.);
+                    EV << "center: [" << latitude << ";" << longitude << "]" << endl;
+                    EV << "coord: [" << coord.x << ";" << coord.y << "]" << endl;
+                    EV << "distance: " << coord.distance(center) << endl;
 
-                    users[id] = (coord.distance(center) <= radius) ? true : false; // true = inside
+                    users[id] = (coord.distance(center) <= radius); // true = inside
                 }
             }
         }
-        else
-        {
-            std::string add =  jsonBody["address"];
+        else {
+            std::string add = jsonBody["address"];
             MacNodeId id = binder->getMacNodeId(inet::Ipv4Address(add.c_str()));
-            if(id == 0 || !findUe(id))
-            {
-                EV << "IP NON ESISTE" << endl;
+            if (id == NODEID_NONE || !findUe(id)) {
+                EV << "IP DOES NOT EXIST" << endl;
             }
-            else
-            {
+            else {
                 // set the initial state
-                inet::Coord coord = LocationUtils::getCoordinates(id);
-                inet::Coord center = inet::Coord(latitude,longitude,0.);
-                EV << "center: [" << latitude << ";"<<longitude << "]"<<endl;
-                EV << "coord: [" << coord.x << ";"<<coord.y << "]"<<endl;
-                EV << "distance: " << coord.distance(center) <<endl;
-                users[id] = (coord.distance(center) <= radius) ? true : false;
+                inet::Coord coord = LocationUtils::getCoordinates(binder, id);
+                inet::Coord center = inet::Coord(latitude, longitude, 0.);
+                EV << "center: [" << latitude << ";" << longitude << "]" << endl;
+                EV << "coord: [" << coord.x << ";" << coord.y << "]" << endl;
+                EV << "distance: " << coord.distance(center) << endl;
+                users[id] = (coord.distance(center) <= radius);
             }
-
         }
     }
-    else
-    {
+    else {
         Http::send400Response(socket_, "address JSON name is mandatory");//address is mandatory
         return false;
     }
 
-
-    resourceURL = baseResLocation_+ "/" + std::to_string(subscriptionId_);
+    resourceURL = baseResLocation_ + "/" + std::to_string(subscriptionId_);
     return true;
 }
 
-EventNotification* CircleNotificationSubscription::handleSubscription()
+EventNotification *CircleNotificationSubscription::handleSubscription()
 {
-
     EV << "CircleNotificationSubscription::handleSubscription()" << endl;
     terminalLocations.clear();
-    std::map<MacNodeId, bool>::iterator it = users.begin();
-    for(; it != users.end(); ++it)
-    {
+    for (auto &[macNodeId, isInside] : users) {
         bool found = false;
-        //check if the use is under one of the Enodeb connected to the Mehost
+        //check if the user is under one of the EnodeB connected to the Mehost
 
-        if(!findUe(it->first))
+        if (!findUe(macNodeId))
             continue; // TODO manage what to do
-        inet::Coord coord = LocationUtils::getCoordinates(it->first);
-        inet::Coord center = inet::Coord(latitude,longitude,0.);
-//        EV << "center: [" << latitude << ";"<<longitude << "]"<<endl;
-//        EV << "coord: [" << coord.x << ";"<<coord.y << "]"<<endl;
-//        EV << "distance: " << coord.distance(center) <<endl;
+        inet::Coord coord = LocationUtils::getCoordinates(binder, macNodeId);
+        inet::Coord center = inet::Coord(latitude, longitude, 0.);
 
-        if(actionCriteria == LocationUtils::Entering)
-        {
-            if(coord.distance(center) <= radius && it->second == false){
-                it->second = true;
-                EV << "dentro" << endl;
+        if (actionCriteria == LocationUtils::Entering) {
+            if (coord.distance(center) <= radius && !isInside) {
+                isInside = true;
+                EV << "inside" << endl;
                 found = true;
             }
-            else if (coord.distance(center) >= radius)
-            {
-                it->second = false;
+            else if (coord.distance(center) >= radius) {
+                isInside = false;
             }
         }
-        else
-        {
-            if(coord.distance(center) >= radius && it->second == true){
-                it->second = false;
-                EV << "fuori" << endl;
+        else {
+            if (coord.distance(center) >= radius && isInside) {
+                isInside = false;
+                EV << "outside" << endl;
                 found = true;
             }
-            else if (coord.distance(center) <= radius)
-            {
-                it->second = true;
+            else if (coord.distance(center) <= radius) {
+                isInside = true;
             }
-
         }
 
-        if(found)
-        {
+        if (found) {
             std::string status = "Retrieved";
             CurrentLocation location(100, coord);
-            TerminalLocation user(binder->getIPv4Address(it->first).str(), status, location);
+            TerminalLocation user(binder->getIPv4Address(macNodeId).str(), status, location);
             terminalLocations.push_back(user);
         }
     }
-    if(!terminalLocations.empty())
-    {
-        CircleNotificationEvent *notificationEvent = new CircleNotificationEvent(subscriptionType_,subscriptionId_, terminalLocations);
+    if (!terminalLocations.empty()) {
+        CircleNotificationEvent *notificationEvent = new CircleNotificationEvent(subscriptionType_, subscriptionId_, terminalLocations);
         return notificationEvent;
     }
     else
         return nullptr;
-
 }
 
 bool CircleNotificationSubscription::findUe(MacNodeId nodeId)
 {
-    std::map<MacCellId, CellInfo*>::const_iterator  eit = eNodeBs_.begin();
-    std::map<MacNodeId, inet::Coord>::const_iterator pit;
-    // const std::map<MacNodeId, inet::Coord>* uePositionList;
-    for(; eit != eNodeBs_.end() ; ++eit){
-        inet::Coord uePos = eit->second->getUePosition(nodeId);
-       if(uePos != inet::Coord::ZERO)
-       {
-           return true;
-       }
+    for (const auto& [cellId, cellInfo] : eNodeBs_) {
+        inet::Coord uePos = cellInfo->getUePosition(nodeId);
+        if (uePos != inet::Coord::ZERO) {
+            return true;
+        }
     }
     return false;
 }

@@ -10,8 +10,11 @@
 //
 
 #include "PacketFlowManagerBase.h"
-#include "stack/mac/layer/LteMacBase.h"
-#include "stack/pdcp_rrc/layer/LtePdcpRrc.h"
+
+#include <inet/common/ModuleAccess.h>
+
+#include "stack/mac/LteMacBase.h"
+#include "stack/pdcp_rrc/LtePdcpRrc.h"
 #include "stack/rlc/LteRlcDefs.h"
 #include "stack/rlc/packet/LteRlcDataPdu.h"
 
@@ -23,19 +26,12 @@ namespace simu5g {
 
 //Define_Module(PacketFlowManagerBase);
 
-PacketFlowManagerBase::PacketFlowManagerBase()
-{
-}
 
-PacketFlowManagerBase::~PacketFlowManagerBase()
-{
-}
 
 void PacketFlowManagerBase::initialize(int stage)
 {
-    if (stage == 1)
-    {
-        LteMacBase *mac= check_and_cast<LteMacBase *>(getParentModule()->getSubmodule("mac"));
+    if (stage == 1) {
+        LteMacBase *mac = getModuleFromPar<LteMacBase>(par("macModule"), this);
         nodeType_ = mac->getNodeType();
         harqProcesses_ = (nodeType_ == UE) ? UE_TX_HARQ_PROCESSES : ENB_TX_HARQ_PROCESSES;
         pfmType = par("pfmType").stringValue();
@@ -44,7 +40,7 @@ void PacketFlowManagerBase::initialize(int stage)
 
 void PacketFlowManagerBase::resetDiscardCounter()
 {
-    pktDiscardCounterTotal_ = {0,0};
+    pktDiscardCounterTotal_ = { 0, 0 };
 }
 
 void PacketFlowManagerBase::finish()

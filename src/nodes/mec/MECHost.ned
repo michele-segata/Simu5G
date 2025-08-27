@@ -22,7 +22,15 @@ import simu5g.nodes.mec.VirtualisationInfrastructureManager.VirtualisationInfras
 
 
 //
-//# MEHost module
+// This module represents a model of a Multi-access Edge Computing (MEC) host
+// belonging to a MEC system, as specified by the ETSI GS MEC 003 specifications. It runs
+// MEC applications within its ~VirtualisationInfrastructure and can provide a number of
+// MEC services via the MEC platform. MEC applications can be created either dynamically by
+// the MEC orchestrator or statically at the initialization of the simulation. The MEC host
+// possesses a configurable number of computing resources (such as CPU speed, RAM, and storage)
+// and keeps track of the utilization of these resources by the MEC applications via the
+// ~VirtualisationInfrastructureManager. Moreover, this module includes a User Plane
+// Function (UPF) that allows it to be connected with the 5G core network.
 //
 module MECHost
 {
@@ -44,10 +52,9 @@ module MECHost
 
         //# List of Base Stations associated to the MEC host
         // This is a string of comma-separated values
-        string bsList = default("");
+        object bsList = default([]);
 
     gates:
-
 		//to local radio networks
         inout ppp[];
 
@@ -59,21 +66,22 @@ module MECHost
         virtualisationInfrastructure: VirtualisationInfrastructure {
             parameters:
                 @display("p=500,400");
+                gateway = parent.gateway;
         }
 
         mecPlatform: MECPlatform {
             parameters:
-                @display("p=573.535,158.12999");
+                @display("p=573,158");
         }
 
         mecPlatformManager: MecPlatformManager {
             parameters:
-                @display("p=865.94995,116.715;is=m");
+                @display("p=865,116;is=m");
         }
 
         vim: VirtualisationInfrastructureManager {
             parameters:
-                @display("p=865.94995,224.64499;is=m");
+                @display("p=865,224;is=m");
         }
 
         // UPF module used to connect the MEC host to the 5G Core Network (either a BS or a UPF)
@@ -81,14 +89,15 @@ module MECHost
             parameters:
                 @display("p=150,400");
                 nodeType = "UPF_MEC";
+                gateway = parent.gateway;
         }
 
         bgApp[numBGMecApp]: BackgroundApp {
-            @display("p=865.94995,326.3,row,140");
+            @display("p=865,326,row,140");
         }
 
         independentMecApp[numIndependentMecApp]: <> like IApp {
-            @display("p=371.47998,156.875,row,140");
+            @display("p=371,156,row,140");
         }
 
     connections allowunconnected:

@@ -17,45 +17,42 @@ namespace simu5g {
 Define_Module(LteRlcUmD2D);
 using namespace omnetpp;
 
-UmTxEntity* LteRlcUmD2D::getTxBuffer(inet::Ptr<FlowControlInfo> lteInfo)
+UmTxEntity *LteRlcUmD2D::getTxBuffer(inet::Ptr<FlowControlInfo> lteInfo)
 {
-    MacNodeId nodeId = 0;
+    MacNodeId nodeId = NODEID_NONE;
     LogicalCid lcid = 0;
-    if (lteInfo != NULL)
-    {
+    if (lteInfo != nullptr) {
         nodeId = ctrlInfoToUeId(lteInfo);
         lcid = lteInfo->getLcid();
     }
     else
-        throw cRuntimeError("LteRlcUmD2D::getTxBuffer - lteInfo is NULL pointer. Aborting.");
+        throw cRuntimeError("LteRlcUmD2D::getTxBuffer - lteInfo is a NULL pointer. Aborting.");
 
     // Find TXBuffer for this CID
     MacCid cid = idToMacCid(nodeId, lcid);
-    EV << "LteRlcUmD2D::getTxBuffer for node ["<< nodeId<<"]" << " with lcid ["<< lcid<<"]"<< " and cid ["<<cid<<"]"<< endl;
+    EV << "LteRlcUmD2D::getTxBuffer for node [" << nodeId << "]" << " with lcid [" << lcid << "]" << " and cid [" << cid << "]" << endl;
     UmTxEntities::iterator it = txEntities_.find(cid);
-    if (it == txEntities_.end())
-    {
+    if (it == txEntities_.end()) {
         // Not found: create
-        MacNodeId d2dPeer = 0;
+        MacNodeId d2dPeer = NODEID_NONE;
         std::stringstream buf;
 
         buf << "UmTxEntity Lcid: " << lcid;
-        cModuleType* moduleType = cModuleType::get("simu5g.stack.rlc.UmTxEntity");
-        UmTxEntity* txEnt = check_and_cast<UmTxEntity *>(moduleType->createScheduleInit(buf.str().c_str(), getParentModule()));
+        cModuleType *moduleType = cModuleType::get("simu5g.stack.rlc.um.UmTxEntity");
+        UmTxEntity *txEnt = check_and_cast<UmTxEntity *>(moduleType->createScheduleInit(buf.str().c_str(), getParentModule()));
         txEntities_[cid] = txEnt;    // Add to tx_entities map
 
-        if (lteInfo != nullptr)
-        {
+        if (lteInfo != nullptr) {
             // store control info for this flow
-            txEnt->setFlowControlInfo(lteInfo->dup());
+            txEnt->setFlowControlInfo(lteInfo.get());
             d2dPeer = lteInfo->getD2dRxPeerId();
         }
 
         EV << "LteRlcUmD2D : Added new UmTxEntity: " << txEnt->getId() <<
-        " for node: " << nodeId << " for Lcid: " << lcid << "\n";
+            " for node: " << nodeId << " for Lcid: " << lcid << "\n";
 
         // store per-peer map
-        if (d2dPeer != 0)
+        if (d2dPeer != NODEID_NONE)
             perPeerTxEntities_[d2dPeer].insert(txEnt);
 
         if (isEmptyingTxBuffer(d2dPeer))
@@ -63,11 +60,10 @@ UmTxEntity* LteRlcUmD2D::getTxBuffer(inet::Ptr<FlowControlInfo> lteInfo)
 
         return txEnt;
     }
-    else
-    {
+    else {
         // Found
         EV << "LteRlcUmD2D : Using old UmTxBuffer: " << it->second->getId() <<
-        " for node: " << nodeId << " for Lcid: " << lcid << "\n";
+            " for node: " << nodeId << " for Lcid: " << lcid << "\n";
 
         return it->second;
     }
@@ -80,8 +76,7 @@ void LteRlcUmD2D::handleLowerMessage(cPacket *pktAux)
 
     auto chunk = pkt->peekAtFront<inet::Chunk>();
 
-    if (inet::dynamicPtrCast<const D2DModeSwitchNotification>(chunk) != nullptr)
-    {
+    if (inet::dynamicPtrCast<const D2DModeSwitchNotification>(chunk) != nullptr) {
         EV << NOW << " LteRlcUmD2D::handleLowerMessage - Received packet " << pkt->getName() << " from lower layer\n";
 
         auto switchPkt = pkt->peekAtFront<D2DModeSwitchNotification>();
@@ -89,20 +84,18 @@ void LteRlcUmD2D::handleLowerMessage(cPacket *pktAux)
 
         // add here specific behavior for handling mode switch at the RLC layer
 
-        if (switchPkt->getTxSide())
-        {
+        if (switchPkt->getTxSide()) {
             // get the corresponding Rx buffer & call handler
-            UmTxEntity* txbuf = getTxBuffer(lteInfo);
+            UmTxEntity *txbuf = getTxBuffer(lteInfo);
             txbuf->rlcHandleD2DModeSwitch(switchPkt->getOldConnection(), switchPkt->getClearRlcBuffer());
 
             // forward packet to PDCP
             EV << "LteRlcUmD2D::handleLowerMessage - Sending packet " << pkt->getName() << " to port UM_Sap_up$o\n";
-            send(pkt, up_[OUT_GATE]);
+            send(pkt, upOutGate_);
         }
-        else  // rx side
-        {
+        else { // rx side
             // get the corresponding Rx buffer & call handler
-            UmRxEntity* rxbuf = getRxBuffer(lteInfo);
+            UmRxEntity *rxbuf = getRxBuffer(lteInfo);
             rxbuf->rlcHandleD2DModeSwitch(switchPkt->getOldConnection(), switchPkt->getOldMode(), switchPkt->getClearRlcBuffer());
 
             delete pkt;
@@ -114,15 +107,12 @@ void LteRlcUmD2D::handleLowerMessage(cPacket *pktAux)
 
 void LteRlcUmD2D::resumeDownstreamInPackets(MacNodeId peerId)
 {
-    if (peerId == 0 || (perPeerTxEntities_.find(peerId) == perPeerTxEntities_.end()))
+    if (peerId == NODEID_NONE || (perPeerTxEntities_.find(peerId) == perPeerTxEntities_.end()))
         return;
 
-    auto it = perPeerTxEntities_.at(peerId).begin();
-    auto et = perPeerTxEntities_.at(peerId).end();
-    for (; it != et; ++it)
-    {
-        if ((*it)->isHoldingDownstreamInPackets())
-            (*it)->resumeDownstreamInPackets();
+    for (auto& txEntity : perPeerTxEntities_.at(peerId)) {
+        if (txEntity->isHoldingDownstreamInPackets())
+            txEntity->resumeDownstreamInPackets();
     }
 }
 
@@ -130,15 +120,11 @@ bool LteRlcUmD2D::isEmptyingTxBuffer(MacNodeId peerId)
 {
     EV << NOW << " LteRlcUmD2D::isEmptyingTxBuffer - peerId " << peerId << endl;
 
-    if (peerId == 0 || (perPeerTxEntities_.find(peerId) == perPeerTxEntities_.end()))
+    if (peerId == NODEID_NONE || (perPeerTxEntities_.find(peerId) == perPeerTxEntities_.end()))
         return false;
 
-    auto it = perPeerTxEntities_.at(peerId).begin();
-    auto et = perPeerTxEntities_.at(peerId).end();
-    for (; it != et; ++it)
-    {
-        if ((*it)->isEmptyingBuffer())
-        {
+    for (auto& entity : perPeerTxEntities_.at(peerId)) {
+        if (entity->isEmptyingBuffer()) {
             EV << NOW << " LteRlcUmD2D::isEmptyingTxBuffer - found " << endl;
             return true;
         }
@@ -148,36 +134,20 @@ bool LteRlcUmD2D::isEmptyingTxBuffer(MacNodeId peerId)
 
 void LteRlcUmD2D::deleteQueues(MacNodeId nodeId)
 {
-    UmTxEntities::iterator tit;
-    UmRxEntities::iterator rit;
-
-    RanNodeType nodeType;
-    std::string nodeTypePar = getAncestorPar("nodeType").stdstringValue();
-    if (strcmp(nodeTypePar.c_str(), "ENODEB") == 0 || strcmp(nodeTypePar.c_str(), "GNODEB") == 0)
-        nodeType = ENODEB;
-    else if (strcmp(nodeTypePar.c_str(), "GNODEB") == 0)
-        nodeType = GNODEB;
-    else
-        nodeType = UE;
-
     // at the UE, delete all connections
     // at the eNB, delete connections related to the given UE
-    for (tit = txEntities_.begin(); tit != txEntities_.end(); )
-    {
+    for (auto tit = txEntities_.begin(); tit != txEntities_.end(); ) {
         // if the entity refers to a D2D_MULTI connection, do not erase it
-        if (tit->second->isD2DMultiConnection())
-        {
+        if (tit->second->isD2DMultiConnection()) {
             ++tit;
             continue;
         }
 
-        if (nodeType == UE || ((nodeType == ENODEB || nodeType == GNODEB) && MacCidToNodeId(tit->first) == nodeId))
-        {
+        if (nodeType == UE || ((nodeType == ENODEB || nodeType == GNODEB) && MacCidToNodeId(tit->first) == nodeId)) {
             tit->second->deleteModule(); // Delete Entity
-            txEntities_.erase(tit++);    // Delete Elem
+            tit = txEntities_.erase(tit);    // Delete Elem
         }
-        else
-        {
+        else {
             ++tit;
         }
     }
@@ -186,22 +156,18 @@ void LteRlcUmD2D::deleteQueues(MacNodeId nodeId)
     // no need to delete pointed objects (they were already deleted in the previous for loop)
     perPeerTxEntities_.clear();
 
-    for (rit = rxEntities_.begin(); rit != rxEntities_.end(); )
-    {
+    for (auto rit = rxEntities_.begin(); rit != rxEntities_.end(); ) {
         // if the entity refers to a D2D_MULTI connection, do not erase it
-        if (rit->second->isD2DMultiConnection())
-        {
+        if (rit->second->isD2DMultiConnection()) {
             ++rit;
             continue;
         }
 
-        if (nodeType == UE || ((nodeType == ENODEB || nodeType == GNODEB) && MacCidToNodeId(rit->first) == nodeId))
-        {
+        if (nodeType == UE || ((nodeType == ENODEB || nodeType == GNODEB) && MacCidToNodeId(rit->first) == nodeId)) {
             rit->second->deleteModule(); // Delete Entity
-            rxEntities_.erase(rit++);    // Delete Elem
+            rit = rxEntities_.erase(rit);    // Delete Elem
         }
-        else
-        {
+        else {
             ++rit;
         }
     }

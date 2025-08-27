@@ -13,24 +13,28 @@
 #define _LTE_FEEDBACKTESTER_H_
 
 #include <omnetpp.h>
+#include <inet/common/ModuleRefByPar.h>
 #include "stack/phy/feedback/LteDlFeedbackGenerator.h"
 
 namespace simu5g {
 
+using namespace omnetpp;
+
 /**
  * TODO
  */
-class FeedbackTester : public omnetpp::cSimpleModule
+class FeedbackTester : public cSimpleModule
 {
-    omnetpp::simtime_t interval_;
-    omnetpp::cMessage *aperiodic_;
-    LteDlFeedbackGenerator *generator_;
+    simtime_t interval_;
+    cMessage *aperiodic_ = nullptr;
+    ModuleRefByPar<LteDlFeedbackGenerator> generator_;
 
   protected:
-    virtual void initialize() override;
-    virtual void handleMessage(omnetpp::cMessage *msg) override;
+    void initialize() override;
+    void handleMessage(cMessage *msg) override;
 };
 
 } //namespace
 
 #endif
+

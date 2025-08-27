@@ -28,15 +28,16 @@ class X2CompProportionalReplyIE : public X2CompReplyIE
 {
   protected:
 
-    // for each block, it denotes whether the eNB can use that block
+    // For each block, it indicates whether the eNB can use that block
     std::vector<CompRbStatus> allowedBlocksMap_;
 
   public:
     X2CompProportionalReplyIE()
     {
-        length_ = sizeof(uint32_t);    // required to store length of map
+        length_ = sizeof(uint32_t);    // Required to store the length of the map
         type_ = COMP_PROP_REPLY_IE;
     }
+
     X2CompProportionalReplyIE(const X2CompProportionalReplyIE& other) :
         X2CompReplyIE()
     {
@@ -51,22 +52,25 @@ class X2CompProportionalReplyIE : public X2CompReplyIE
         X2InformationElement::operator=(other);
         return *this;
     }
-    virtual X2CompProportionalReplyIE *dup() const
+
+    X2CompProportionalReplyIE *dup() const override
     {
         return new X2CompProportionalReplyIE(*this);
     }
-    virtual ~X2CompProportionalReplyIE() {}
 
-    // getter/setter methods
+
+    // Getter/setter methods
     void setAllowedBlocksMap(std::vector<CompRbStatus>& map)
     {
         allowedBlocksMap_ = map;
-        // number of bytes of map when being serialized
+        // Number of bytes of the map when being serialized
         length_ += allowedBlocksMap_.size() * sizeof(uint8_t);
     }
+
     std::vector<CompRbStatus>& getAllowedBlocksMap() { return allowedBlocksMap_; }
 };
 
 } //namespace
 
 #endif
+

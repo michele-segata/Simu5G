@@ -11,15 +11,23 @@
 package simu5g.apps.d2dMultihop.statistics;
 
 //
-// MultihopD2DStatistics module
+// This module is only used in conjunction with UEs running instances of the
+// ~MultihopD2D application. It collects statistics related to notification messages
+// broadcast by the ~MultihopD2D applications by gathering data through method
+// calls from these applications.
 //
-// This module is only used to gather statistics related to events generated
-// by the Multihop D2D apps. It is accessed via method calls.
+// Each time a ~MultihopD2D application generates a new message (upon notification
+// by the ~EventGenerator module), a new event is registered via the
+// recordNewBroadcast() function. Each event is tied to a *target area*, which
+// represents a defined set of nodes intended to receive the notification of
+// the event. The receiving nodes report the event back to this module in order
+// to update the statistics related to that event. For instance, upon receiving a
+// message, the node will call the recordReception() function to record the
+// 'reception' event.
 //
 simple MultihopD2DStatistics
 {
     parameters:
-
         @signal[d2dMultihopEventDeliveryRatio];
         @statistic[d2dMultihopEventDeliveryRatio](title="Avg delivery ratio within the area"; unit=""; source="d2dMultihopEventDeliveryRatio"; record=mean,sum,min,max);
         @signal[d2dMultihopEventDelay];

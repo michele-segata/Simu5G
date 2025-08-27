@@ -15,10 +15,10 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
 
-#ifndef _HTTREQUESTMESSAGESERIALIZER_H_
-#define _HTTREQUESTMESSAGESERIALIZER_H_
+#ifndef _HTTPREQUESTMESSAGESERIALIZER_H_
+#define _HTTPREQUESTMESSAGESERIALIZER_H_
 
-#include "inet/common/packet/serializer/FieldsChunkSerializer.h"
+#include <inet/common/packet/serializer/FieldsChunkSerializer.h>
 
 namespace simu5g {
 
@@ -30,11 +30,8 @@ using namespace inet;
 class HttpRequestMessageSerializer : public FieldsChunkSerializer
 {
   protected:
-    virtual void serialize(MemoryOutputStream& stream, const Ptr<const Chunk>& chunk) const override;
-    virtual const Ptr<Chunk> deserialize(MemoryInputStream& stream) const override;
-
-  public:
-    HttpRequestMessageSerializer() : FieldsChunkSerializer() {}
+    void serialize(MemoryOutputStream& stream, const Ptr<const Chunk>& chunk) const override;
+    const Ptr<Chunk> deserialize(MemoryInputStream& stream) const override;
 };
 
 } //namespace

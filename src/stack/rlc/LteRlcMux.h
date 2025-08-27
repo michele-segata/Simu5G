@@ -18,43 +18,40 @@
 
 namespace simu5g {
 
+using namespace omnetpp;
+
 /**
  * \class LteRLC
  * \brief RLC Layer
  *
- * This is the Muxer of RLC layer of LTE Stack.
- * It has the function of muxing/demuxing traffic:
+ * This is the Muxer of the RLC layer of the LTE Stack.
+ * It has the function of multiplexing/demultiplexing traffic:
  * - Traffic coming from TM/UM/AM modules is decoded
  *   and forwarded to MAC layer ports
  * - Traffic coming from MAC layer is decoded
  *   and forwarded to TM/UM/AM modules
  *
  */
-class LteRlcMux : public omnetpp::cSimpleModule
+class LteRlcMux : public cSimpleModule
 {
-  public:
-    virtual ~LteRlcMux()
-    {
-    }
-
   protected:
 
     /**
      * Initialize class structures
-     * gatemap and delay
+     * gate map and delay
      */
-    virtual void initialize() override;
+    void initialize() override;
 
     /**
      * Analyze gate of incoming packet
      * and call proper handler
      */
-    virtual void handleMessage(omnetpp::cMessage *msg) override;
+    void handleMessage(cMessage *msg) override;
 
     /**
      * Statistics recording
      */
-    virtual void finish() override;
+    void finish() override;
 
   private:
     /*
@@ -62,33 +59,38 @@ class LteRlcMux : public omnetpp::cSimpleModule
      */
 
     /**
-     * handler for rlc2mac packets
+     * Handler for rlc2mac packets
      *
      * @param pkt packet to process
      */
-    void rlc2mac(omnetpp::cPacket *pkt);
+    void rlc2mac(cPacket *pkt);
 
     /*
      * Lower Layer Handler
      */
 
     /**
-     * handler for mac2rlc packets
+     * Handler for mac2rlc packets
      *
      * @param pkt packet to process
      */
-    void mac2rlc(omnetpp::cPacket *pkt);
+    void mac2rlc(cPacket *pkt);
 
     /*
      * Data structures
      */
 
-    omnetpp::cGate* macSap_[2];
-    omnetpp::cGate* tmSap_[2];
-    omnetpp::cGate* umSap_[2];
-    omnetpp::cGate* amSap_[2];
+    cGate *macSapInGate_ = nullptr;
+    cGate *macSapOutGate_ = nullptr;
+    cGate *tmSapInGate_ = nullptr;
+    cGate *tmSapOutGate_ = nullptr;
+    cGate *umSapInGate_ = nullptr;
+    cGate *umSapOutGate_ = nullptr;
+    cGate *amSapInGate_ = nullptr;
+    cGate *amSapOutGate_ = nullptr;
 };
 
 } //namespace
 
 #endif
+

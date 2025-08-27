@@ -15,6 +15,15 @@ cplusplus {{
 
 namespace simu5g;
 
+class MacNodeId {
+    @existingClass;
+    @opaque;
+}
+
+// class X2NodeId {
+//    @existingClass;
+// }
+
 struct Lambda
 {
     @existingClass;
@@ -134,13 +143,9 @@ struct DeploymentScenarioMapping
     @toString(.str());
 }
 
-
 class X2InformationElement
 {
-    @existingClass;
-    @opaque;
-    @polymorphic(false);
-    @toString(.str());
+    @customize;
 }
 
 class LteMacBuffer
@@ -173,7 +178,6 @@ class LteCellInfo
     @opaque;
     @polymorphic(false);
     @toString(.str());
-
 }
 
 class LteMacEnb
@@ -215,4 +219,3 @@ class ExtCell
     @polymorphic(false);
     @toString(.str());
 }
- 

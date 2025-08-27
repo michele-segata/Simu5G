@@ -12,24 +12,23 @@
 package simu5g.nodes.mec.MECOrchestrator;
 
 //
-// This module implements the MEC orchestrator of a MEC system.
-// It does not follow ETSI compliant APIs, but the it handles the lifecycle operations
-// of the standard by using OMNeT++ features.
-// Communications with the LCM proxy occur via connections, while the MEC hosts associated with
-// the MEC system (and the MEC orchestrator) are managed with the mecHostList parameter.
-// This MEC orchestrator provides:
-//   - MEC app instantiation
-//   - MEC app termination
-//   - MEC app run-time onboarding
+// This module models the functionalities of the MEC orchestrator within a Multi-access Edge
+// Computing (MEC) system. Specifically, it manages the dynamic instantiation and
+// termination of MEC applications on the MEC hosts belonging to the MEC system. Upon
+// receiving a MEC app instantiation request from the ~UALCMP module, this module is
+// responsible for selecting the MEC host on which the MEC application is to be instantiated, according
+// to a configurable policy.
 //
 simple MecOrchestrator
 {
     parameters:
-        @display("i=device/mainframe;bgb=1006.50995,692.76");
+        @display("i=device/mainframe;bgb=1006,692");
+        string binderModule = default("binder");
+
         string selectionPolicy @enum(MecHostBased,MecServiceBased,AvailableResourcesBased) = default("MecServiceBased"); // available policies: "MecHostBased", "MecServiceBased", "AvailableResourcesBased"
         int mecHostIndex = default(0); // to be used with the MecHostBased policybased
-        string mecHostList = default("");
-        string mecApplicationPackageList = default("");
+        object mecHostList = default([]);
+        object mecApplicationPackageList = default([]);
 
         // times to simulate lifecycle operations
         double onboardingTime @unit(s) = default(50ms);
@@ -37,8 +36,6 @@ simple MecOrchestrator
         double terminationTime @unit(s) = default(50ms);
 
     gates:
-
         output toUALCMP;
         input fromUALCMP;
-
 }

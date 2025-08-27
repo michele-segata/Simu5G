@@ -13,6 +13,13 @@ package simu5g.apps.alert;
 
 import inet.applications.contract.IApp;
 
+//
+// This module generates periodic alert messages and sends them to a specified multicast
+// group or unicast destination. The packet size, transmission period, start time, and stop
+// time are configurable using the corresponding parameters. The destination address must be a
+// multicast IP address. This module can be used in simulations that require periodic alert
+// generation via device-to-device (D2D) communications, such as vehicular networks.
+//
 simple AlertSender like IApp
 {
     parameters:

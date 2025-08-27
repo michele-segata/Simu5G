@@ -13,17 +13,19 @@
 #define _LTE_LTEHARQUNITTXD2D_H_
 
 #include "stack/mac/buffer/harq/LteHarqUnitTx.h"
-#include "stack/mac/layer/LteMacUeD2D.h"
-#include "stack/mac/layer/LteMacEnbD2D.h"
+#include "stack/mac/LteMacUeD2D.h"
+#include "stack/mac/LteMacEnbD2D.h"
 
 namespace simu5g {
 
+using namespace omnetpp;
+
 /**
  * An LteHarqUnit is an HARQ mac pdu container,
- * an harqBuffer is made of harq processes which is made of harq units.
+ * a harqBuffer is made of harq processes which are made of harq units.
  *
  * LteHarqUnit manages transmissions and retransmissions.
- * Contained PDU may be in one of four status:
+ * Contained PDU may be in one of four statuses:
  *
  *                            IDLE       PDU                    READY
  * TXHARQ_PDU_BUFFERED:        no        present locally        ready for rtx
@@ -36,13 +38,13 @@ class LteHarqUnitTxD2D : public LteHarqUnitTx
   protected:
 
     // D2D Statistics
-      omnetpp::simsignal_t macCellPacketLossD2D_;
-      omnetpp::simsignal_t macPacketLossD2D_;
-      omnetpp::simsignal_t harqErrorRateD2D_;
-      omnetpp::simsignal_t harqErrorRateD2D_1_;
-      omnetpp::simsignal_t harqErrorRateD2D_2_;
-      omnetpp::simsignal_t harqErrorRateD2D_3_;
-      omnetpp::simsignal_t harqErrorRateD2D_4_;
+    static simsignal_t macCellPacketLossD2DSignal_;
+    static simsignal_t macPacketLossD2DSignal_;
+    static simsignal_t harqErrorRateD2DSignal_;
+    static simsignal_t harqErrorRateD2D_1Signal_;
+    static simsignal_t harqErrorRateD2D_2Signal_;
+    static simsignal_t harqErrorRateD2D_3Signal_;
+    static simsignal_t harqErrorRateD2D_4Signal_;
 
   public:
     /**
@@ -50,7 +52,7 @@ class LteHarqUnitTxD2D : public LteHarqUnitTx
      *
      * @param id unit identifier
      */
-    LteHarqUnitTxD2D(unsigned char acid, Codeword cw, LteMacBase *macOwner, LteMacBase *dstMac);
+    LteHarqUnitTxD2D(Binder *binder, unsigned char acid, Codeword cw, LteMacBase *macOwner, LteMacBase *dstMac);
 
     /**
      * Manages ACK/NACK.
@@ -58,20 +60,20 @@ class LteHarqUnitTxD2D : public LteHarqUnitTx
      * @param fb ACK or NACK for this H-ARQ unit
      * @return true if the unit has become empty, false if it is still busy
      */
-    virtual bool pduFeedback(HarqAcknowledgment fb);
+    bool pduFeedback(HarqAcknowledgment fb) override;
 
     /**
      * Returns the macPdu to be sent and increments transmissions_ counter.
      *
-     * The H-ARQ process containing this unit, must call this method in order
-     * to extract the pdu the Mac layer will send.
+     * The H-ARQ process containing this unit must call this method in order
+     * to extract the PDU the Mac layer will send.
      * Before extraction, control info is updated with transmission counter and ndi.
      */
-    virtual inet::Packet *extractPdu();
+    inet::Packet *extractPdu() override;
 
-    virtual ~LteHarqUnitTxD2D();
 };
 
 } //namespace
 
 #endif
+

@@ -12,42 +12,42 @@
 #ifndef __MECRESPONSEAPP_H_
 #define __MECRESPONSEAPP_H_
 
-#include "omnetpp.h"
-
 #include <queue>
 
-#include "inet/networklayer/common/L3Address.h"
-#include "inet/networklayer/common/L3AddressResolver.h"
+#include <inet/networklayer/common/L3Address.h>
+#include <inet/networklayer/common/L3AddressResolver.h>
 
 #include "apps/mec/MecApps/MecAppBase.h"
 #include "nodes/mec/MECPlatform/ServiceRegistry/ServiceRegistry.h"
 
 namespace simu5g {
 
-#define UEAPP_REQUEST 0
-#define MECAPP_RESPONSE 1
-#define UEAPP_STOP 2
-#define UEAPP_ACK_STOP 3
+using namespace omnetpp;
+
+#define UEAPP_REQUEST      0
+#define MECAPP_RESPONSE    1
+#define UEAPP_STOP         2
+#define UEAPP_ACK_STOP     3
 
 class MECResponseApp : public MecAppBase
 {
-protected:
-    inet::TcpSocket *mp1Socket_;
-    inet::TcpSocket *serviceSocket_;
+  protected:
+    inet::TcpSocket *mp1Socket_ = nullptr;
+    inet::TcpSocket *serviceSocket_ = nullptr;
 
     inet::UdpSocket ueAppSocket_;
     int localUePort_;
 
-    HttpBaseMessage* mp1HttpMessage;
+    HttpBaseMessage *mp1HttpMessage = nullptr;
 
-    cMessage* currentRequestfMsg_;
-    cMessage* processingTimer_;
+    cMessage *currentRequestfMsg_ = nullptr;
+    cMessage *processingTimer_ = nullptr;
     simtime_t msgArrived_;
     simtime_t getRequestSent_;
     simtime_t getRequestArrived_;
     double processingTime_;
 
-    int packetSize_;
+    inet::B packetSize_;
 
     int minInstructions_;
     int maxInstructions_;
@@ -62,25 +62,24 @@ protected:
     inet::L3Address serviceAddress_;
     int servicePort_;
 
+    int numInitStages() const override { return inet::NUM_INIT_STAGES; }
+    void initialize(int stage) override;
+    void handleProcessedMessage(cMessage *msg) override;
+    void finish() override;
+    void handleSelfMessage(cMessage *msg) override;
+    void handleHttpMessage(int connId) override;
+    void handleUeMessage(cMessage *msg) override {}
 
-    virtual int numInitStages() const override { return inet::NUM_INIT_STAGES; }
-    virtual void initialize(int stage) override;
-    virtual void handleProcessedMessage(cMessage *msg) override;
-    virtual void finish() override;
-    virtual void handleSelfMessage(cMessage *msg) override;
-    virtual void handleHttpMessage(int connId) override;
-    virtual void handleUeMessage(omnetpp::cMessage *msg) override {}
-
-    virtual double scheduleNextMsg(cMessage* msg) override;
+    double scheduleNextMsg(cMessage *msg) override;
 
     // @brief handler for data received from the service registry
-    virtual void handleMp1Message(int connId) override;
+    void handleMp1Message(int connId) override;
 
     // @brief handler for data received from a MEC service
-    virtual void handleServiceMessage(int connId) override;
+    void handleServiceMessage(int connId) override;
 
-    virtual void handleRequest(cMessage* msg);
-    virtual void handleStopRequest(cMessage* msg);
+    virtual void handleRequest(cMessage *msg);
+    virtual void handleStopRequest(cMessage *msg);
     virtual void sendStopAck();
     virtual void sendResponse();
 
@@ -90,15 +89,14 @@ protected:
     void sendGetRequest();
 
     /* TCPSocket::CallbackInterface callback methods */
-    virtual void established(int connId) override;
-    virtual void socketClosed(inet::TcpSocket *socket) override;
-
+    void established(int connId) override;
+    void socketClosed(inet::TcpSocket *socket) override;
 
   public:
-    MECResponseApp();
-    virtual ~MECResponseApp();
+    ~MECResponseApp() override;
 };
 
 } //namespace
 
 #endif
+

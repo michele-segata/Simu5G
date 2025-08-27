@@ -12,20 +12,19 @@
 #ifndef _RNISERVICE_H
 #define _RNISERVICE_H
 
-#include "nodes/mec/MECPlatform/MECServices/MECServiceBase/MecServiceBase.h"
+#include "nodes/mec/MECPlatform/MECServices/MECServiceBase/MecServiceBase2.h"
 #include "nodes/mec/MECPlatform/MECServices/RNIService/resources/L2Meas.h"
 
 namespace simu5g {
 
 /**
- * Radio Network Information Service (RNIS)
+ * Radio Network Information Service (RNI)
  * This class inherits the MECServiceBase module interface for the implementation
  * of the RNI Service defined in ETSI GS MEC 012 RNI API.
- * The current available functionalities are related to the L2 measures information resource
+ * The currently available functionalities are related to the L2 measurements information resource
  */
 
-
-class RNIService: public MecServiceBase
+class RNIService : public MecServiceBase2
 {
   private:
 
@@ -33,17 +32,16 @@ class RNIService: public MecServiceBase
 
   public:
     RNIService();
+
   protected:
 
-    virtual void initialize(int stage) override;
-    virtual void finish() override;
+    void initialize(int stage) override;
+    void finish() override;
 
-    virtual void handleGETRequest(const HttpRequestMessage *currentRequestMessageServed, inet::TcpSocket* socket) override;
-    virtual void handlePOSTRequest(const HttpRequestMessage *currentRequestMessageServed, inet::TcpSocket* socket)   override;
-    virtual void handlePUTRequest(const HttpRequestMessage *currentRequestMessageServed, inet::TcpSocket* socket)    override;
-    virtual void handleDELETERequest(const HttpRequestMessage *currentRequestMessageServed, inet::TcpSocket* socket) override;
-
-    virtual ~RNIService();
+    void handleGETRequest(const HttpRequestMessage *currentRequestMessageServed, inet::TcpSocket *socket) override;
+    void handlePOSTRequest(const HttpRequestMessage *currentRequestMessageServed, inet::TcpSocket *socket)   override;
+    void handlePUTRequest(const HttpRequestMessage *currentRequestMessageServed, inet::TcpSocket *socket)    override;
+    void handleDELETERequest(const HttpRequestMessage *currentRequestMessageServed, inet::TcpSocket *socket) override;
 
 
 };

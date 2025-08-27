@@ -14,17 +14,19 @@ package simu5g.stack;
 
 import simu5g.stack.phy.feedback.LteDlFeedbackGenerator;
 
-
 //
-// User Equipment of LTE stack
+// The LteNicUe module is a network interface that provides LTE connectivity
+// within a UE (User Equipment). It implements the data and signaling planes of the LTE stack,
+// which includes PDCP, RLC, MAC, and PHY layers. The parameters and submodules
+// allow customization of the UE's behavior.
 //
 module LteNicUe extends LteNicBase
 {
     parameters:
-        LtePdcpRrcType = default("LtePdcpRrcUe");
-        LteMacType = default("LteMacUe");
-        LtePhyType = default("LtePhyUe");
-        PacketFlowManagerType = default("PacketFlowManagerUe");
+        pdcpRrc.typename = default("LtePdcpRrcUe");
+        mac.typename = default("LteMacUe");
+        phy.typename = default("LtePhyUe");
+        packetFlowManager.typename = default("PacketFlowManagerUe");
         d2dCapable = default(false);          // DO NOT CHANGE
 
     submodules:

@@ -11,21 +11,19 @@
 
 #include "apps/mec/RnisTestApp/MecRnisTestApp.h"
 
+#include <fstream>
+
+#include <inet/common/TimeTag_m.h>
+#include <inet/common/packet/Packet_m.h>
+#include <inet/networklayer/common/L3AddressTag_m.h>
+#include <inet/transportlayer/common/L4PortTag_m.h>
+
 #include "apps/mec/DeviceApp/DeviceAppMessages/DeviceAppPacket_Types.h"
+#include "nodes/mec/MECPlatform/MECServices/packets/HttpResponseMessage/HttpResponseMessage.h"
 #include "apps/mec/RnisTestApp/packets/RnisTestAppPacket_Types.h"
 #include "apps/mec/RnisTestApp/packets/RnisTestAppPacket_m.h"
-
-#include "inet/common/TimeTag_m.h"
-#include "inet/common/packet/Packet_m.h"
-
-#include "inet/networklayer/common/L3AddressTag_m.h"
-#include "inet/transportlayer/common/L4PortTag_m.h"
-
 #include "nodes/mec/utils/httpUtils/httpUtils.h"
 #include "nodes/mec/utils/httpUtils/json.hpp"
-#include "nodes/mec/MECPlatform/MECServices/packets/HttpResponseMessage/HttpResponseMessage.h"
-
-#include <fstream>
 
 namespace simu5g {
 
@@ -34,21 +32,12 @@ Define_Module(MecRnisTestApp);
 using namespace inet;
 using namespace omnetpp;
 
-MecRnisTestApp::MecRnisTestApp(): MecAppBase()
-{
-}
-
-MecRnisTestApp::~MecRnisTestApp()
-{
-}
-
-
 void MecRnisTestApp::initialize(int stage)
 {
     MecAppBase::initialize(stage);
 
     // avoid multiple initializations
-    if (stage!=inet::INITSTAGE_APPLICATION_LAYER)
+    if (stage != inet::INITSTAGE_APPLICATION_LAYER)
         return;
 
     // set Udp Socket
@@ -58,14 +47,13 @@ void MecRnisTestApp::initialize(int stage)
     ueSocket.bind(localUePort);
 
     //testing
-    EV << "MecRnisTestApp::initialize - Mec application "<< getClassName() << " with mecAppId["<< mecAppId << "] has started!" << endl;
+    EV << "MecRnisTestApp::initialize - Mec application " << getClassName() << " with mecAppId[" << mecAppId << "] has started!" << endl;
 
     mp1Socket_ = addNewSocket();
 
     // connect with the service registry
     cMessage *msg = new cMessage("connectMp1");
     scheduleAt(simTime() + 0, msg);
-
 }
 
 void MecRnisTestApp::finish()
@@ -73,12 +61,11 @@ void MecRnisTestApp::finish()
     MecAppBase::finish();
     EV << "MecRnisTestApp::finish()" << endl;
 
-    if(gate("socketOut")->isConnected()){
-
+    if (gate("socketOut")->isConnected()) {
     }
 }
 
-void MecRnisTestApp::handleUeMessage(omnetpp::cMessage *msg)
+void MecRnisTestApp::handleUeMessage(cMessage *msg)
 {
     // determine its source address/port
     auto pk = check_and_cast<Packet *>(msg);
@@ -87,20 +74,17 @@ void MecRnisTestApp::handleUeMessage(omnetpp::cMessage *msg)
 
     auto mecPk = pk->peekAtFront<RnisTestAppPacket>();
 
-    if(strcmp(mecPk->getType(), START_QUERY_RNIS) == 0)
-    {
+    if (strcmp(mecPk->getType(), START_QUERY_RNIS) == 0) {
         EV << "MecRnisTestApp::handleUeMessage - RnisTestAppStartPacket arrived" << endl;
         auto startMsg = dynamicPtrCast<const RnisTestAppStartPacket>(mecPk);
-        if(startMsg == nullptr)
+        if (startMsg == nullptr)
             throw cRuntimeError("MecRnisTestApp::handleUeMessage - RnisTestAppStartPacket is null");
 
-        if(par("logger").boolValue())
-        {
-            ofstream myfile;
-            myfile.open ("example.txt", ios::app);
-            if(myfile.is_open())
-            {
-                myfile <<"["<< NOW << "] MecRnisTestApp - Received START message from UE, connecting to the RNIS\n";
+        if (par("logger").boolValue()) {
+            std::ofstream myfile;
+            myfile.open("example.txt", std::ios::app);
+            if (myfile.is_open()) {
+                myfile << "[" << NOW << "] MecRnisTestApp - Received START message from UE, connecting to the RNIS\n";
                 myfile.close();
             }
         }
@@ -111,13 +95,12 @@ void MecRnisTestApp::handleUeMessage(omnetpp::cMessage *msg)
         EV << "MecRnisTestApp::handleUeMessage - UE has asked the MEC app to connect to the RNIService" << endl;
 
         cMessage *m = new cMessage("connectService");
-        scheduleAt(simTime()+0.005, m);
+        scheduleAt(simTime() + 0.005, m);
     }
-    else if (strcmp(mecPk->getType(), STOP_QUERY_RNIS) == 0)
-    {
+    else if (strcmp(mecPk->getType(), STOP_QUERY_RNIS) == 0) {
         EV << "MecRnisTestApp::handleUeMessage - RnisTestAppStopPacket arrived" << endl;
         auto stopMsg = dynamicPtrCast<const RnisTestAppStopPacket>(mecPk);
-        if(stopMsg == nullptr)
+        if (stopMsg == nullptr)
             throw cRuntimeError("MecRnisTestApp::handleUeMessage - RnisTestAppStopPacket is null");
 
         // stop periodic timer
@@ -125,7 +108,7 @@ void MecRnisTestApp::handleUeMessage(omnetpp::cMessage *msg)
 
         EV << "MecRnisTestApp::handleUeMessage - periodic querying to RNIS has been stopped" << endl;
 
-        inet::Packet* packet = new inet::Packet("RnisTestAppAckPacket");
+        inet::Packet *packet = new inet::Packet("RnisTestAppAckPacket");
         auto ack = inet::makeShared<RnisTestAppStopPacket>();
         ack->setType(STOP_QUERY_RNIS_ACK);
         ack->setChunkLength(inet::B(2));
@@ -133,42 +116,37 @@ void MecRnisTestApp::handleUeMessage(omnetpp::cMessage *msg)
         ueSocket.sendTo(packet, ueAppAddress, ueAppPort);
         EV << "MecRnisTestApp::handleUeMessage - an ACK has been sent to the UE" << endl;
 
-        if(par("logger").boolValue())
-        {
-            ofstream myfile;
-            myfile.open ("example.txt", ios::app);
-            if(myfile.is_open())
-            {
-                myfile <<"["<< NOW << "] MecRnisTestApp - Received STOP message from UE, stop querying the RNIS\n";
+        if (par("logger").boolValue()) {
+            std::ofstream myfile;
+            myfile.open("example.txt", std::ios::app);
+            if (myfile.is_open()) {
+                myfile << "[" << NOW << "] MecRnisTestApp - Received STOP message from UE, stopping querying the RNIS\n";
                 myfile.close();
             }
         }
 
         // TODO should we disconnect from the RNIS?
     }
-    else
-    {
+    else {
         throw cRuntimeError("MecRnisTestApp::handleUeMessage - packet not recognized");
     }
 }
 
 void MecRnisTestApp::sendQuery(int cellId, std::string ueIpv4Address)
 {
-    std::string host = serviceSocket_->getRemoteAddress().str()+":"+std::to_string(serviceSocket_->getRemotePort());
+    std::string host = serviceSocket_->getRemoteAddress().str() + ":" + std::to_string(serviceSocket_->getRemotePort());
 
     std::string uri = "/example/rni/v2/queries/layer2_meas";
 
     unsigned short numPars = 0;
     std::string query_string = "";
 
-    if (cellId != 0)
-    {
+    if (cellId != 0) {
         query_string += "cell_id=" + std::to_string(cellId);
         numPars++;
     }
 
-    if (ueIpv4Address != "")
-    {
+    if (ueIpv4Address != "") {
         if (numPars > 0)
             query_string += "&";
         query_string += "ue_ipv4_address=" + ueIpv4Address;
@@ -176,13 +154,11 @@ void MecRnisTestApp::sendQuery(int cellId, std::string ueIpv4Address)
 
     uri += ("?" + query_string);
 
-    if(par("logger").boolValue())
-    {
-        ofstream myfile;
-        myfile.open ("example.txt", ios::app);
-        if(myfile.is_open())
-        {
-            myfile <<"["<< NOW << "] MecRnisTestApp - Sent GET layer2_meas query to the Radio Network Information Service \n";
+    if (par("logger").boolValue()) {
+        std::ofstream myfile;
+        myfile.open("example.txt", std::ios::app);
+        if (myfile.is_open()) {
+            myfile << "[" << NOW << "] MecRnisTestApp - Sent GET layer2_meas query to the Radio Network Information Service \n";
             myfile.close();
         }
     }
@@ -192,149 +168,128 @@ void MecRnisTestApp::sendQuery(int cellId, std::string ueIpv4Address)
     Http::sendGetRequest(serviceSocket_, host.c_str(), uri.c_str());
 }
 
-
 void MecRnisTestApp::established(int connId)
 {
-    if(connId == mp1Socket_->getSocketId())
-    {
-        EV << "MecRnisTestApp::established - Mp1Socket"<< endl;
+    if (connId == mp1Socket_->getSocketId()) {
+        EV << "MecRnisTestApp::established - Mp1Socket" << endl;
         // get endPoint of the required service
         const char *uri = "/example/mec_service_mgmt/v1/services?ser_name=RNIService";
-        std::string host = mp1Socket_->getRemoteAddress().str()+":"+std::to_string(mp1Socket_->getRemotePort());
+        std::string host = mp1Socket_->getRemoteAddress().str() + ":" + std::to_string(mp1Socket_->getRemotePort());
 
-        EV << "MecRnisTestApp::established - connecting to service RNIService"<< endl;
+        EV << "MecRnisTestApp::established - connecting to service RNIService" << endl;
 
         Http::sendGetRequest(mp1Socket_, host.c_str(), uri);
     }
-    else if (connId == serviceSocket_->getSocketId())
-    {
-        EV << "MecRnisTestApp::established - serviceSocket"<< endl;
+    else if (connId == serviceSocket_->getSocketId()) {
+        EV << "MecRnisTestApp::established - serviceSocket" << endl;
 
-        EV << "MecRnisTestApp::established - connection to the RNIService done... sending ACK to the UE"<< endl;
+        EV << "MecRnisTestApp::established - connection to the RNIService done... sending ACK to the UE" << endl;
 
         // the connectService message is scheduled after a start mec app from the UE app, so I can
-        // response to her here, once the socket is established
+        // respond to her here, once the socket is established
         auto ack = inet::makeShared<RnisTestAppPacket>();
         ack->setType(START_QUERY_RNIS_ACK);
         ack->setChunkLength(inet::B(2));
-        inet::Packet* packet = new inet::Packet("RnisTestAppAckPacket");
+        inet::Packet *packet = new inet::Packet("RnisTestAppAckPacket");
         packet->insertAtBack(ack);
         ueSocket.sendTo(packet, ueAppAddress, ueAppPort);
 
-        EV << "MecRnisTestApp::established - querying the RNIService"<< endl;
+        EV << "MecRnisTestApp::established - querying the RNIService" << endl;
 
         // send first request to the RNIS
         sendQuery(0, ueAppAddress.toIpv4().str());
 
         // set periodic timer for next queries
-        if (rnisQueryingPeriod_ > 0)
-        {
+        if (rnisQueryingPeriod_ > 0) {
             rnisQueryingTimer_ = new cMessage("rnisQueryingTimer");
             scheduleAfter(rnisQueryingPeriod_, rnisQueryingTimer_);
             EV << "MecRnisTestApp::established - next query to the RNIService in " << rnisQueryingPeriod_ << " seconds " << endl;
         }
     }
-    else
-    {
+    else {
         throw cRuntimeError("MecAppBase::socketEstablished - Socket %d not recognized", connId);
     }
 }
-
 
 void MecRnisTestApp::handleHttpMessage(int connId)
 {
     if (mp1Socket_ != nullptr && connId == mp1Socket_->getSocketId()) {
         handleMp1Message(connId);
     }
-    else
-    {
+    else {
         handleServiceMessage(connId);
     }
 }
 
 void MecRnisTestApp::handleMp1Message(int connId)
 {
-    // for now I only have just one Service Registry
-    HttpMessageStatus *msgStatus = (HttpMessageStatus*) mp1Socket_->getUserData();
-    mp1HttpMessage = (HttpBaseMessage*) msgStatus->httpMessageQueue.front();
+    // for now I only have one Service Registry
+    HttpMessageStatus *msgStatus = static_cast<HttpMessageStatus *>(mp1Socket_->getUserData());
+    mp1HttpMessage = check_and_cast_nullable<HttpBaseMessage *>(msgStatus->httpMessageQueue.front());
     EV << "MecRnisTestApp::handleMp1Message - payload: " << mp1HttpMessage->getBody() << endl;
 
-    try
-    {
+    try {
         nlohmann::json jsonBody = nlohmann::json::parse(mp1HttpMessage->getBody()); // get the JSON structure
-        if(!jsonBody.empty())
-        {
+        if (!jsonBody.empty()) {
             jsonBody = jsonBody[0];
             std::string serName = jsonBody["serName"];
-            if(serName.compare("RNIService") == 0)
-            {
-                if(jsonBody.contains("transportInfo"))
-                {
+            if (serName == "RNIService") {
+                if (jsonBody.contains("transportInfo")) {
                     nlohmann::json endPoint = jsonBody["transportInfo"]["endPoint"]["addresses"];
-                    EV << "Obtained endpoint for RNIService - address: " << endPoint["host"] << " port: " <<  endPoint["port"] << endl;
+                    EV << "Obtained endpoint for RNIService - address: " << endPoint["host"] << " port: " << endPoint["port"] << endl;
 
                     std::string address = endPoint["host"];
                     serviceAddress = L3AddressResolver().resolve(address.c_str());
                     servicePort = endPoint["port"];
                     serviceSocket_ = addNewSocket();
 
-                    EV << "Creating new socket for communicating with RNIService"<< endl;
+                    EV << "Creating new socket for communicating with RNIService" << endl;
                 }
             }
-            else
-            {
-                EV << "MecRnisTestApp::handleMp1Message - Radio Network Information Service not found"<< endl;
+            else {
+                EV << "MecRnisTestApp::handleMp1Message - Radio Network Information Service not found" << endl;
                 serviceAddress = L3Address();
             }
         }
-
     }
-    catch(nlohmann::detail::parse_error e)
-    {
-        EV <<  e.what() << std::endl;
+    catch (nlohmann::detail::parse_error e) {
+        EV << e.what() << std::endl;
         // body is not correctly formatted in JSON, manage it
         return;
     }
-
 }
 
 void MecRnisTestApp::handleServiceMessage(int connId)
 {
-    HttpMessageStatus *msgStatus = (HttpMessageStatus*) serviceSocket_->getUserData();
-    serviceHttpMessage = (HttpBaseMessage*) msgStatus->httpMessageQueue.front();
+    HttpMessageStatus *msgStatus = static_cast<HttpMessageStatus *>(serviceSocket_->getUserData());
+    serviceHttpMessage = check_and_cast_nullable<HttpBaseMessage *>(msgStatus->httpMessageQueue.front());
 
-    if(serviceHttpMessage->getType() == REQUEST)
-    {
+    if (serviceHttpMessage->getType() == REQUEST) {
         // should never go here?
     }
-    else if(serviceHttpMessage->getType() == RESPONSE)
-    {
-        HttpResponseMessage *rspMsg = dynamic_cast<HttpResponseMessage*>(serviceHttpMessage);
+    else if (serviceHttpMessage->getType() == RESPONSE) {
+        HttpResponseMessage *rspMsg = dynamic_cast<HttpResponseMessage *>(serviceHttpMessage);
 
-        if(rspMsg->getCode() == 200) // in response to a GET
-        {
+        if (rspMsg->getCode() == 200) { // in response to a GET
             // read values
 
             nlohmann::json jsonBody;
-            EV << "MecRnisTestApp::handleServiceMessage - response 200 " << rspMsg->getBody()<< endl;
-            try
-            {
-               jsonBody = nlohmann::json::parse(rspMsg->getBody()); // get the JSON structure
+            EV << "MecRnisTestApp::handleServiceMessage - response 200 " << rspMsg->getBody() << endl;
+            try {
+                jsonBody = nlohmann::json::parse(rspMsg->getBody()); // get the JSON structure
             }
-            catch(nlohmann::detail::parse_error e)
-            {
-               EV <<  e.what() << endl;
-               // body is not correctly formatted in JSON, manage it
-               return;
+            catch (nlohmann::detail::parse_error e) {
+                EV << e.what() << endl;
+                // body is not correctly formatted in JSON, manage it
+                return;
             }
-
             EV << "MecRnisTestApp::handleServiceMessage - received information from RNIS:" << endl;
             EV << jsonBody.dump(4) << endl;
 
             // TODO forward this message to the UE
-            EV << "MecRnisTestApp::handleServiceMessage - sending RNIS info to the UE"<< endl;
+            EV << "MecRnisTestApp::handleServiceMessage - sending RNIS info to the UE" << endl;
 
-            inet::Packet* packet = new inet::Packet("RnisTestAppInfoPacket");
+            inet::Packet *packet = new inet::Packet("RnisTestAppInfoPacket");
 
             auto rnisInfo = inet::makeShared<RnisTestAppInfoPacket>();
             rnisInfo->setType(RNIS_INFO);
@@ -342,57 +297,43 @@ void MecRnisTestApp::handleServiceMessage(int connId)
             rnisInfo->setChunkLength(inet::B(jsonBody.dump(4).length()));
             packet->insertAtBack(rnisInfo);
             ueSocket.sendTo(packet, ueAppAddress, ueAppPort);
-//
-//            nlohmann::ordered_json val = jsonBody["L2Meas"];
-//            nlohmann::json cellInfo = val["cellInfo"];
-//            nlohmann::json cellUEInfo = val["cellUEInfo"];
-//
-//            std::cout << "cellInfo = " << cellInfo << endl;
-//            std::cout << "cellUEInfo = " << cellUEInfo << endl;
         }
     }
-
 }
 
 void MecRnisTestApp::handleSelfMessage(cMessage *msg)
 {
-    if(strcmp(msg->getName(), "connectMp1") == 0)
-    {
+    if (strcmp(msg->getName(), "connectMp1") == 0) {
         EV << "MecAppBase::handleMessage- " << msg->getName() << endl;
         connect(mp1Socket_, mp1Address, mp1Port);
     }
-
-    else if(strcmp(msg->getName(), "connectService") == 0)
-    {
+    else if (strcmp(msg->getName(), "connectService") == 0) {
         EV << "MecAppBase::handleMessage- " << msg->getName() << endl;
-        if(!serviceAddress.isUnspecified() && serviceSocket_->getState() != inet::TcpSocket::CONNECTED)
-        {
-            EV << "MecRnisTestApp::handleSelfMessage - socket has been already created... now connecting to the RNIService" << endl;
+        if (!serviceAddress.isUnspecified() && serviceSocket_->getState() != inet::TcpSocket::CONNECTED) {
+            EV << "MecRnisTestApp::handleSelfMessage - socket has already been created... now connecting to the RNIService" << endl;
             connect(serviceSocket_, serviceAddress, servicePort);
         }
-        else
-        {
-            if(serviceAddress.isUnspecified())
-                EV << "MecRnisTestApp::handleSelfMessage - service IP address is  unspecified (maybe response from the service registry is arriving)" << endl;
-            else if(serviceSocket_->getState() == inet::TcpSocket::CONNECTED)
+        else {
+            if (serviceAddress.isUnspecified())
+                EV << "MecRnisTestApp::handleSelfMessage - service IP address is unspecified (maybe response from the service registry is arriving)" << endl;
+            else if (serviceSocket_->getState() == inet::TcpSocket::CONNECTED)
                 EV << "MecRnisTestApp::handleSelfMessage - service socket is already connected" << endl;
 
             EV << "MecRnisTestApp::handleSelfMessage - socket has not been created for some reason... cannot connect to the RNIService, now sending NACK to UE" << endl;
 
-            inet::Packet* packet = new inet::Packet("RnisTestAppNackPacket");
+            inet::Packet *packet = new inet::Packet("RnisTestAppNackPacket");
             auto nack = inet::makeShared<RnisTestAppStartPacket>();
 
             // the connectService message is scheduled after a start mec app from the UE app, so I can
-            // response to her here
+            // respond to her here
             nack->setType(START_QUERY_RNIS_NACK);
             nack->setChunkLength(inet::B(2));
             packet->insertAtBack(nack);
             ueSocket.sendTo(packet, ueAppAddress, ueAppPort);
         }
     }
-    else if (strcmp(msg->getName(), "rnisQueryingTimer") == 0)
-    {
-        EV << "MecRnisTestApp::handleSelfMessage - rnisQueryingTimer expired: now querying the RNIService"<< endl;
+    else if (strcmp(msg->getName(), "rnisQueryingTimer") == 0) {
+        EV << "MecRnisTestApp::handleSelfMessage - rnisQueryingTimer expired: now querying the RNIService" << endl;
 
         // send request to the RNIS
         sendQuery(0, ueAppAddress.toIpv4().str());
@@ -408,12 +349,11 @@ void MecRnisTestApp::handleSelfMessage(cMessage *msg)
 void MecRnisTestApp::handleProcessedMessage(cMessage *msg)
 {
     if (!msg->isSelfMessage()) {
-        if(ueSocket.belongsToSocket(msg))
-       {
-           handleUeMessage(msg);
-           delete msg;
-           return;
-       }
+        if (ueSocket.belongsToSocket(msg)) {
+            handleUeMessage(msg);
+            delete msg;
+            return;
+        }
     }
     MecAppBase::handleProcessedMessage(msg);
 }

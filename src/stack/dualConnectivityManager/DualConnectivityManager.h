@@ -12,10 +12,12 @@
 #ifndef DUALCONNECTIVITYMANAGER_H_
 #define DUALCONNECTIVITYMANAGER_H_
 
+#include <inet/common/ModuleRefByPar.h>
+
 #include "common/LteCommon.h"
 #include "x2/packet/X2ControlInfo_m.h"
 #include "stack/dualConnectivityManager/X2DualConnectivityDataMsg.h"
-#include "stack/pdcp_rrc/layer/LtePdcpRrc.h"
+#include "stack/pdcp_rrc/LtePdcpRrc.h"
 
 namespace simu5g {
 
@@ -31,30 +33,30 @@ class DualConnectivityManager : public cSimpleModule
   protected:
 
     // reference to PDCP layer
-    LtePdcpRrcBase* pdcp_;
+    inet::ModuleRefByPar<LtePdcpRrcBase> pdcp_;
 
     // X2 identifier
     X2NodeId nodeId_;
 
     // reference to the gates
-    cGate* x2Manager_[2];
+    cGate *x2ManagerInGate_ = nullptr;
+    cGate *x2ManagerOutGate_ = nullptr;
 
-    void handleX2Message(cMessage* msg);
+    void handleX2Message(cMessage *msg);
 
   public:
-    DualConnectivityManager() {}
-    virtual ~DualConnectivityManager() {}
 
-    virtual void initialize();
-    virtual void handleMessage(cMessage *msg);
+    void initialize() override;
+    void handleMessage(cMessage *msg) override;
 
     // send a PDCP PDU to the X2 Manager
-    void forwardDataToTargetNode(inet::Packet* pkt, MacNodeId targetNode);
+    void forwardDataToTargetNode(inet::Packet *pkt, MacNodeId targetNode);
 
     // receive PDCP PDU from X2 Manager and send it to the PDCP layer
-    void receiveDataFromSourceNode(inet::Packet* pkt, MacNodeId sourceNode);
+    void receiveDataFromSourceNode(inet::Packet *pkt, MacNodeId sourceNode);
 };
 
 } //namespace
 
 #endif /* DUALCONNECTIVITYMANAGER_H_ */
+

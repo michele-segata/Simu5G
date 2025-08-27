@@ -10,13 +10,14 @@
 //
 
 #include "world/radio/ChannelAccess.h"
-#include <inet/mobility/contract/IMobility.h>
+
+#include <inet/common/InitStages.h>
 #include <inet/common/ModuleAccess.h>
-#include "inet/common/InitStages.h"
+#include <inet/mobility/contract/IMobility.h>
 
 namespace inet {
-    Define_InitStage_Dependency(PHYSICAL_LAYER, SINGLE_MOBILITY);
-}
+Define_InitStage_Dependency(PHYSICAL_LAYER, SINGLE_MOBILITY);
+} // namespace inet
 
 namespace simu5g {
 
@@ -34,60 +35,56 @@ static int parseInt(const char *s, int defaultValue)
     return *endptr == '\0' ? value : defaultValue;
 }
 
-// the destructor unregister the radio module
+// the destructor unregisters the radio module
 ChannelAccess::~ChannelAccess()
 {
-    if (cc && myRadioRef)
-    {
-        // check if channel control exist
+    if (cc != nullptr && myRadioRef != nullptr) {
+        // check if channel control exists
         IChannelControl *cc = dynamic_cast<IChannelControl *>(getSimulation()->findModuleByPath("channelControl"));
         if (cc)
-             cc->unregisterRadio(myRadioRef);
+            cc->unregisterRadio(myRadioRef);
         myRadioRef = nullptr;
     }
 }
+
 /**
- * Upon initialization ChannelAccess registers the nic parent module
+ * Upon initialization, ChannelAccess registers the NIC parent module
  * to have all its connections handled by ChannelControl
  */
 void ChannelAccess::initialize(int stage)
 {
     cSimpleModule::initialize(stage);
 
-    if (stage == inet::INITSTAGE_LOCAL)
-    {
+    if (stage == inet::INITSTAGE_LOCAL) {
         cc = getChannelControl();
-        hostModule = inet::findContainingNode(this);
+        hostModule = inet::getContainingNode(this);
         myRadioRef = nullptr;
 
         positionUpdateArrived = false;
 
         // subscribe to the correct mobility module
 
-        if (hostModule->findSubmodule("mobility") != -1)
-        {
+        if (hostModule->findSubmodule("mobility") != -1) {
             // register to get a notification when position changes
             hostModule->subscribe(inet::IMobility::mobilityStateChangedSignal, this);
         }
     }
-    else if (stage == inet::INITSTAGE_SINGLE_MOBILITY)
-    {
-        if (!positionUpdateArrived && hostModule->isSubscribed(inet::IMobility::mobilityStateChangedSignal, this))
-        {
+    else if (stage == inet::INITSTAGE_SINGLE_MOBILITY) {
+        if (!positionUpdateArrived && hostModule->isSubscribed(inet::IMobility::mobilityStateChangedSignal, this)) {
             // ...else, get the initial position from the display string
             radioPos.x = parseInt(hostModule->getDisplayString().getTagArg("p", 0), -1);
             radioPos.y = parseInt(hostModule->getDisplayString().getTagArg("p", 1), -1);
 
             if (radioPos.x == -1 || radioPos.y == -1)
-                error("The coordinates of '%s' host are invalid. Please set coordinates in "
-                        "'@display' attribute, or configure Mobility for this host.",
+                throw cRuntimeError("The coordinates of '%s' host are invalid. Please set coordinates in "
+                      "'@display' attribute, or configure Mobility for this host.",
                         hostModule->getFullPath().c_str());
 
             const char *s = hostModule->getDisplayString().getTagArg("p", 2);
-            if (s && *s)
-                error("The coordinates of '%s' host are invalid. Please remove automatic arrangement"
-                        " (3rd argument of 'p' tag)"
-                        " from '@display' attribute, or configure Mobility for this host.",
+            if (s != nullptr && *s)
+                throw cRuntimeError("The coordinates of '%s' host are invalid. Please remove automatic arrangement"
+                      " (3rd argument of 'p' tag)"
+                      " from '@display' attribute, or configure Mobility for this host.",
                         hostModule->getFullPath().c_str());
         }
         myRadioRef = cc->registerRadio(this);
@@ -99,7 +96,7 @@ IChannelControl *ChannelAccess::getChannelControl()
 {
     IChannelControl *cc = dynamic_cast<IChannelControl *>(getSimulation()->findModuleByPath("channelControl"));
     if (!cc)
-        throw cRuntimeError("Could not find ChannelControl module with name 'channelControl' in the toplevel network.");
+        throw cRuntimeError("Could not find ChannelControl module with name 'channelControl' in the top-level network.");
     return cc;
 }
 
@@ -123,16 +120,15 @@ void ChannelAccess::receiveSignal(cComponent *source, simsignal_t signalID, cObj
     // since background UEs and their mobility modules are submodules of the e/gNB, a mobilityStateChangedSignal
     // intended for a background UE would be intercepted by the e/gNB too, making it change its position.
     // To prevent this issue, we need to check if the source of the signal is the same as the module receiving it
-    if ( (strcmp(hostModule->getFullName(), source->getParentModule()->getFullName()) != 0) )
-            return;
+    if (hostModule != source->getParentModule())
+        return;
 
-    if (signalID == inet::IMobility::mobilityStateChangedSignal)
-    {
-        inet::IMobility *mobility = check_and_cast<inet::IMobility*>(obj);
+    if (signalID == inet::IMobility::mobilityStateChangedSignal) {
+        inet::IMobility *mobility = check_and_cast<inet::IMobility *>(obj);
         radioPos = mobility->getCurrentPosition();
         positionUpdateArrived = true;
 
-        if (myRadioRef)
+        if (myRadioRef != nullptr)
             cc->setRadioPosition(myRadioRef, radioPos);
 
         // emit serving cell and the distance from it

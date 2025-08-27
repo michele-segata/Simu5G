@@ -17,18 +17,20 @@
 #include "stack/mac/packet/LteMacPdu.h"
 #include "common/LteControlInfo.h"
 #include "common/LteCommon.h"
-#include "stack/mac/layer/LteMacBase.h"
+#include "stack/mac/LteMacBase.h"
 
 namespace simu5g {
+
+using namespace omnetpp;
 
 class LteMacBase;
 
 /**
  * An LteHarqUnit is an HARQ mac pdu container,
- * an harqBuffer is made of harq processes which is made of harq units.
+ * a harqBuffer is made of harq processes which are made of harq units.
  *
  * LteHarqUnit manages transmissions and retransmissions.
- * Contained PDU may be in one of four status:
+ * Contained PDU may be in one of four statuses:
  *
  *                            IDLE    PDU                    READY
  * TXHARQ_PDU_BUFFERED:       no      present locally        ready for rtx
@@ -36,15 +38,15 @@ class LteMacBase;
  * TXHARQ_PDU_EMPTY:          yes     not present            not ready for tx
  * TXHARQ_PDU_SELECTED:       no      present                will be tx
  */
-class LteHarqUnitTx
+class LteHarqUnitTx : noncopyable
 {
   protected:
 
     /// Carried sub-burst
-    Packet *pdu_;
+    Packet *pdu_ = nullptr;
 
     /// Omnet ID of the pdu
-    long pduId_;
+    long pduId_ = -1;
 
     /// PDU size in bytes
     int64_t pduLength_;
@@ -56,42 +58,34 @@ class LteHarqUnitTx
     Codeword cw_;
 
     /// Number of (re)transmissions for current pdu (N.B.: values are 1,2,3,4)
-    unsigned char transmissions_;
+    unsigned char transmissions_ = 0;
 
-    TxHarqPduStatus status_;
+    TxHarqPduStatus status_ = TXHARQ_PDU_EMPTY;
 
     /// TTI at which the pdu has been transmitted
-    omnetpp::simtime_t txTime_;
+    simtime_t txTime_;
 
     // reference to the eNB module
-    omnetpp::cModule* nodeB_;
+    opp_component_ptr<cModule> nodeB_;
 
-    LteMacBase *macOwner_;
+    opp_component_ptr<LteMacBase> macOwner_;
     //used for statistics
-    LteMacBase *dstMac_;
-    //Maximum number of H-ARQ retransmission
+    opp_component_ptr<LteMacBase> dstMac_;
+    //Maximum number of H-ARQ retransmissions
     unsigned int maxHarqRtx_;
 
     // Statistics
 
+    Direction dir_ = UNKNOWN_DIRECTION;
 
-    omnetpp::simsignal_t macCellPacketLoss_;
-    omnetpp::simsignal_t macPacketLoss_;
-    omnetpp::simsignal_t harqErrorRate_;
-    omnetpp::simsignal_t harqErrorRate_1_;
-    omnetpp::simsignal_t harqErrorRate_2_;
-    omnetpp::simsignal_t harqErrorRate_3_;
-    omnetpp::simsignal_t harqErrorRate_4_;
-    omnetpp::simsignal_t harqTxAttempts_;
-
-    // D2D Statistics
-    omnetpp::simsignal_t macCellPacketLossD2D_;
-    omnetpp::simsignal_t macPacketLossD2D_;
-    omnetpp::simsignal_t harqErrorRateD2D_;
-    omnetpp::simsignal_t harqErrorRateD2D_1_;
-    omnetpp::simsignal_t harqErrorRateD2D_2_;
-    omnetpp::simsignal_t harqErrorRateD2D_3_;
-    omnetpp::simsignal_t harqErrorRateD2D_4_;
+    static simsignal_t macCellPacketLossSignal_[2];
+    static simsignal_t macPacketLossSignal_[2];
+    static simsignal_t harqErrorRateSignal_[2];
+    static simsignal_t harqErrorRate_1Signal_[2];
+    static simsignal_t harqErrorRate_2Signal_[2];
+    static simsignal_t harqErrorRate_3Signal_[2];
+    static simsignal_t harqErrorRate_4Signal_[2];
+    static simsignal_t harqTxAttemptsSignal_[2];
 
   public:
     /**
@@ -99,16 +93,7 @@ class LteHarqUnitTx
      *
      * @param id unit identifier
      */
-    LteHarqUnitTx(unsigned char acid, Codeword cw, LteMacBase *macOwner, LteMacBase *dstMac);
-
-    /**
-     * Copy constructor and operator=
-     */
-    LteHarqUnitTx(const LteHarqUnitTx& other)
-    {
-        operator=(other);
-    }
-    LteHarqUnitTx& operator=(const LteHarqUnitTx& other);
+    LteHarqUnitTx(Binder *binder, unsigned char acid, Codeword cw, LteMacBase *macOwner, LteMacBase *dstMac);
 
     /**
      * Inserts a pdu in this harq unit.
@@ -122,14 +107,14 @@ class LteHarqUnitTx
 
     /**
      * Transition from BUFFERED to SELECTED status: the pdu will be extracted when the
-     * buffer will be inspected.
+     * buffer is inspected.
      */
     virtual void markSelected();
 
     /**
      * Returns the macPdu to be sent and increments transmissions_ counter.
      *
-     * The H-ARQ process containing this unit, must call this method in order
+     * The H-ARQ process containing this unit must call this method in order
      * to extract the pdu the Mac layer will send.
      * Before extraction, control info is updated with transmission counter and ndi.
      */
@@ -156,12 +141,12 @@ class LteHarqUnitTx
     /**
      * If, after evaluating the pdu, it cannot be retransmitted because there isn't
      * enough frame space, a selfNack can be issued to advance the unit status.
-     * This avoids a big pdu that cannot be retransmitted (because the channel changed),
-     * to lock an H-ARQ unit indefinitely.
+     * This avoids a large pdu that cannot be retransmitted (because the channel changed),
+     * from locking an H-ARQ unit indefinitely.
      * Must simulate selection, extraction and nack reception.
      * N.B.: txTime is also updated so firstReadyForRtx returns a different pdu
      *
-     * @result true if the unit reset as effect of self nack, false otherwise
+     * @result true if the unit reset as a result of self nack, false otherwise
      */
     virtual bool selfNack();
 
@@ -195,14 +180,14 @@ class LteHarqUnitTx
         return pduLength_;
     }
 
-    virtual omnetpp::simtime_t getTxTime()
+    virtual simtime_t getTxTime()
     {
         return txTime_;
     }
 
     virtual bool isMarked()
     {
-        return (status_ == TXHARQ_PDU_SELECTED);
+        return status_ == TXHARQ_PDU_SELECTED;
     }
 
     virtual long getMacPduId()
@@ -225,3 +210,4 @@ class LteHarqUnitTx
 } //namespace
 
 #endif
+

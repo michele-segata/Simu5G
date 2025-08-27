@@ -23,7 +23,9 @@
 
 namespace simu5g {
 
-class CbrReceiver : public omnetpp::cSimpleModule
+using namespace omnetpp;
+
+class CbrReceiver : public cSimpleModule
 {
     inet::UdpSocket socket;
 
@@ -33,20 +35,19 @@ class CbrReceiver : public omnetpp::cSimpleModule
 
     bool mInit_;
 
-    static omnetpp::simsignal_t cbrFrameLossSignal_;
-    static omnetpp::simsignal_t cbrFrameDelaySignal_;
-    static omnetpp::simsignal_t cbrJitterSignal_;
-    static omnetpp::simsignal_t cbrReceivedThroughtput_;
-    static omnetpp::simsignal_t cbrReceivedBytesSignal_;
-
-    omnetpp::simsignal_t cbrRcvdPkt_;
+    static simsignal_t cbrFrameLossSignal_;
+    static simsignal_t cbrFrameDelaySignal_;
+    static simsignal_t cbrJitterSignal_;
+    static simsignal_t cbrReceivedThroughputSignal_;
+    static simsignal_t cbrReceivedBytesSignal_;
+    static simsignal_t cbrRcvdPktSignal_;
 
   protected:
 
-    virtual int numInitStages() const override { return inet::NUM_INIT_STAGES; }
+    int numInitStages() const override { return inet::NUM_INIT_STAGES; }
     void initialize(int stage) override;
-    void handleMessage(omnetpp::cMessage *msg) override;
-    virtual void finish() override;
+    void handleMessage(cMessage *msg) override;
+    void finish() override;
 };
 
 } //namespace

@@ -12,8 +12,9 @@
 #ifndef APPS_MEC_MEAPPS_MEFGAPP_H_
 #define APPS_MEC_MEAPPS_MEFGAPP_H_
 
+#include <inet/common/lifecycle/NodeStatus.h>
+
 #include "apps/mec/MecApps/MecAppBase.h"
-#include "inet/common/lifecycle/NodeStatus.h"
 
 namespace simu5g {
 
@@ -21,40 +22,36 @@ using namespace omnetpp;
 
 class MecRequestForegroundApp : public MecAppBase
 {
-protected:
-     inet::NodeStatus *nodeStatus = nullptr;
-     cMessage *sendFGRequest;
-     double lambda;
+  protected:
+    cMessage *sendFGRequest = nullptr;
 
-     inet::TcpSocket* serviceSocket_;
-     inet::TcpSocket* mp1Socket_;
+    inet::TcpSocket *serviceSocket_ = nullptr;
+    inet::TcpSocket *mp1Socket_ = nullptr;
 
-     HttpBaseMessage* mp1HttpMessage;
-     HttpBaseMessage* serviceHttpMessage;
+    HttpBaseMessage *mp1HttpMessage = nullptr;
+    HttpBaseMessage *serviceHttpMessage = nullptr;
 
-     virtual void handleSelfMessage(cMessage *msg) override;
+    void handleSelfMessage(cMessage *msg) override;
 
-     virtual int numInitStages() const override { return inet::NUM_INIT_STAGES; }
-     virtual void initialize(int stage) override;
+    int numInitStages() const override { return inet::NUM_INIT_STAGES; }
+    void initialize(int stage) override;
 
+    void handleHttpMessage(int connId) override;
+    void handleServiceMessage(int connId) override;
+    void handleMp1Message(int connId) override;
 
-     virtual void handleHttpMessage(int connId) override;
-     virtual void handleServiceMessage(int connId) override;
-     virtual void handleMp1Message(int connId) override;
+    void handleUeMessage(cMessage *msg) override {};
 
-     virtual void handleUeMessage(omnetpp::cMessage *msg) override {};
+    void established(int connId) override;
 
+    virtual void sendRequest();
 
-     virtual void established(int connId) override;
-
-     virtual void sendRequest();
-
-   public:
-     MecRequestForegroundApp() {}
-     virtual ~MecRequestForegroundApp();
+  public:
+    ~MecRequestForegroundApp() override;
 
 };
 
 } //namespace
 
 #endif /* APPS_MEC_MEAPPS_MEFGAPP_H_ */
+

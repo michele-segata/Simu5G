@@ -11,10 +11,19 @@
 
 package simu5g.mobility.trafficLightMobility;
 
+//
+// This module defines the behavior of traffic light controllers in the simulation.
+// It manages the states of the traffic lights (green, yellow, red) and handles the
+// interactions with vehicles, thus influencing the behavior of a node implementing the
+// ~TrafficLightMobility mobility model when such a node reaches the position of the
+// traffic light. This module allows for the configuration of the duration of
+// green-yellow-red cycles.
+//
 simple TrafficLightController
 {
     @class(TrafficLightController);
 
+    string mobilityModule;
     double greenPeriod @unit(s) = default(1s);
     double yellowPeriod @unit(s) = default(1s);
     double redPeriod @unit(s) = default(1s);
@@ -22,4 +31,5 @@ simple TrafficLightController
     int startState @enum(OFF,GREEN,YELLOW,RED) = default(3); // do not use 0 or 2, for now!
     double meanCarLength @unit(m) = default(4m);
     double areaWidth @unit(m) = default(1m);
+    bool bidirectional = default(false);
 }

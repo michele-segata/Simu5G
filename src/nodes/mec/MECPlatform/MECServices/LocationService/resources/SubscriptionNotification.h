@@ -18,7 +18,7 @@
 namespace simu5g {
 
 /*
- *  From RESTful Network APIforTerminal Location
+ *  From RESTful Network API for Terminal Location
  *  section 5.2.2.3
  *
  * attributes           optional
@@ -30,32 +30,28 @@ namespace simu5g {
  * link                   yes
  *
  */
-class SubscriptioNotification : public AttributeBase
+class SubscriptionNotification : public AttributeBase
 {
-    protected:
-        std::string callbackData;
-        bool isValidCallbackData;
+  protected:
+    std::string callbackData;
+    bool isValidCallbackData;
 
-        EnteringLeavingCriteria elCriteria;
-        bool isValidElCriteria;
+    EnteringLeavingCriteria elCriteria;
+    bool isValidElCriteria;
 
-        DistanceCriteria dCriteria;
-        bool isValidDCriteria;
+    DistanceCriteria dCriteria;
+    bool isValidDCriteria;
 
-        bool isFinalNotification;
-        bool isValidIsFinalNotification;
+    bool isFinalNotification;
+    bool isValidIsFinalNotification;
 
-        std::vector<std::string> links;
-        //check done by looking at empty() method
+    std::vector<std::string> links;  // Check done by looking at empty() method
 
-
-        std::vector<TerminalLocation> ues;
-        //check done by looking at empty() method
-
-
+    std::vector<TerminalLocation> ues;  // Check done by looking at empty() method
 
 };
 
 } //namespace
 
 #endif /* APPS_MEC_MESERVICES_LOCATIONSERVICE_RESOURCES_SUBSCRIPTIONNOTIFICATION_H_ */
+

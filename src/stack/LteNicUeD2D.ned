@@ -9,19 +9,22 @@
 // and cannot be removed from it.
 //
 
-
 package simu5g.stack;
 
+
 //
-// D2D-capable User Equipment of LTE stack
+// This module represents a Device-to-Device (D2D) capable User Equipment (UE)
+// network interface. It extends the basic LTE UE functionality by adding D2D
+// communication capabilities, allowing direct communication between UEs without
+// the need to route traffic through the base station.
 //
 module LteNicUeD2D extends LteNicUe
 {
     parameters:
-        LtePdcpRrcType = default("LtePdcpRrcUeD2D");
-        LteMacType = default("LteMacUeD2D");
-        LtePhyType = default("LtePhyUeD2D");
-        PacketFlowManagerType = default("PacketFlowManagerUe");
+        pdcpRrc.typename = default("LtePdcpRrcUeD2D");
+        mac.typename = default("LteMacUeD2D");
+        phy.typename = default("LtePhyUeD2D");
+        packetFlowManager.typename = default("PacketFlowManagerUe");
 
         d2dCapable = default(true);             // DO NOT CHANGE
         bool d2dInitialMode = default(false);

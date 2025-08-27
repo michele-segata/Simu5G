@@ -17,20 +17,22 @@
 
 namespace simu5g {
 
+using namespace omnetpp;
+
 class SctpAssociation;
 
 /**
- * Implements the X2AppClient simple module. See the NED file for more info.
+ * Implements the X2AppClient simple module. See the NED file for more information.
  */
 class X2AppClient : public inet::SctpClient
 {
     // reference to the gates
-    omnetpp::cGate* x2ManagerOut_;
+    cGate *x2ManagerOut_ = nullptr;
 
   protected:
 
     void initialize(int stage) override;
-    virtual int numInitStages() const override { return inet::NUM_INIT_STAGES; }
+    int numInitStages() const override { return inet::NUM_INIT_STAGES; }
     void socketEstablished(inet::SctpSocket *socket, unsigned long int buffer) override;
     void socketDataArrived(inet::SctpSocket *socket, inet::Packet *msg, bool urgent) override;
 };

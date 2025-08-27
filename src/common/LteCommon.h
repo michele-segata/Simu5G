@@ -20,24 +20,28 @@
 
 #define _NO_W32_PSEUDO_MODIFIERS
 
-#include <iostream>
-#include <omnetpp.h>
-#include <string>
-#include <fstream>
-#include <vector>
-#include <bitset>
-#include <set>
-#include <queue>
-#include <map>
-#include <list>
 #include <algorithm>
-#include "inet/common/geometry/common/Coord.h"
-#include "inet/common/packet/Packet.h"
-#include "inet/common/Protocol.h"
+#include <bitset>
+#include <fstream>
+#include <iostream>
+#include <list>
+#include <map>
+#include <queue>
+#include <set>
+#include <string>
+#include <vector>
+
+#include <omnetpp.h>
+#include <inet/common/geometry/common/Coord.h>
+#include <inet/common/packet/Packet.h>
+#include <inet/common/Protocol.h>
+
 #include "common/features.h"
 #include "common/LteCommonEnum_m.h"
 
 namespace simu5g {
+
+using namespace omnetpp;
 
 class Binder;
 class CellInfo;
@@ -49,16 +53,16 @@ class LtePhyBase;
 class LteRealisticChannelModel;
 class LteControlInfo;
 class ExtCell;
-class BackgroundTrafficManager;
+class IBackgroundTrafficManager;
 class BackgroundScheduler;
 class TrafficGeneratorBase;
-
 
 /**
  * Lte specific protocols
  */
-class LteProtocol {
-public:
+class LteProtocol
+{
+  public:
     static const inet::Protocol ipv4uu;  // IP protocol on the uU interface
     static const inet::Protocol pdcp;    // Packet Data Convergence Protocol
     static const inet::Protocol rlc;     // Radio Link Control
@@ -70,37 +74,54 @@ public:
 /**
  * TODO
  */
-#define ELEM(x) {x,#x}
+#define ELEM(x)            { x, #x }
 
 /// Transmission time interval
-#define TTI 0.001
+#define TTI                0.001
 
 /// Current simulation time
-#define NOW omnetpp::simTime()
-
-/// Node Id bounds
-#define ENB_MIN_ID 1
-#define ENB_MAX_ID 1023
-#define BGUE_ID 1024
-#define UE_MIN_ID 1025
-#define NR_UE_MIN_ID 2049
-#define BGUE_MIN_ID 4097
-#define UE_MAX_ID 65535
+#define NOW                simTime()
 
 /// Max Number of Codewords
-#define MAX_CODEWORDS 2
+#define MAX_CODEWORDS      2
 
 // Number of QCI classes
-#define LTE_QCI_CLASSES 9
+#define LTE_QCI_CLASSES    9
 
 /// MAC node ID
-typedef unsigned short MacNodeId;
+enum class MacNodeId : unsigned short {};  // emulate "strong typedef" with enum class
+
+// Facilitates finding places where the numeric value of MacNodeId is used
+inline unsigned short num(MacNodeId id) { return static_cast<unsigned short>(id); }
+
+inline std::ostream& operator<<(std::ostream& os, MacNodeId id) { os << static_cast<unsigned short>(id); return os; }
+
+// The following operators are mostly for simplifying comparisons and transformations involving UE_MIN_ID and similar constants
+inline bool operator<(MacNodeId a, MacNodeId b) { return static_cast<unsigned short>(a) < static_cast<unsigned short>(b); }
+inline bool operator>(MacNodeId a, MacNodeId b) { return static_cast<unsigned short>(a) > static_cast<unsigned short>(b); }
+inline bool operator<=(MacNodeId a, MacNodeId b) { return static_cast<unsigned short>(a) <= static_cast<unsigned short>(b); }
+inline bool operator>=(MacNodeId a, MacNodeId b) { return static_cast<unsigned short>(a) >= static_cast<unsigned short>(b); }
+inline MacNodeId operator+(MacNodeId a, unsigned int b) { return MacNodeId(static_cast<unsigned short>(a) + b); }
+inline MacNodeId operator-(MacNodeId a, unsigned int b) { return MacNodeId(static_cast<unsigned short>(a) - b); }
+inline MacNodeId operator-(unsigned int a, MacNodeId b) { return MacNodeId(a - static_cast<unsigned short>(b)); }
+inline unsigned short operator-(MacNodeId a, MacNodeId b) { return static_cast<unsigned short>(a) - static_cast<unsigned short>(b); }
+
+/// Node Id bounds
+constexpr MacNodeId NODEID_NONE  = MacNodeId(0);
+constexpr MacNodeId ENB_MIN_ID   = MacNodeId(1);
+constexpr MacNodeId ENB_MAX_ID   = MacNodeId(1023);
+constexpr MacNodeId BGUE_ID      = MacNodeId(1024);
+constexpr MacNodeId UE_MIN_ID    = MacNodeId(1025);
+constexpr MacNodeId NR_UE_MIN_ID = MacNodeId(2049);
+constexpr MacNodeId BGUE_MIN_ID  = MacNodeId(4097);
+constexpr MacNodeId UE_MAX_ID    = MacNodeId(65535);
+
 
 /// Cell node ID. It is numerically equal to eNodeB MAC node ID.
-typedef unsigned short MacCellId;
+typedef MacNodeId MacCellId;
 
 /// X2 node ID. It is equal to the eNodeB MAC Cell ID
-typedef unsigned short X2NodeId;
+typedef MacNodeId X2NodeId;
 
 /// Omnet Node Id
 typedef unsigned int OmnetId;
@@ -126,6 +147,12 @@ typedef unsigned short Tbs;
 /// Logical band
 typedef unsigned short Band;
 
+// specifies a list of bands that can be used by a user
+typedef std::vector<Band> UsableBands;
+
+// maps a user with a set of usable bands. If a UE is not in the list, the set of usable bands comprises the whole spectrum
+typedef std::map<MacNodeId, UsableBands> UsableBandsList;
+
 /// Codeword
 typedef unsigned short Codeword;
 
@@ -143,12 +170,8 @@ struct QCIParameters
     double packetErrorLossRate;
 };
 
-
 // Attenuation vector for analogue models
 typedef std::vector<double> AttenuationVector;
-
-
-
 
 struct ApplicationTable
 {
@@ -167,8 +190,8 @@ const ApplicationTable applications[] = {
 };
 
 /**************************
- * Scheduling discipline  *
- **************************/
+* Scheduling discipline  *
+**************************/
 
 struct SchedDisciplineTable
 {
@@ -188,8 +211,8 @@ const SchedDisciplineTable disciplines[] = {
 };
 
 /*************************
- *   Transmission Modes  *
- *************************/
+*   Transmission Modes  *
+*************************/
 struct TxTable
 {
     TxMode tx;
@@ -206,7 +229,6 @@ const TxTable txmodes[] = {
     ELEM(UNKNOWN_TX_MODE)
 };
 
-
 struct TxDirectionTable
 {
     TxDirectionType txDirection;
@@ -217,7 +239,6 @@ const TxDirectionTable txDirections[] = {
     ELEM(ANISOTROPIC),
     ELEM(OMNI)
 };
-
 
 struct FeedbackRequest
 {
@@ -248,8 +269,6 @@ const unsigned char DL_NUM_TXMODE = MULTI_USER + 1;
 
 /// Number of transmission modes in UL direction.
 const unsigned char UL_NUM_TXMODE = MULTI_USER + 1;
-
-
 
 struct DeploymentScenarioMapping
 {
@@ -294,8 +313,8 @@ double linearToDBm(double lin);
 double linearToDb(double lin);
 
 /*************************
- *      DAS Support      *
- *************************/
+*      DAS Support      *
+*************************/
 
 struct RemoteTable
 {
@@ -331,7 +350,7 @@ const unsigned char NUM_ANTENNAS = NUM_RUS + 1;
 /**
  *  Block allocation Map: # of Rbs per Band, per Remote.
  */
-typedef std::map<Remote, std::map<Band, unsigned int> > RbMap;
+typedef std::map<Remote, std::map<Band, unsigned int>> RbMap;
 
 struct LtePhyFrameTable
 {
@@ -348,7 +367,6 @@ const LtePhyFrameTable phytypes[] = {
     ELEM(D2DMODESWITCHPKT),
     ELEM(UNKNOWN_TYPE)
 };
-
 
 struct RanNodeTable
 {
@@ -367,8 +385,8 @@ const RanNodeTable nodetypes[] = {
 //|--------------------------------------------------|
 
 /*****************
- * X2 Support
- *****************/
+* X2 Support
+*****************/
 
 class X2InformationElement;
 
@@ -376,9 +394,7 @@ class X2InformationElement;
  * The Information Elements List, a list
  * of IEs contained inside a X2Message
  */
-typedef std::list<X2InformationElement*> X2InformationElementsList;
-
-
+typedef std::list<X2InformationElement *> X2InformationElementsList;
 
 /**
  * The following structure specifies a band and a byte amount which limits the schedulable data
@@ -394,29 +410,29 @@ struct BandLimit
     /// Limit of bytes (per codeword) which can be requested for the current band
     std::vector<int> limit_;
 
-    BandLimit()
+    BandLimit() : band_(0)
     {
-        band_ = 0;
         limit_.resize(MAX_CODEWORDS, -1);
     }
 
     // default "from Band" constructor
-    BandLimit(Band b)
+    BandLimit(Band b) : band_(b)
     {
-        band_ = b;
         limit_.resize(MAX_CODEWORDS, -1);
     }
+
     bool operator<(const BandLimit rhs) const
     {
-        return (limit_[0] > rhs.limit_[0]);
+        return limit_[0] > rhs.limit_[0];
     }
+
 };
 
 typedef std::vector<BandLimit> BandLimitVector;
 
 /*****************
- * LTE Constants
- *****************/
+* LTE Constants
+*****************/
 
 const unsigned char MAXCW = 2;
 const Cqi MAXCQI = 15;
@@ -432,8 +448,8 @@ const unsigned int MAC_HEADER = 2;
 const unsigned int MAXGRANT = 4294967295U;
 
 /*****************
- * MAC Support
- *****************/
+* MAC Support
+*****************/
 
 class LteMacBuffer;
 class LteMacQueue;
@@ -444,13 +460,13 @@ class LteMacPdu;
  * This is a map that associates each Connection Id with
  * a Mac Queue, storing  MAC SDUs (or RLC PDUs)
  */
-typedef std::map<MacCid, LteMacQueue*> LteMacBuffers;
+typedef std::map<MacCid, LteMacQueue *> LteMacBuffers;
 
 /**
  * This is a map that associates each Connection Id with
  *  a buffer storing the  MAC SDUs info (or RLC PDUs).
  */
-typedef std::map<MacCid, LteMacBuffer*> LteMacBufferMap;
+typedef std::map<MacCid, LteMacBuffer *> LteMacBufferMap;
 
 /**
  * This is the Schedule list, a list of schedule elements.
@@ -462,7 +478,7 @@ typedef std::map<std::pair<MacCid, Codeword>, unsigned int> LteMacScheduleList;
  * This is the Pdu list, a list of scheduled Pdus for
  * each user on each codeword.
  */
-typedef std::map<std::pair<MacNodeId, Codeword>, inet::Packet*> MacPduList;
+typedef std::map<std::pair<MacNodeId, Codeword>, inet::Packet *> MacPduList;
 
 /*
  * Codeword list : for each node, it keeps track of allocated codewords (number)
@@ -473,20 +489,20 @@ typedef std::map<MacNodeId, unsigned int> LteMacAllocatedCws;
  * The Rlc Sdu List, a list of RLC SDUs
  * contained inside a RLC PDU
  */
-typedef std::list<inet::Packet*> RlcSduList;
+typedef std::list<inet::Packet *> RlcSduList;
 typedef std::list<size_t> RlcSduListSizes;
 
 /**
  * The Mac Sdu List, a list of MAC SDUs
  * contained inside a MAC PDU
  */
-typedef omnetpp::cPacketQueue MacSduList;
+typedef cPacketQueue MacSduList;
 
 /**
  * The Mac Control Elements List, a list
  * of CEs contained inside a MAC PDU
  */
-typedef std::list<MacControlElement*> MacControlElementsList;
+typedef std::list<MacControlElement *> MacControlElementsList;
 
 /**
  * Set of MacNodeIds
@@ -494,21 +510,20 @@ typedef std::list<MacControlElement*> MacControlElementsList;
 typedef std::set<MacNodeId> UeSet;
 
 /*****************
- * HARQ Support
- *****************/
+* HARQ Support
+*****************/
 
 /// Unknown acid code
-#define HARQ_NONE 255
+#define HARQ_NONE                255
 
 /// Number of harq tx processes
-#define ENB_TX_HARQ_PROCESSES 8
-#define UE_TX_HARQ_PROCESSES 8
-#define ENB_RX_HARQ_PROCESSES 8
-#define UE_RX_HARQ_PROCESSES 8
+#define ENB_TX_HARQ_PROCESSES    8
+#define UE_TX_HARQ_PROCESSES     8
+#define ENB_RX_HARQ_PROCESSES    8
+#define UE_RX_HARQ_PROCESSES     8
 
 /// time interval between two transmissions of the same pdu
-#define HARQ_TX_INTERVAL 7*TTI
-
+#define HARQ_TX_INTERVAL         7 * TTI
 
 struct RemoteUnitPhyData
 {
@@ -523,8 +538,8 @@ typedef std::list<Codeword> CwList;
 typedef std::pair<unsigned char, CwList> UnitList;
 
 /*********************
- * Incell Interference Support
- *********************/
+* Incell Interference Support
+*********************/
 struct EnbInfo
 {
     bool init;         // initialization flag
@@ -534,10 +549,10 @@ struct EnbInfo
     TxDirectionType txDirection;
     double txAngle;
     MacNodeId id;
-    LtePhyBase * phy;
-    LteMacEnb * mac;
-    LteRealisticChannelModel * realChan;
-    omnetpp::cModule * eNodeB;
+    LtePhyBase *phy = nullptr;
+    LteMacEnb *mac = nullptr;
+    LteRealisticChannelModel *realChan = nullptr;
+    opp_component_ptr<cModule> eNodeB;
     int x2;
 };
 
@@ -547,44 +562,41 @@ struct UeInfo
     double txPwr;
     MacNodeId id;
     MacNodeId cellId;
-    LteRealisticChannelModel * realChan;
-    omnetpp::cModule * ue;
-    LtePhyBase* phy;
+    LteRealisticChannelModel *realChan = nullptr;
+    opp_component_ptr<cModule> ue;
+    LtePhyBase *phy = nullptr;
 };
 
-
 /**********************************
- * Background UEs avg Cqi support *
+ * Background UEs avg CQI support *
  *********************************/
 struct BgTrafficManagerInfo
 {
     bool init;         // initialization flag
-    BackgroundTrafficManager* bgTrafficManager;
+    IBackgroundTrafficManager *bgTrafficManager = nullptr;
     double carrierFrequency;
     double allocatedRbsDl;
     double allocatedRbsUl;
     std::vector<double> allocatedRbsUeUl;
 };
 
-
-
 // uplink interference support
-struct UeAllocationInfo{
+struct UeAllocationInfo {
     MacNodeId nodeId;
     MacCellId cellId;
-    LtePhyBase* phy;
-    TrafficGeneratorBase* trafficGen;
+    LtePhyBase *phy = nullptr;
+    TrafficGeneratorBase *trafficGen = nullptr;
     Direction dir;
 };
 
-typedef std::vector<ExtCell*> ExtCellList;
-typedef std::vector<BackgroundScheduler*> BackgroundSchedulerList;
+typedef std::vector<ExtCell *> ExtCellList;
+typedef std::vector<BackgroundScheduler *> BackgroundSchedulerList;
 
 /*****************
- *  PHY Support  *
- *****************/
+*  PHY Support  *
+*****************/
 
-typedef std::vector<std::vector<std::vector<double> > > BlerCurves;
+typedef std::vector<std::vector<std::vector<double>>> BlerCurves;
 
 struct SlotFormat {
     bool tdd;
@@ -604,17 +616,16 @@ struct CarrierInfo {
 };
 typedef std::map<double, CarrierInfo> CarrierInfoMap;
 
-
 /*************************************
- * Shortcut for structures using STL
- *************************************/
+* Shortcut for structures using STL
+*************************************/
 
 typedef std::vector<Cqi> CqiVector;
 typedef std::vector<Pmi> PmiVector;
 typedef std::set<Band> BandSet;
 typedef std::set<Remote> RemoteSet;
 typedef std::map<MacNodeId, bool> ConnectedUesMap;
-typedef std::pair<int, omnetpp::simtime_t> PacketInfo;
+typedef std::pair<int, simtime_t> PacketInfo;
 typedef std::vector<RemoteUnitPhyData> RemoteUnitPhyDataVector;
 typedef std::set<MacNodeId> ActiveUser;
 typedef std::set<MacCid> ActiveSet;
@@ -625,11 +636,11 @@ typedef std::set<MacCid> ActiveSet;
  *
  * Parameters read from xml file are stored in this map.
  */
-typedef std::map<std::string, omnetpp::cMsgPar> ParameterMap;
+typedef std::map<std::string, cMsgPar> ParameterMap;
 
 /*********************
- * Utility functions
- *********************/
+* Utility functions
+*********************/
 
 const std::string dirToA(Direction dir);
 const std::string d2dModeToA(LteD2DMode mode);
@@ -656,7 +667,7 @@ LteTrafficClass aToLteTrafficClass(std::string s);
 const std::string phyFrameTypeToA(const LtePhyFrameType r);
 LtePhyFrameType aToPhyFrameType(std::string s);
 const std::string rlcTypeToA(LteRlcType type);
-char* cStringToLower(char* str);
+char *cStringToLower(char *str);
 LteRlcType aToRlcType(std::string s);
 const std::string planeToA(Plane p);
 MacNodeId ctrlInfoToUeId(inet::Ptr<LteControlInfo> info);
@@ -664,18 +675,17 @@ MacCid idToMacCid(MacNodeId nodeId, LogicalCid lcid);
 MacCid ctrlInfoToMacCid(inet::Ptr<LteControlInfo> info);        // get the CID from the packet control info
 MacNodeId MacCidToNodeId(MacCid cid);
 LogicalCid MacCidToLcid(MacCid cid);
-Binder* getBinder();
-CellInfo* getCellInfo(MacNodeId nodeId);
-omnetpp::cModule* getPhyByMacNodeId(MacNodeId nodeId);
-omnetpp::cModule* getMacByMacNodeId(MacNodeId nodeId);
-omnetpp::cModule* getRlcByMacNodeId(MacNodeId nodeId, LteRlcType rlcType);
-omnetpp::cModule* getPdcpByMacNodeId(MacNodeId nodeId);
-LteMacBase* getMacUe(MacNodeId nodeId);
+CellInfo *getCellInfo(Binder *binder, MacNodeId nodeId);
+cModule *getPhyByMacNodeId(Binder *binder, MacNodeId nodeId);
+cModule *getMacByMacNodeId(Binder *binder, MacNodeId nodeId);
+cModule *getRlcByMacNodeId(Binder *binder, MacNodeId nodeId, LteRlcType rlcType);
+cModule *getPdcpByMacNodeId(Binder *binder, MacNodeId nodeId);
+LteMacBase *getMacUe(Binder *binder, MacNodeId nodeId);
 FeedbackGeneratorType getFeedbackGeneratorType(std::string s);
 const std::string fbGeneratorTypeToA(FeedbackGeneratorType type);
 const std::string DeploymentScenarioToA(DeploymentScenario type);
 DeploymentScenario aToDeploymentScenario(std::string s);
-bool isMulticastConnection(LteControlInfo* lteInfo);
+bool isMulticastConnection(LteControlInfo *lteInfo);
 
 /**
  * Utility function that reads the parameters of an XML element
@@ -684,7 +694,7 @@ bool isMulticastConnection(LteControlInfo* lteInfo);
  * @param xmlData XML parameters config element related to a specific section
  * @param[output] outputMap map to store read parameters
  */
-void getParametersFromXML(omnetpp::cXMLElement* xmlData, ParameterMap& outputMap);
+void getParametersFromXML(cXMLElement *xmlData, ParameterMap& outputMap);
 
 /**
  * Parses a CSV string parameter into an int array.
@@ -698,34 +708,33 @@ void getParametersFromXML(omnetpp::cXMLElement* xmlData, ParameterMap& outputMap
  * @param dim dimension of the values array
  * @param pad default value to be used when the string has less than dim values
  */
-void parseStringToIntArray(std::string str, int* values, int dim, int pad);
+void parseStringToIntArray(std::string str, int *values, int dim, int pad);
 
 /**
  * Initializes module's channels
  *
- * A dinamically created node needs its channels to be initialized, this method
+ * A dynamically created node needs its channels to be initialized, this method
  * runs through all a module's and its submodules' channels recursively and
  * initializes all channels.
  *
  * @param mod module whose channels needs initialization
  */
-void initializeAllChannels(omnetpp::cModule *mod);
+void initializeAllChannels(cModule *mod);
 
 void removeAllSimu5GTags(inet::Packet *pkt);
 
-
-template <typename T>
-  bool checkIfHeaderType(const inet::Packet *pkt, bool checkFirst = false) {
+template<typename T>
+bool checkIfHeaderType(const inet::Packet *pkt, bool checkFirst = false) {
 
     auto pktAux = pkt->dup();
 
     int index = 0;
-    while(pktAux->getBitLength() > 0 && pktAux->peekAtFront<inet::Chunk>()) {
+    while (pktAux->getBitLength() > 0 && pktAux->peekAtFront<inet::Chunk>()) {
         auto chunk = pktAux->popAtFront<inet::Chunk>();
         if (inet::dynamicPtrCast<const T>(chunk)) {
             delete pktAux;
             if (index != 0 && checkFirst)
-                throw omnetpp::cRuntimeError("The header is not the top");
+                throw cRuntimeError("The header is not the top");
             return true;
         }
         index++;
@@ -734,7 +743,7 @@ template <typename T>
     return false;
 }
 
-template <typename T>
+template<typename T>
 std::vector<T> getTagsWithInherit(inet::Packet *pkt)
 {
     std::vector<T> t;
@@ -742,11 +751,11 @@ std::vector<T> getTagsWithInherit(inet::Packet *pkt)
     if (tags.getNumTags() == 0)
         return t;
 
-    // check if exist tag of that is derived from this.
+    // check if a tag that is derived from this exists.
     //
     for (int i = 0; i < tags.getNumTags(); i++) {
         auto tag = tags.getTagForUpdate(i);
-        auto temp = inet::dynamicPtrCast<T> (tag);
+        auto temp = inet::dynamicPtrCast<T>(tag);
         if (temp != nullptr) {
             t.push_back(*temp.get());
         }

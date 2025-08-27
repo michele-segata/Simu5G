@@ -13,7 +13,6 @@
 
 namespace simu5g {
 
-L2MeasBase::L2MeasBase(){};
 
 void L2MeasBase::init(std::string name, int period, bool movingAverage)
 {
@@ -25,44 +24,37 @@ void L2MeasBase::init(std::string name, int period, bool movingAverage)
     sum_ = 0;
     mean_ = 0;
     movingAverage_ = movingAverage;
-//    outVector_.setName(name_.c_str());
-//    histogram_.setName(name_.c_str());
-
 }
-L2MeasBase::~L2MeasBase()
-{
-//    histogram_.recordAs(name_.c_str());
-    }
 
-void L2MeasBase::addValue(double value){
+
+void L2MeasBase::addValue(double value) {
     lastValue_ = (int)value;
     sum_ += value;
-    if(size_ < period_)
-    {
+    if (size_ < period_) {
         size_++;
     }
-    else
-    {
-        index_ = index_%period_;
+    else {
+        index_ = index_ % period_;
         sum_ -= values_.at(index_);
     }
     values_.at(index_++) = value;
 
-    if(movingAverage_ || index_ == period_){ // compute mean
+    if (movingAverage_ || index_ == period_) { // compute mean
         mean_ = computeMean();
         //outVector_.record(mean_);
         //histogram_.collect(mean_);
     }
 }
+
 int L2MeasBase::computeMean()
 {
-    if(index_ == 0)
+    if (index_ == 0)
         return 0;
-    if(!movingAverage_ && size_ < period_) // no enough data
+    if (!movingAverage_ && size_ < period_) // not enough data
         return 0;
-    else{
-        int mean = floor(sum_/size_);
-        return mean < 0 ? 0: mean; // round could returns -0.00 -> -1
+    else {
+        int mean = floor(sum_ / size_);
+        return mean < 0 ? 0 : mean; // round could return -0.00 -> -1
     }
 }
 
@@ -70,7 +62,6 @@ int L2MeasBase::getMean()
 {
     return mean_;
 }
-
 
 void L2MeasBase::reset()
 {
@@ -80,7 +71,6 @@ void L2MeasBase::reset()
     index_ = 0;
     sum_ = 0;
     mean_ = 0;
-
 }
 
 } //namespace

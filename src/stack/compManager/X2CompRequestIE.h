@@ -22,14 +22,13 @@ namespace simu5g {
 //
 class X2CompRequestIE : public X2InformationElement
 {
-  protected:
-
   public:
     X2CompRequestIE()
     {
         type_ = COMP_REQUEST_IE;
         length_ = 0;
     }
+
     X2CompRequestIE(const X2CompRequestIE& other) :
         X2InformationElement()
     {
@@ -43,13 +42,15 @@ class X2CompRequestIE : public X2InformationElement
         X2InformationElement::operator=(other);
         return *this;
     }
-    virtual X2CompRequestIE *dup() const
+
+    X2CompRequestIE *dup() const override
     {
         return new X2CompRequestIE(*this);
     }
-    virtual ~X2CompRequestIE() {}
+
 };
 
 } //namespace
 
 #endif
+

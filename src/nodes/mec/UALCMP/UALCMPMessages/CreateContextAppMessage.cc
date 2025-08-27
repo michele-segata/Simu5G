@@ -9,7 +9,6 @@
 // and cannot be removed from it.
 //
 
-
 #include "nodes/mec/UALCMP/UALCMPMessages/CreateContextAppMessage.h"
 
 namespace simu5g {
@@ -23,9 +22,6 @@ CreateContextAppMessage::CreateContextAppMessage(const CreateContextAppMessage& 
     copy(other);
 }
 
-CreateContextAppMessage::~CreateContextAppMessage()
-{
-}
 
 CreateContextAppMessage& CreateContextAppMessage::operator=(const CreateContextAppMessage& other)
 {

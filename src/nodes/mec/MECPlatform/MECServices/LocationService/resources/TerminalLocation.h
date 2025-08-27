@@ -18,33 +18,32 @@
 namespace simu5g {
 
 /*
- *  From RESTful Network APIforTerminal Location
+ *  From RESTful Network API for Terminal Location
  *  section 5.2.2.1
  *
  * attributes           optional
  * address                 no
- * locationRetreivalStatus no
+ * locationRetrievalStatus no
  * currentLocation         yes
  * errorInformation        yes
  *
  */
 
-
 class TerminalLocation : public AttributeBase
 {
-    protected:
-        std::string address;
-        std::string locationRetreivalStatus; // Retrieved or error
-        CurrentLocation currentLocation;
-        std::string errorInformation;
+  protected:
+    std::string address;
+    std::string locationRetrievalStatus; // Retrieved or error
+    CurrentLocation currentLocation;
+    std::string errorInformation;
 
-    public:
-        TerminalLocation();
-        TerminalLocation(const std::string& address, const std::string& locationRetreivalStatus, const CurrentLocation& currentLocation);
-        ~TerminalLocation();
-        nlohmann::ordered_json toJson() const;
+  public:
+    TerminalLocation();
+    TerminalLocation(const std::string& address, const std::string& locationRetrievalStatus, const CurrentLocation& currentLocation);
+    nlohmann::ordered_json toJson() const override;
 };
 
 } //namespace
 
 #endif /* APPS_MEC_MECSERVICES_LOCATIONSERVICE_RESOURCES_TERMINALLOCATION_H_ */
+

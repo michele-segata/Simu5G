@@ -13,26 +13,18 @@
 
 namespace simu5g {
 
-LocationInfo::LocationInfo()
+LocationInfo::LocationInfo() : coordinates_(inet::Coord::NIL), speed_(inet::Coord::NIL)
 {
-    coordinates_ = inet::Coord::NIL;
-    speed_ = inet::Coord::NIL;
-}
-LocationInfo::LocationInfo(const inet::Coord& coordinates, const inet::Coord& speed)
-{
-    coordinates_ = coordinates;
-    speed_ = speed;
 }
 
-LocationInfo::LocationInfo(const inet::Coord& coordinates)
+LocationInfo::LocationInfo(const inet::Coord& coordinates, const inet::Coord& speed) : coordinates_(coordinates), speed_(speed)
 {
-    coordinates_ = coordinates;
-    speed_ = inet::Coord::NIL;
 }
 
+LocationInfo::LocationInfo(const inet::Coord& coordinates) : coordinates_(coordinates), speed_(inet::Coord::NIL)
+{
+}
 
-
-LocationInfo::~LocationInfo(){}
 
 nlohmann::ordered_json LocationInfo::toJson() const
 {
@@ -49,17 +41,16 @@ nlohmann::ordered_json LocationInfo::toJson() const
     val["y"] = coordinates_.y;
     val["z"] = coordinates_.z;
     val["shape"] = 2;
-    if(!speed_.isUnspecified())
-    {
-        inet::Coord North(0,1,0);
+    if (!speed_.isUnspecified()) {
+        inet::Coord North(0, 1, 0);
         inet::Coord temp(speed_); // this method is const and angle() does not.
         double angle = temp.angle(North);
 
         val["velocity"]["velocityType"] = 1;
-        val["velocity"]["bearing"] = (speed_.x >= 0? angle : 360-angle);
+        val["velocity"]["bearing"] = (speed_.x >= 0 ? angle : 360 - angle);
         val["velocity"]["horizontalSpeed"] = speed_.length();
     }
- return val;
+    return val;
 }
 
 } //namespace

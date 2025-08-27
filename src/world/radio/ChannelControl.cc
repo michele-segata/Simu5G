@@ -15,6 +15,7 @@
  **************************************************************************/
 
 #include <cassert>
+#include <algorithm>
 
 #include <inet/common/INETMath.h>
 
@@ -36,20 +37,17 @@ std::ostream& operator<<(std::ostream& os, const ChannelControl::RadioEntry& rad
 
 std::ostream& operator<<(std::ostream& os, const ChannelControl::TransmissionList& tl)
 {
-    for (ChannelControl::TransmissionList::const_iterator it = tl.begin(); it != tl.end(); ++it)
-        os << endl << *it;
+    for (auto it : tl)
+        os << endl << it;
     return os;
 }
 
-ChannelControl::ChannelControl()
-{
-}
 
 ChannelControl::~ChannelControl()
 {
-    for (unsigned int i = 0; i < transmissions.size(); i++)
-        for (TransmissionList::iterator it = transmissions[i].begin(); it != transmissions[i].end(); it++)
-            delete *it;
+    for (auto& channelTransmission : transmissions)
+        for (auto airFrame : channelTransmission)
+            delete airFrame;
 }
 
 /**
@@ -59,7 +57,7 @@ ChannelControl::~ChannelControl()
  */
 void ChannelControl::initialize()
 {
-    coreDebug = hasPar("coreDebug") ? (bool) par("coreDebug") : false;
+    coreDebug = hasPar("coreDebug") ? (bool)par("coreDebug") : false;
 
     EV << "initializing ChannelControl\n";
 
@@ -69,16 +67,12 @@ void ChannelControl::initialize()
     lastOngoingTransmissionsUpdate = 0;
 
     maxInterferenceDistance = calcInterfDist();
-
-//    WATCH(maxInterferenceDistance);
-//    WATCH_LIST(radios);
-//    WATCH_VECTOR(transmissions);
 }
 
 /**
  * Calculation of the interference distance based on the transmitter
  * power, wavelength, pathloss coefficient and a threshold for the
- * minimal receive Power
+ * minimal receive power
  *
  * You may want to overwrite this function in order to do your own
  * interference calculation
@@ -87,21 +81,21 @@ double ChannelControl::calcInterfDist()
 {
     double interfDistance;
 
-    //the carrier frequency used
+    // the carrier frequency used
     double carrierFrequency = par("carrierFrequency");
-    //maximum transmission power possible
+    // maximum transmission power possible
     double pMax = par("pMax");
-    //signal attenuation threshold
+    // signal attenuation threshold
     double sat = par("sat");
-    //path loss coefficient
+    // path loss coefficient
     double alpha = par("alpha");
 
     double waveLength = (SPEED_OF_LIGHT / carrierFrequency);
-    //minimum power level to be able to physically receive a signal
+    // minimum power level to be able to physically receive a signal
     double minReceivePower = pow(10.0, sat / 10.0);
 
-    interfDistance = pow(waveLength * waveLength * pMax /
-                         (16.0 * M_PI * M_PI * minReceivePower), 1.0 / alpha);
+    interfDistance = pow(waveLength * waveLength * pMax
+            / (16.0 * M_PI * M_PI * minReceivePower), 1.0 / alpha);
 
     EV << "max interference distance:" << interfDistance << endl;
 
@@ -130,49 +124,44 @@ ChannelControl::RadioRef ChannelControl::registerRadio(cModule *radio, cGate *ra
     return &radios.back(); // last element
 }
 
-void ChannelControl::unregisterRadio(RadioRef r)
+void ChannelControl::unregisterRadio(RadioRef radio)
 {
     Enter_Method_Silent();
-    for (RadioList::iterator it = radios.begin(); it != radios.end(); it++)
-    {
-        if (it->radioModule == r->radioModule)
-        {
-            RadioRef radioToRemove = &*it;
-            // erase radio from all registered radios' neighbor list
-            for (RadioList::iterator i2 = radios.begin(); i2 != radios.end(); ++i2)
-            {
-                RadioRef otherRadio = &*i2;
-                otherRadio->neighbors.erase(radioToRemove);
-                otherRadio->isNeighborListValid = false;
-                radioToRemove->isNeighborListValid = false;
-            }
+    auto radioIt = std::find_if(radios.begin(), radios.end(), [radio](const RadioEntry& r) {
+        return r.radioModule == radio->radioModule;
+    });
 
-            // erase radio from registered radios
-            radios.erase(it);
-            return;
-        }
+    if (radioIt == radios.end())
+        throw cRuntimeError("unregisterRadio failed: no such radio");
+
+    // erase radio from all registered radios' neighbor list
+    RadioRef radioToRemove = &(*radioIt);
+    for (auto & otherRadio : radios) {
+        otherRadio.neighbors.erase(radioToRemove);
+        otherRadio.isNeighborListValid = false;
+        radioToRemove->isNeighborListValid = false;
     }
 
-    error("unregisterRadio failed: no such radio");
+    // erase radio from registered radios
+    radios.erase(radioIt);
 }
 
 ChannelControl::RadioRef ChannelControl::lookupRadio(cModule *radio)
 {
     Enter_Method_Silent();
-    for (RadioList::iterator it = radios.begin(); it != radios.end(); it++)
-        if (it->radioModule == radio)
-            return &(*it);
-    return 0;
+    for (auto & it : radios)
+        if (it.radioModule.get() == radio)
+            return &it;
+    return nullptr;
 }
 
 const ChannelControl::RadioRefVector& ChannelControl::getNeighbors(RadioRef h)
 {
     Enter_Method_Silent();
-    if (!h->isNeighborListValid)
-    {
+    if (!h->isNeighborListValid) {
         h->neighborList.clear();
-        for (std::set<RadioRef,RadioEntry::Compare>::iterator it = h->neighbors.begin(); it != h->neighbors.end(); it++)
-            h->neighborList.push_back(*it);
+        for (const auto& neighbor : h->neighbors)
+            h->neighborList.push_back(neighbor);
         h->isNeighborListValid = true;
     }
     return h->neighborList;
@@ -182,9 +171,8 @@ void ChannelControl::updateConnections(RadioRef h)
 {
     inet::Coord& hpos = h->pos;
     double maxDistSquared = maxInterferenceDistance * maxInterferenceDistance;
-    for (RadioList::iterator it = radios.begin(); it != radios.end(); ++it)
-    {
-        RadioEntry *hi = &(*it);
+    for (auto & radio : radios) {
+        RadioEntry *hi = &radio;
         if (hi == h)
             continue;
 
@@ -192,20 +180,16 @@ void ChannelControl::updateConnections(RadioRef h)
         // (omitting the square root (calling sqrdist() instead of distance()) saves about 5% CPU)
         bool inRange = hpos.sqrdist(hi->pos) < maxDistSquared;
 
-        if (inRange)
-        {
+        if (inRange) {
             // nodes within communication range: connect
-            if (h->neighbors.insert(hi).second == true)
-            {
+            if (h->neighbors.insert(hi).second == true) {
                 hi->neighbors.insert(h);
                 h->isNeighborListValid = hi->isNeighborListValid = false;
             }
         }
-        else
-        {
+        else {
             // out of range: disconnect
-            if (h->neighbors.erase(hi))
-            {
+            if (h->neighbors.erase(hi)) {
                 hi->neighbors.erase(h);
                 h->isNeighborListValid = hi->isNeighborListValid = false;
             }
@@ -216,7 +200,7 @@ void ChannelControl::updateConnections(RadioRef h)
 void ChannelControl::checkChannel(int channel)
 {
     if (channel >= numChannels || channel < 0)
-        error("Invalid channel, must above 0 and below %d", numChannels);
+        throw cRuntimeError("Invalid channel, must be above 0 and below %d", numChannels);
 }
 
 void ChannelControl::setRadioPosition(RadioRef r, const inet::Coord& pos)
@@ -250,15 +234,13 @@ void ChannelControl::addOngoingTransmission(RadioRef h, AirFrame *frame)
     // we only keep track of ongoing transmissions so that we can support
     // NICs switching channels -- so there's no point doing it if there's only
     // one channel
-    if (numChannels == 1)
-    {
+    if (numChannels == 1) {
         delete frame;
         return;
     }
 
     // purge old transmissions from time to time
-    if (simTime() - lastOngoingTransmissionsUpdate > TRANSMISSION_PURGE_INTERVAL)
-    {
+    if (simTime() - lastOngoingTransmissionsUpdate > TRANSMISSION_PURGE_INTERVAL) {
         purgeOngoingTransmissions();
         lastOngoingTransmissionsUpdate = simTime();
     }
@@ -271,19 +253,15 @@ void ChannelControl::addOngoingTransmission(RadioRef h, AirFrame *frame)
 
 void ChannelControl::purgeOngoingTransmissions()
 {
-    for (int i = 0; i < numChannels; i++)
-    {
-        for (TransmissionList::iterator it = transmissions[i].begin(); it != transmissions[i].end();)
-        {
-            TransmissionList::iterator curr = it;
+    for (int i = 0; i < numChannels; i++) {
+        for (auto it = transmissions[i].begin(); it != transmissions[i].end(); ) {
             AirFrame *frame = *it;
-            it++;
-
-            if (frame->getTimestamp() + frame->getDuration() + TRANSMISSION_PURGE_INTERVAL < simTime())
-            {
+            if (frame->getTimestamp() + frame->getDuration() + TRANSMISSION_PURGE_INTERVAL < simTime()) {
                 delete frame;
-                transmissions[i].erase(curr);
+                it = transmissions[i].erase(it);
             }
+            else
+                ++it;
         }
     }
 }
@@ -296,21 +274,18 @@ void ChannelControl::sendToChannel(RadioRef srcRadio, AirFrame *airFrame)
     const RadioRefVector& neighbors = getNeighbors(srcRadio);
     int n = neighbors.size();
     int channel = airFrame->getChannelNumber();
-    for (int i=0; i<n; i++)
-    {
+    for (int i = 0; i < n; i++) {
         RadioRef r = neighbors[i];
-        if (!r->isActive)
-        {
+        if (!r->isActive) {
             EV << "skipping disabled radio interface \n";
             continue;
         }
-        if (r->channel == channel)
-        {
+        if (r->channel == channel) {
             EV << "sending message to radio listening on the same channel\n";
             // account for propagation delay, based on distance in meters
             // Over 300m, dt=1us=10 bit times @ 10Mbps
             simtime_t delay = srcRadio->pos.distance(r->pos) / SPEED_OF_LIGHT;
-            check_and_cast<cSimpleModule*>(srcRadio->radioModule)->sendDirect(airFrame->dup(), delay, airFrame->getDuration(), r->radioInGate);
+            check_and_cast<cSimpleModule *>(srcRadio->radioModule.get())->sendDirect(airFrame->dup(), delay, airFrame->getDuration(), r->radioInGate);
         }
         else
             EV << "skipping radio listening on a different channel\n";

@@ -13,7 +13,10 @@
 package simu5g.stack.mac;
 
 //
-// D2D-capable User Equipment MAC layer of LTE stack
+// This module extends LTE MAC functionalities at the User Equipment side to support device-to-device (D2D)
+// communications. Specifically, it customizes ~LteMacUe functionalities to support the transmission and reception
+// of MAC Protocol Data Units (PDUs), Channel Status Information (CSI), and Buffer Status Reports (BSRs) over a
+// D2D link. It supports D2D multicast transmission to nearby UEs belonging to a given multicast group.
 //
 simple LteMacUeD2D extends LteMacUe
 {
@@ -22,6 +25,8 @@ simple LteMacUeD2D extends LteMacUe
 
         bool usePreconfiguredTxParams = default(false);
         int d2dCqi = default(7);
+        string rlcUmModule = default("^.rlc.um");
+        string pdcpRrcModule = default("^.pdcpRrc");
 
         @signal[harqErrorRate_1st_D2D];
         @statistic[harqErrorRate_1st_D2D](title="Harq Error Rate D2D (1st Tx)"; unit=""; source="harqErrorRate_1st_D2D"; record=mean,vector);

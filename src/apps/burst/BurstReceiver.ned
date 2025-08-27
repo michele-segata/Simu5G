@@ -13,11 +13,15 @@ package simu5g.apps.burst;
 
 import inet.applications.contract.IApp;
 
-
+//
+// This module models an application that receives bursts of packets from
+// a ~BurstSender application module. It binds to a specified UDP local port,
+// logs the received packets, and records statistics such as packet delay.
+//
 simple BurstReceiver like IApp
 {
     parameters:
-        int localPort = default(3000);
+        int localPort = default(3000);   // the local UDP port to bind to
 
         @signal[burstRcvdPkt];
         @statistic[burstRcvdPkt](title="Received packet ID"; unit=""; source="burstRcvdPkt"; record=vector);
@@ -28,6 +32,5 @@ simple BurstReceiver like IApp
     gates:
         output socketOut;
         input socketIn;
-
 }
 

@@ -9,11 +9,12 @@
 // and cannot be removed from it.
 //
 
-
 package simu5g.stack.pdcp_rrc;
 
 //
-// Receive Entity of NR PDCP
+// This module handles the operations related to the LTE PDCP (Packet Data Convergence Protocol)
+// layer at the receiving side of a specific connection. It processes incoming PDCP PDUs from the
+// RLC layer, performing header decompression before forwarding them to the upper layer protocols.
 //
 simple LteRxPdcpEntity
 {

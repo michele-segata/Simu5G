@@ -13,8 +13,13 @@ package simu5g.nodes.mec.MECPlatform.MECServices.LocationService;
 import simu5g.nodes.mec.MECPlatform.MECServices.MECServiceBase.IMECService;
 import inet.applications.contract.IApp;
 
-//# Location Service module
-
+//
+// This module implements the Location Service API as defined by the ETSI GS MEC 013 specification.
+// It exposes a REST API that allows MEC applications to retrieve location-related information
+// about User Equipment (UE) or a group of UEs. It supports both request-response and
+// subscribe-notification patterns (in the latter case, the MEC application will be notified when
+// a target UE enters a specific circular area.
+//
 simple LocationService like IMECService, IApp
 {
     parameters:
@@ -22,7 +27,6 @@ simple LocationService like IMECService, IApp
         int subscriptionQueueSize = default(0);
         string localAddress = default(""); // local address; may be left empty ("")
         int localPort = default(1000);     // localPort number to listen on
-        string dataTransferMode @enum("bytecount","object","bytestream") = default("bytestream"); // bytestream for emulation
         double LocationSubscriptionPeriod @unit(s) = default(1s);
 
         bool loadGenerator = default(false);
@@ -50,6 +54,8 @@ simple LocationService like IMECService, IApp
 
         string scopeOfLocality = default("MEC_HOST");
         bool consumedLocalOnly = default(true);
+
+        string binderModule = default("binder");
 
         @display("i=block/app");
         @signal[requestQueueSize];

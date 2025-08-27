@@ -29,13 +29,19 @@ import simu5g.stack.ICellularNic;
 
 
 //
-// User Equipment Module
+// This module models a User Equipment (UE) in a 4G LTE network. It is a host equipped with
+// an LTE Network Interface Card (NIC), allowing the UE to connect to an ~eNodeB module via the
+// Radio Access Network (RAN) of the LTE network and communicate with any other host in the system.
+// In addition to a NIC submodule, this compound module includes all the higher layers of the protocol stack,
+// from IP to application modules. It supports a configurable number of UDP and TCP applications. It
+// also features an Ethernet interface, which is utilized in real-time emulation mode to connect the UE
+// to the real network (outside the simulator) via a virtual Ethernet interface.
 //
 module Ue
 {
     parameters:
         @networkNode();
-        @display("i=device/pocketpc;bgb=858.888,659.568");
+        @display("i=device/pocketpc;bgb=858,659");
         @figure[applicationLayer](type=rectangle; pos=250,6; size=600,130; lineColor=#808080; cornerRadius=5; fillColor=#ffff00; fillOpacity=0.1);
         @figure[applicationLayer.title](type=text; pos=845,11; anchor=ne; text="application layer");
         @figure[transportLayer](type=rectangle; pos=250,156; size=600,130; fillColor=#ff0000; lineColor=#808080; cornerRadius=5; fillOpacity=0.1);
@@ -45,10 +51,6 @@ module Ue
         @figure[linkLayer](type=rectangle; pos=250,456; size=600,130; fillColor=#0000ff; lineColor=#808080; cornerRadius=5; fillOpacity=0.1);
         @figure[linkLayer.title](type=text; pos=845,461; anchor=ne; text="link layer");
         @figure[submodules];
-
-
-        //# Mobility
-        mobility.typename = default("StationaryMobility");
 
         //# Apps
         int numApps = default(0);   // no of apps.
@@ -65,14 +67,12 @@ module Ue
         int macNodeId @mutable = default(0); // TODO: this is not a real parameter
         int macCellId @mutable = default(0); // TODO: this is not a real parameter
 
-        //# D2D capability
-        string nicType = default("LteNicUe");
-
         //# Network Layer specs
         bool hasIpv4 = default(true);
         bool hasIpv6 = default(false);
         *.interfaceTableModule = default(absPath(".interfaceTable"));
         *.routingTableModule = default("^.ipv4.routingTable");
+        *.mobilityModule = default(absPath(".mobility"));
 
         //# External Ethernet interfaces
         int numEthInterfaces = default(0);
@@ -85,16 +85,18 @@ module Ue
         int numPcapRecorders = default(0); // no of PcapRecorders
 
         bool hasRNISupport = default(false);
+        cellularNic.mac.collectorModule = hasRNISupport ? "^.^.ueCollector" : "";
+        cellularNic.phy.hasCollector = hasRNISupport;
 
     gates:
         input radioIn @directIn;     // connection to master
 
     submodules:
         interfaceTable: InterfaceTable {
-            @display("p=127.368004,257.868;is=s");
+            @display("p=127,257;is=s");
         }
-        mobility: <default("")> like IMobility if typename != "" {
-            @display("p=127.368004,172.26001;is=s");
+        mobility: <default("StationaryMobility")> like IMobility {
+            @display("p=127,172;is=s");
         }
 
         //# layer submodules (must be ordered from lower to upper layers)
@@ -102,22 +104,22 @@ module Ue
         //# link layer
         lo[numLoInterfaces]: <default("LoopbackInterface")> like ILoopbackInterface {
             parameters:
-                @display("p=503.736,589.50397,row,150");
+                @display("p=503,590,row,150");
         }
-        cellularNic: <nicType> like ICellularNic {
+        cellularNic: <default("LteNicUe")> like ICellularNic {
             nodeType = parent.nodeType;
-            @display("p=355.152,589.50397");
+            @display("p=355,589");
         }
 
         //# ethernet interface used for communicating with external applications in emulation mode
         eth[numEthInterfaces]: <default("ExtLowerEthernetInterface")> like IEthernetInterface {
             parameters:
-                @display("p=674.06396,589.50397,row,150;q=txQueue");
+                @display("p=674,590,row,150;q=txQueue");
         }
         encap: <default("EthernetEncapsulation")> like IEthernetLayer if typename != "" {
             parameters:
                 registerProtocol = true;
-                @display("p=674.06396,496.488");
+                @display("p=674,500");
         }
 
         //# network layer
@@ -146,7 +148,7 @@ module Ue
 
         //# app layer
         app[numApps]: <> like IApp {
-            @display("p=374.47998,72.479996,row,140");
+            @display("p=374,72,row,140");
         }
 
         //# message dispatcher for SAP between application and transport layer
@@ -157,7 +159,7 @@ module Ue
         //# message dispatcher for SAP between transport and network layer
         tn: MessageDispatcher {
             parameters:
-                @display("p=550,296;b=600,5,,,,1");
+                @display("p=550,300;b=600,5,,,,1");
         }
         //# message dispatcher for SAP to link layer
         nl: MessageDispatcher {
@@ -166,12 +168,12 @@ module Ue
         }
         //# PcapRecorders
         pcapRecorder[numPcapRecorders]: PcapRecorder {
-            @display("p=126.84,346.69598,r,10");
+            @display("p=126,346,r,10");
         }
 
         //# UeStatsCollector - for MEC
         ueCollector: UeStatsCollector if hasRNISupport {
-            @display("p=126.84,588.296;is=s");
+            @display("p=126,588;is=s");
         }
 
     connections allowunconnected:

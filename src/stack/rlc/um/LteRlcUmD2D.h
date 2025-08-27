@@ -17,6 +17,8 @@
 
 namespace simu5g {
 
+using namespace omnetpp;
+
 /**
  * @class LteRlcUmD2D
  * @brief UM Module
@@ -27,29 +29,27 @@ namespace simu5g {
 class LteRlcUmD2D : public LteRlcUm
 {
   public:
-    virtual ~LteRlcUmD2D()
-    {
-    }
-    virtual void resumeDownstreamInPackets(MacNodeId peerId) override;
-    virtual bool isEmptyingTxBuffer(MacNodeId peerId) override;
+
+    void resumeDownstreamInPackets(MacNodeId peerId) override;
+    bool isEmptyingTxBuffer(MacNodeId peerId) override;
 
   protected:
 
     RanNodeType nodeType_;
 
-    virtual int numInitStages() const override { return inet::NUM_INIT_STAGES; }
+    int numInitStages() const override { return inet::NUM_INIT_STAGES; }
 
     /**
      * getTxBuffer() is used by the sender to gather the TXBuffer
      * for that CID. If TXBuffer was already present, a reference
      * is returned, otherwise a new TXBuffer is created,
-     * added to the tx_buffers map and a reference is returned aswell.
+     * added to the tx_buffers map and a reference is returned as well.
      *
      * @param lteInfo flow-related info
      * @return pointer to the TXBuffer for the CID of the flow
      *
      */
-    virtual UmTxEntity* getTxBuffer(inet::Ptr<FlowControlInfo> lteInfo) override;
+    UmTxEntity *getTxBuffer(inet::Ptr<FlowControlInfo> lteInfo) override;
 
     /**
      * UM Mode
@@ -57,16 +57,16 @@ class LteRlcUmD2D : public LteRlcUm
      * handler for traffic coming from
      * lower layer (DTCH, MTCH, MCCH).
      *
-     * handleLowerMessage() performs the following task:
+     * handleLowerMessage() performs the following tasks:
      *
      * - Search (or add) the proper RXBuffer, depending
      *   on the packet CID
-     * - Calls the RXBuffer, that from now on takes
+     * - Calls the RXBuffer, which from now on takes
      *   care of the packet
      *
      * @param pkt packet to process
      */
-    virtual void handleLowerMessage(omnetpp::cPacket *pkt) override;
+    void handleLowerMessage(cPacket *pkt) override;
 
     /**
      * deleteQueues() must be called on handover
@@ -74,13 +74,14 @@ class LteRlcUmD2D : public LteRlcUm
      *
      * @param nodeId Id of the node whose queues are deleted
      */
-    virtual void deleteQueues(MacNodeId nodeId) override;
+    void deleteQueues(MacNodeId nodeId) override;
 
   private:
 
-    std::map<MacNodeId, std::set<UmTxEntity*, simu5g::utils::cModule_LessId> > perPeerTxEntities_;
+    std::map<MacNodeId, std::set<UmTxEntity *, simu5g::utils::cModule_LessId>> perPeerTxEntities_;
 };
 
 } //namespace
 
 #endif
+

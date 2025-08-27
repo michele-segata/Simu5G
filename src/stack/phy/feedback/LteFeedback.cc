@@ -17,12 +17,6 @@ namespace simu5g {
 using namespace omnetpp;
 
 
-
-LteFeedback::LteFeedback() :
-        status_(EMPTY), txMode_(SINGLE_ANTENNA_PORT0), periodicFeedback_(true), remoteAntennaId_(
-                MACRO) {
-}
-
 void LteFeedback::reset() {
     wideBandCqi_.clear();
     perBandCqi_.clear();
@@ -36,16 +30,16 @@ void LteFeedback::reset() {
 }
 
 void LteFeedback::print(MacCellId cellId, MacNodeId nodeId, Direction dir,
-        const char* s) const {
+        const char *s) const {
     EV << NOW << " " << s << "         LteFeedback\n";
     EV << NOW << " " << s << " CellId: " << cellId << "\n";
     EV << NOW << " " << s << " NodeId: " << nodeId << "\n";
-    EV << NOW << " " << s << " Antenna: " << dasToA(getAntennaId()) << "\n"; // XXX Generoso
+    EV << NOW << " " << s << " Antenna: " << dasToA(getAntennaId()) << "\n"; // XXX Generous
     EV << NOW << " " << s << " Direction: " << dirToA(dir) << "\n";
     EV << NOW << " " << s << " -------------------------\n";
     EV << NOW << " " << s << " TxMode: " << txModeToA(getTxMode()) << "\n";
     EV << NOW << " " << s << " Type: "
-              << (isPeriodicFeedback() ? "PERIODIC" : "APERIODIC") << "\n";
+       << (isPeriodicFeedback() ? "PERIODIC" : "APERIODIC") << "\n";
     EV << NOW << " " << s << " -------------------------\n";
 
     if (isEmptyFeedback()) {
@@ -60,7 +54,7 @@ void LteFeedback::print(MacCellId cellId, MacNodeId nodeId, Direction dir,
         unsigned int codewords = cqi.size();
         for (Codeword cw = 0; cw < codewords; ++cw)
             EV << NOW << " " << s << " Preferred CQI[" << cw << "] = "
-                      << cqi.at(cw) << "\n";
+               << cqi.at(cw) << "\n";
     }
 
     if (hasWbCqi()) {
@@ -68,7 +62,7 @@ void LteFeedback::print(MacCellId cellId, MacNodeId nodeId, Direction dir,
         unsigned int codewords = cqi.size();
         for (Codeword cw = 0; cw < codewords; ++cw)
             EV << NOW << " " << s << " Wideband CQI[" << cw << "] = "
-                      << cqi.at(cw) << "\n";
+               << cqi.at(cw) << "\n";
     }
 
     if (hasBandCqi()) {
@@ -76,11 +70,11 @@ void LteFeedback::print(MacCellId cellId, MacNodeId nodeId, Direction dir,
         unsigned int codewords = cqi.size();
         for (Codeword cw = 0; cw < codewords; ++cw) {
             EV << NOW << " " << s << " Band CQI[" << cw << "] = {";
-            unsigned int bands = cqi[0].size();
+            unsigned int bands = cqi[cw].size();
             if (bands > 0) {
-                EV << cqi.at(cw).at(0);
+                EV << cqi[cw].at(0);
                 for (Band b = 1; b < bands; ++b)
-                    EV << ", " << cqi.at(cw).at(b);
+                    EV << ", " << cqi[cw].at(b);
             }
             EV << "}\n";
         }
@@ -110,14 +104,11 @@ void LteFeedback::print(MacCellId cellId, MacNodeId nodeId, Direction dir,
 
     if (hasPreferredCqi() || hasPreferredPmi()) {
         BandSet band = getPreferredBands();
-        BandSet::iterator it = band.begin();
-        BandSet::iterator et = band.end();
         EV << NOW << " " << s << " Preferred Bands = {";
-        if (it != et) {
-            EV << *it;
-            it++;
-            for (; it != et; ++it)
-                EV << ", " << *it;
+        const char *sep = "";
+        for (const auto& b : band) {
+            EV << sep << b;
+            sep = ", ";
         }
         EV << "}\n";
     }
@@ -127,11 +118,11 @@ void LteMuMimoMatrix::print(const char *s) const {
     EV << NOW << " " << s << " ################" << endl;
     EV << NOW << " " << s << " LteMuMimoMatrix" << endl;
     EV << NOW << " " << s << " ################" << endl;
-    for (unsigned int i=1025;i<maxNodeId_;i++)
-    EV << NOW << "" << i;
+    for (unsigned int i = num(UE_MIN_ID); i < num(maxNodeId_); i++)
+        EV << NOW << "" << i;
     EV << endl;
-    for (unsigned int i=1025;i<maxNodeId_;i++)
-    EV << NOW << "" << muMatrix_[i];
+    for (unsigned int i = num(UE_MIN_ID); i < num(maxNodeId_); i++)
+        EV << NOW << "" << muMatrix_[i];
 }
 
 } //namespace

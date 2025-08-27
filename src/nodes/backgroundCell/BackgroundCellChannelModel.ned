@@ -11,11 +11,20 @@
 
 package simu5g.nodes.backgroundCell;
 
+//
+// This module configures the channel parameters associated with a ~BackgroundCell. It is used
+// to compute the channel quality for background UEs (refer to the ~BackgroundUe module), which in
+// turn is essential for deriving the correct allocation of time-frequency resources via the
+// Adaptive Modulation and Coding mechanism.
+//
 simple BackgroundCellChannelModel
 {
     parameters:
         @display("i=block/control");
         @class("BackgroundCellChannelModel");
+
+        // modules
+        string binderModule = default("binder");
 
         // Enable/disable shadowing
         bool shadowing = default(true);
@@ -37,7 +46,7 @@ simple BackgroundCellChannelModel
         double correlation_distance @unit(m) = default(50m);
 
         // Antenna Gain of UE --> wrt an isotropic antenna
-        double antennaGainUe @unit(dBi) = default(0dBi);  
+        double antennaGainUe @unit(dBi) = default(0dBi);
         // Antenna Gain of eNodeB -->
         double antennGainEnB @unit(dBi) = default(18dBi);
         // Antenna Gain of Micro node -->

@@ -15,7 +15,11 @@
 #include "common/LteCommon.h"
 #include "stack/mac/allocator/LteAllocatorUtils.h"
 
+#include "stack/mac/LteMacEnb.h"
+
 namespace simu5g {
+
+using namespace omnetpp;
 
 class LteMacEnb;
 
@@ -28,19 +32,19 @@ class LteAllocationModule
   protected:
 
     /// Owner MAC module
-    LteMacEnb *mac_;
+    opp_component_ptr<LteMacEnb> mac_;
 
     /// Number of bands
-    unsigned int bands_;
+    unsigned int bands_ = 0;
 
     /// Operational Direction. Set via initialize().
     Direction dir_;
 
     /// Flag that indicates when the data structures need to be reset in the next slot
-    bool usedInLastSlot_;
+    bool usedInLastSlot_ = false;
 
     /*
-     * We will consider in the following two Planes
+     * We will consider the following two planes
      *
      * plane
      *  [0]      represents the main OFDMA space
@@ -53,25 +57,26 @@ class LteAllocationModule
      *
      * e.g. totalRbsMatrix_[ <plane> ] [ <antenna> ]
      */
-    std::vector<std::vector<unsigned int> > totalRbsMatrix_;
+    std::vector<std::vector<unsigned int>> totalRbsMatrix_;
 
     /**
-     * Amount of Blocks allocated during this TTI, for each plane and for each antenna
+     * Amount of blocks allocated during this TTI, for each plane and for each antenna
      *
      * e.g. allocatedRbsMatrix_[ <plane> ] [ <antenna> ]
      */
-    std::vector<std::vector<unsigned int> > allocatedRbsMatrix_;
+    std::vector<std::vector<unsigned int>> allocatedRbsMatrix_;
 
     /**
      * Amount of available resource blocks, for each plane, for each antenna and for each band
      *
      * e.g. availableRbsMatrix_[ <plane> ] [ <antenna> ] [ <band> ]
      */
-    std::vector<std::vector<std::vector<unsigned int> > > freeRbsMatrix_;
+    std::vector<std::vector<std::vector<unsigned int>>> freeRbsMatrix_;
 
     /************************************************************
-     *    From UE to Logical Band
-     ************************************************************/
+    *    From UE to Logical Band
+    ************************************************************/
+
   public:
 
     // Amount of bytes served by a single set of allocated blocks
@@ -93,15 +98,15 @@ class LteAllocationModule
     struct AllocatedRbsPerUeInfo
     {
         /// Stores the amount of blocks allocated in every band by the structure UE
-        unsigned int allocatedBlocks_;
+        unsigned int allocatedBlocks_ = 0;
         /// Stores the amount of bytes allocated to every UE in the structure band
-        unsigned int allocatedBytes_;
+        unsigned int allocatedBytes_ = 0;
 
         // if false this user is not using MU-MIMO
-        bool muMimoEnabled_;
+        bool muMimoEnabled_ = false;
         // if false this user transmits on MAIN_PLANE, otherwise it is considered as secondary
-        bool secondaryUser_;
-        MacNodeId peerId_;
+        bool secondaryUser_ = false;
+        MacNodeId peerId_ = NODEID_NONE;
 
         // amount of blocks allocated for this UE for each remote and for each band
         std::map<Remote, PerBandAllocatedRbsMap> ueAllocatedRbsMap_;
@@ -114,19 +119,13 @@ class LteAllocationModule
         RemoteSet availableAntennaSet_;
 
         // first available antenna
-        Remote currentAntenna_;
+        Remote currentAntenna_ = MACRO;
 
-    public:
+      public:
 
         AllocatedRbsPerUeInfo()
         {
-            allocatedBlocks_ = 0;
-            allocatedBytes_ = 0;
-            peerId_ = 0;
-            muMimoEnabled_ = false;
-            secondaryUser_ = false;
             availableAntennaSet_.insert(MACRO);
-            currentAntenna_ = MACRO;
         }
     };
 
@@ -140,8 +139,9 @@ class LteAllocationModule
     AllocatedRbsPerUeMap allocatedRbsUe_;
 
     /************************************************************
-     *   From Logical Bands to UE
-     ************************************************************/
+    *   From Logical Bands to UE
+    ************************************************************/
+
   public:
 
     typedef std::map<MacNodeId, unsigned int> UeAllocatedBlocksMap;
@@ -156,11 +156,10 @@ class LteAllocationModule
         UeAllocatedBytesMap ueAllocatedBytesMap_;
 
         /// Stores the amount of blocks allocated to every UE in the structure band
-        unsigned int allocated_;
+        unsigned int allocated_ = 0;
 
         AllocatedRbsPerBandInfo()
         {
-            allocated_ = 0;
         }
     };
 
@@ -169,14 +168,14 @@ class LteAllocationModule
   protected:
 
     /**
-     * e.g. allocatedRbsBand_ [ <plane> ] [ <antenna> ] [ <band> ] give the the amount of blocks allocated for each UE
+     * e.g. allocatedRbsBand_ [ <plane> ] [ <antenna> ] [ <band> ] give the amount of blocks allocated for each UE
      */
-    std::vector<std::vector<AllocatedRbsPerBandMap> > allocatedRbsPerBand_;
+    std::vector<std::vector<AllocatedRbsPerBandMap>> allocatedRbsPerBand_;
 
     /*
-     * Stores the block-allocation info of the previous TTI in order to use them for interference computation
+     * Stores the block-allocation info of the previous TTI in order to use it for interference computation
      */
-    std::vector<std::vector<AllocatedRbsPerBandMap> > prevAllocatedRbsPerBand_;
+    std::vector<std::vector<AllocatedRbsPerBandMap>> prevAllocatedRbsPerBand_;
 
   public:
 
@@ -184,24 +183,24 @@ class LteAllocationModule
     LteAllocationModule(LteMacEnb *mac, const Direction direction);
 
     /// Destructor.
-    virtual ~LteAllocationModule() { };
+    virtual ~LteAllocationModule() {}
 
-    // init Allocation Module strucutre
+    // init Allocation Module structure
     void init(const unsigned int resourceBlocks, const unsigned int bands);
 
-    // reset Allocation Module strucutre
+    // reset Allocation Module structure
     void reset(const unsigned int resourceBlocks, const unsigned int bands);
 
-    // ********* MUMimo Support *********
+    // ********* MU-MIMO Support *********
     // Configure MuMimo between "nodeId" and "peer"
     bool configureMuMimoPeering(const MacNodeId nodeId, const MacNodeId peer);
 
-    // MU-Mimo configuration functions
+    // MU-MIMO configuration functions
     void configureOFDMplane(const Plane plane);
     void setRemoteAntenna(const Plane plane, const Remote antenna);
     Plane getOFDMPlane(const MacNodeId nodeId);
 
-    // returns the Mu-Mimo peer id if it exists, own id otherwise
+    // returns the Mu-MIMO peer id if it exists, own id otherwise
     MacNodeId getMuMimoPeer(const MacNodeId nodeId) const;
     // **********************************
 
@@ -212,19 +211,19 @@ class LteAllocationModule
     // returns the amount of free blocks for the given band in the given plane
     unsigned int availableBlocks(const MacNodeId nodeId, const Plane plane, const Band band);
 
-    // returns the amount of free blocks for the given band and for the fiven antenna
+    // returns the amount of free blocks for the given band and for the given antenna
     unsigned int availableBlocks(const MacNodeId nodeId, const Remote antenna, const Band band);
     // ***************************************************************
 
     // ************** Resource Blocks Allocation Methods **************
-    // tries to satisfy the resource block request in the given band and for the fiven antenna
+    // tries to satisfy the resource block request in the given band and for the given antenna
     bool addBlocks(const Remote antenna, const Band band, const MacNodeId nodeId, const unsigned int blocks,
-        const unsigned int bytes);
+            const unsigned int bytes);
 
     // tries to satisfy the resource block request in the first available antenna
     bool addBlocks(const Band band, const MacNodeId nodeId, const unsigned int blocks, const unsigned int bytes);
 
-    // remove resource Blocks previously allocated in a band by an UE
+    // remove resource Blocks previously allocated in a band by a UE
     unsigned int removeBlocks(const Remote antenna, const Band band, const MacNodeId nodeId);
     // ****************************************************************
 
@@ -233,7 +232,7 @@ class LteAllocationModule
     // Simple block-amount returning methods
 
     /**
-     * Returns the amount of blocks allocated by an UE in a Band
+     * Returns the amount of blocks allocated by a UE in a Band
      * @param antenna The MACRO or DAS antenna.
      * @param band the logical band
      * @param nodeId the node id of the user
@@ -249,7 +248,7 @@ class LteAllocationModule
      * Returns the amount of blocks allocated in a Band
      */
     unsigned int getAllocatedBlocks(Plane plane, const Remote antenna, const Band band);
-    unsigned int getInterferringBlocks(Plane plane, const Remote antenna, const Band band);
+    unsigned int getInterferingBlocks(Plane plane, const Remote antenna, const Band band);
 
     unsigned int getBytes(const Remote antenna, const Band band, const MacNodeId nodeId)
     {
@@ -276,27 +275,31 @@ class LteAllocationModule
     {
         return allocatedRbsUe_.begin();
     }
+
     AllocatedRbsPerUeMap::const_iterator getAllocatedBlocksUeEnd()
     {
         return allocatedRbsUe_.end();
     }
-    std::vector<std::vector<unsigned int> >::const_iterator getAllocatedBlocksBegin()
+
+    std::vector<std::vector<unsigned int>>::const_iterator getAllocatedBlocksBegin()
     {
         return allocatedRbsMatrix_.begin();
     }
-    std::vector<std::vector<unsigned int> >::const_iterator getAllocatedBlocksEnd()
+
+    std::vector<std::vector<unsigned int>>::const_iterator getAllocatedBlocksEnd()
     {
         return allocatedRbsMatrix_.end();
     }
 
     //  Band Allocation Map
     AllocationList::const_iterator getAllocatedBlocksUeAllocationListBegin(const Remote antenna, const Band b,
-        const MacNodeId nodeId)
+            const MacNodeId nodeId)
     {
         return allocatedRbsUe_[nodeId].allocationMap_[antenna][b].begin();
     }
+
     AllocationList::const_iterator getAllocatedBlocksUeAllocationListEnd(const Remote antenna, const Band b,
-        const MacNodeId nodeId)
+            const MacNodeId nodeId)
     {
         return allocatedRbsUe_[nodeId].allocationMap_[antenna][b].end();
     }
@@ -306,7 +309,7 @@ class LteAllocationModule
      */
 
     // Store the Allocation based on passed parameters
-    virtual void storeAllocation( std::vector<std::vector<AllocatedRbsPerBandMapA> > allocatedRbsPerBand,std::set<Band>* untouchableBands = nullptr)
+    virtual void storeAllocation(std::vector<std::vector<AllocatedRbsPerBandMapA>> allocatedRbsPerBand, std::set<Band> *untouchableBands = nullptr)
     {
         return;
     }
@@ -315,7 +318,6 @@ class LteAllocationModule
     virtual std::set<Band> getAllocatorOccupiedBands()
     {
         std::set<Band> bandVector;
-        bandVector.clear();
         return bandVector;
     }
 
@@ -324,8 +326,10 @@ class LteAllocationModule
     {
         return bands_;
     }
+
 };
 
 } //namespace
 
 #endif
+

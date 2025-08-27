@@ -12,26 +12,30 @@
 #ifndef _LTE_AMTXBUFFER_H_
 #define _LTE_AMTXBUFFER_H_
 
+#include <inet/common/ModuleRefByPar.h>
+#include <inet/common/packet/Packet.h>
+
 #include "common/LteCommon.h"
 #include "common/LteControlInfo.h"
 #include "common/timer/TTimer.h"
+#include "stack/pdcp_rrc/packet/LtePdcpPdu_m.h"
 #include "stack/rlc/LteRlcDefs.h"
 #include "stack/rlc/am/packet/LteRlcAmPdu.h"
 #include "stack/rlc/am/packet/LteRlcAmSdu_m.h"
 #include "stack/rlc/am/LteRlcAm.h"
-#include "stack/pdcp_rrc/packet/LtePdcpPdu_m.h"
-#include "inet/common/packet/Packet.h"
 
 namespace simu5g {
+
+using namespace omnetpp;
 
 /*
  * RLC AM Mode Transmission Entity
  *
- * it is created by the RLC AM entity on new LCID detection
- * (and eventually destroyed on hand-over /connection close)
+ * It is created by the RLC AM entity upon the detection of a new LCID
+ * (and eventually destroyed on handover / connection close)
  *
- * enqueues upper layer PDUs (RLC SDUs) into a TX waiting buffer,
- * then fragments them and send them to MAC layer by using a
+ * Enqueues upper layer PDUs (RLC SDUs) into a TX waiting buffer,
+ * then fragments them and sends them to the MAC layer using a
  * moving transmission window enabled with ARQ and drop-timer mechanisms.
  */
 
@@ -41,14 +45,14 @@ class AmTxQueue : public cSimpleModule
   protected:
 
     /*
-     * reference to corresponding RLC AM module
+     * Reference to the corresponding RLC AM module
      */
-    LteRlcAm* lteRlc_;
+    inet::ModuleRefByPar<LteRlcAm> lteRlc_;
 
     /*
      * SDU (upper layer PDU) currently being processed
      */
-    Packet * currentSdu_ = nullptr;
+    Packet *currentSdu_ = nullptr;
     std::deque<Packet *> *fragmentList_ = nullptr;
     std::deque<int> txWindowIndexList_;
 
@@ -58,10 +62,10 @@ class AmTxQueue : public cSimpleModule
 
     RlcFragDesc fragDesc_;
     /*
-     * copy of LTE control info - used for sending down PDUs and control packets.
+     * Copy of LTE control info - used for sending down PDUs and control packets.
      */
 
-    FlowControlInfo* lteInfo_ = nullptr;
+    FlowControlInfo *lteInfo_ = nullptr;
 
     //--------------------------------------------------------------------------------------
     //        Buffers
@@ -113,35 +117,35 @@ class AmTxQueue : public cSimpleModule
     // A Generic timer is used to analyze the buffer status
     TTimer bufferStatusTimer_;
 
-    // maximum AM retransmissions
+    // Maximum AM retransmissions
     int maxRtx_;
 
     // PDU retransmission timeout
-    omnetpp::simtime_t pduRtxTimeout_;
+    simtime_t pduRtxTimeout_;
 
-    // control PDU retransmission timeout
-    omnetpp::simtime_t ctrlPduRtxTimeout_;
+    // Control PDU retransmission timeout
+    simtime_t ctrlPduRtxTimeout_;
 
     // Buffer analyze timeout
-    omnetpp::simtime_t bufferStatusTimeout_;
+    simtime_t bufferStatusTimeout_;
 
     //-------------------------------------------------------------------------
 
-    // map of RLC Control PDU that are waiting for ACK
+    // Map of RLC Control PDUs that are waiting for ACK
     std::map<int, LteRlcAmPdu *> unackedMrw_;
 
   public:
     AmTxQueue();
-    virtual ~AmTxQueue();
+    ~AmTxQueue() override;
 
     /*
      * Enqueues an upper layer packet into the transmission buffer
      * @param sdu the packet to be enqueued
      */
-    void enque(Packet* sdu);
+    void enque(Packet *sdu);
 
     /*
-     *     Fragments current SDU (or next one, if current is completed) and adds PDUs (fragments) to the transmission buffer
+     * Fragments current SDU (or next one, if current is completed) and adds PDUs (fragments) to the transmission buffer
      */
     void addPdus();
 
@@ -154,27 +158,27 @@ class AmTxQueue : public cSimpleModule
     void sendPdus(int size);
 
     /*
-     * Buffers a control pdu within the corresponding TxQueue
+     * Buffers a control PDU within the corresponding TxQueue
      */
-    void bufferControlPdu(cPacket* pkt);
+    void bufferControlPdu(cPacket *pkt);
 
     /*
      * Receives a control message from the AM receiver buffer
      * @param pkt
      */
-    virtual void handleControlPacket(cPacket* pkt);
+    virtual void handleControlPacket(cPacket *pkt);
 
   protected:
 
     /**
      * Initialize
      */
-    virtual void initialize();
+    void initialize() override;
     /*
-     * Analyze gate of incoming packet and call proper handler
+     * Analyze the gate of incoming packet and call proper handler
      * @param msg
      */
-    virtual void handleMessage(cMessage* msg);
+    void handleMessage(cMessage *msg) override;
 
     /* Discards a given RLC PDU and all the PDUs related to the same SDU
      *
@@ -182,13 +186,13 @@ class AmTxQueue : public cSimpleModule
      */
     void discard(int seqNum);
 
-    /* buffers a PDU to be sent down to MAC when a new SDU is requested
+    /* Buffers a PDU to be sent down to MAC when a new SDU is requested
      *
      * @param pdu PDU to be sent
      */
     void bufferPdu(cPacket *pdu);
 
-    /* Move the transmitter window based upon reception of ACK control message
+    /* Move the transmitter window based upon the reception of an ACK control message
      *
      * @param seqNum
      */
@@ -200,7 +204,7 @@ class AmTxQueue : public cSimpleModule
      */
     void sendMrw(const int seqNum);
 
-    /* Checks if receiver window has to be shifted
+    /* Checks if the receiver window has to be shifted
      */
     void checkForMrw();
 
@@ -222,13 +226,14 @@ class AmTxQueue : public cSimpleModule
      */
     void recvMrwAck(const int seqNum);
 
-    /* timer events handlers*/
+    /* Timer events handlers */
     void pduTimerHandle(const int sn);
     void mrwTimerHandle(const int sn);
 
-    std::deque<Packet *> * fragmentFrame(Packet *frame, std::deque<int>& windowsIndex, RlcFragDesc rlcFragDesc);
+    std::deque<Packet *> *fragmentFrame(Packet *frame, std::deque<int>& windowsIndex, RlcFragDesc rlcFragDesc);
 };
 
 } //namespace
 
 #endif
+

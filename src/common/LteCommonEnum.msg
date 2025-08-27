@@ -42,13 +42,6 @@ enum RbAllocationType
     TYPE2_LOCALIZED = 1;
 };
 
-/// Gate Direction
-enum GateDirection
-{
-    IN_GATE = 0;
-    OUT_GATE = 1;
-};
-
 /// Lte Traffic Classes
 enum LteTrafficClass
 {
@@ -142,6 +135,7 @@ enum TxDirectionType
 {
     ANISOTROPIC = 0;
     OMNI = 1;
+    UNKNOWN_TX_DIRECTION = -1;
 };
 
 // Lte feedback type

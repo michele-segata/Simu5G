@@ -12,15 +12,9 @@
 #ifndef __UEREQUESTAPP_H_
 #define __UEREQUESTAPP_H_
 
-#define UEAPP_REQUEST 0
-#define MECAPP_RESPONSE 1
-#define UEAPP_STOP 2
-#define UEAPP_ACK_STOP 3
-
-
-#include "inet/transportlayer/contract/udp/UdpSocket.h"
-#include "inet/networklayer/common/L3Address.h"
-#include "inet/networklayer/common/L3AddressResolver.h"
+#include <inet/networklayer/common/L3Address.h>
+#include <inet/networklayer/common/L3AddressResolver.h>
+#include <inet/transportlayer/contract/udp/UdpSocket.h>
 
 #include "common/binder/Binder.h"
 
@@ -28,18 +22,24 @@ namespace simu5g {
 
 using namespace omnetpp;
 
-class UERequestApp: public cSimpleModule
+enum {
+    UEAPP_REQUEST   = 0,
+    MECAPP_RESPONSE = 1,
+    UEAPP_STOP      = 2,
+    UEAPP_ACK_STOP  = 3,
+};
+
+class UERequestApp : public cSimpleModule
 {
     //communication to device app and mec app
     inet::UdpSocket socket;
 
     unsigned int sno_;
-    int requestPacketSize_;
+    inet::B requestPacketSize_;
     double requestPeriod_;
 
     simtime_t start_;
     simtime_t end_;
-
 
     // DeviceApp info
     int localPort_;
@@ -52,49 +52,53 @@ class UERequestApp: public cSimpleModule
 
     std::string mecAppName;
 
-
     //scheduling
-    cMessage *selfStart_;
-    cMessage *selfStop_;
-    cMessage *sendRequest_;
-    cMessage *unBlockingMsg_; //it prevents to stop the send/response pattern if msg gets lost
-
+    enum MsgKind {
+        KIND_SELF_START = 1000,
+        KIND_SELF_STOP,
+        KIND_SEND_REQUEST,
+        KIND_UN_BLOCKING_MSG
+    };
+    cMessage *selfStart_ = nullptr;
+    cMessage *selfStop_ = nullptr;
+    cMessage *sendRequest_ = nullptr;
+    cMessage *unBlockingMsg_ = nullptr; //it prevents to stop the send/response pattern if msg gets lost
 
     // signals for statistics
-    simsignal_t processingTime_;
-    simsignal_t serviceResponseTime_;
-    simsignal_t upLinkTime_;
-    simsignal_t downLinkTime_;
-    simsignal_t responseTime_;
+    static simsignal_t processingTimeSignal_;
+    static simsignal_t serviceResponseTimeSignal_;
+    static simsignal_t upLinkTimeSignal_;
+    static simsignal_t downLinkTimeSignal_;
+    static simsignal_t responseTimeSignal_;
 
   public:
-    ~UERequestApp();
-    UERequestApp();
+    ~UERequestApp() override;
 
   protected:
 
-    virtual int numInitStages() const { return inet::NUM_INIT_STAGES; }
-    void initialize(int stage);
-    virtual void handleMessage(cMessage *msg);
-    virtual void finish();
+    int numInitStages() const override { return inet::NUM_INIT_STAGES; }
+    void initialize(int stage) override;
+    void handleMessage(cMessage *msg) override;
+    void finish() override;
 
     void emitStats();
 
     // --- Functions to interact with the DeviceApp --- //
     void sendStartMECRequestApp();
     void sendStopMECRequestApp();
-    void handleStopApp(cMessage* msg);
+    void handleStopApp(cMessage *msg);
     void sendStopApp();
 
-    void handleAckStartMECRequestApp(cMessage* msg);
-    void handleAckStopMECRequestApp(cMessage* msg);
+    void handleAckStartMECRequestApp(cMessage *msg);
+    void handleAckStopMECRequestApp(cMessage *msg);
 
     // --- Functions to interact with the MECPlatooningApp --- //
     void sendRequest();
-    void recvResponse(cMessage* msg);
+    void recvResponse(cMessage *msg);
 
 };
 
 } //namespace
 
 #endif
+

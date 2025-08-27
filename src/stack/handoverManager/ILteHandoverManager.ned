@@ -11,12 +11,13 @@
 
 package simu5g.stack.handoverManager;
 
-import simu5g.x2.X2User;
+import simu5g.x2.IX2User;
 
 //
-// Interface for the Handover Manager
+// Interface for the Handover Manager. This module extends the ~X2User module interface
+// to define the basic contract that any handover manager must adhere to.
 //
-moduleinterface ILteHandoverManager extends X2User
+moduleinterface ILteHandoverManager extends IX2User
 {
     parameters:
         @display("i=block/cogwheel");

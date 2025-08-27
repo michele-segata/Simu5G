@@ -20,50 +20,51 @@ class PhyPisaData;
 class LteFeedbackComputationRealistic : public LteFeedbackComputation
 {
     // Channel matrix struct
-    std::map<MacNodeId, Lambda>* lambda_;
-    //Target Bler
+    std::map<MacNodeId, Lambda> *lambda_;
+    // Target BLER
     double targetBler_;
-    //Number of logical bands
+    // Number of logical bands
     unsigned int numBands_;
-    //Lambda threshold
+    // Lambda threshold
     double lambdaMinTh_;
     double lambdaMaxTh_;
     double lambdaRatioTh_;
-    //pointer to pisadata
-    PhyPisaData* phyPisaData_;
+    // Pointer to Pisa data
+    PhyPisaData *phyPisaData_ = nullptr;
 
     std::vector<double> baseMin_;
 
   protected:
     // Rank computation
     unsigned int computeRank(MacNodeId id);
-    // Generate base feedback for all types of feedback(allbands, preferred, wideband)
-    void generateBaseFeedback(int numBands, int numPreferredBabds, LteFeedback& fb, FeedbackType fbType, int cw,
-        RbAllocationType rbAllocationType, TxMode txmode, std::vector<double> snr);
-    // Get cqi from BLer Curves
+    // Generate base feedback for all types of feedback (all bands, preferred, wideband)
+    void generateBaseFeedback(int numBands, int numPreferredBands, LteFeedback& fb, FeedbackType fbType, int cw,
+            RbAllocationType rbAllocationType, TxMode txmode, std::vector<double> snr);
+    // Get CQI from BLER Curves
     Cqi getCqi(TxMode txmode, double snr);
     double meanSnr(std::vector<double> snr);
-    public:
-    LteFeedbackComputationRealistic(double targetBler, std::map<MacNodeId, Lambda>* lambda, double lambdaMinTh,
-        double lambdaMaxTh, double lambdaRatioTh, unsigned int numBands);
-    virtual ~LteFeedbackComputationRealistic();
 
-    virtual LteFeedbackDoubleVector computeFeedback(FeedbackType fbType, RbAllocationType rbAllocationType,
-        TxMode currentTxMode,
-        std::map<Remote, int> antennaCws, int numPreferredBands, FeedbackGeneratorType feedbackGeneratortype,
-        int numRus, std::vector<double> snr, MacNodeId id = 0);
+  public:
+    LteFeedbackComputationRealistic(Binder *binder, double targetBler, std::map<MacNodeId, Lambda> *lambda, double lambdaMinTh,
+            double lambdaMaxTh, double lambdaRatioTh, unsigned int numBands);
 
-    virtual LteFeedbackVector computeFeedback(const Remote remote, FeedbackType fbType,
-        RbAllocationType rbAllocationType, TxMode currentTxMode,
-        int antennaCws, int numPreferredBands, FeedbackGeneratorType feedbackGeneratortype, int numRus,
-        std::vector<double> snr, MacNodeId id = 0);
+    LteFeedbackDoubleVector computeFeedback(FeedbackType fbType, RbAllocationType rbAllocationType,
+            TxMode currentTxMode,
+            std::map<Remote, int> antennaCws, int numPreferredBands, FeedbackGeneratorType feedbackGeneratortype,
+            int numRus, std::vector<double> snr, MacNodeId id = NODEID_NONE) override;
 
-    virtual LteFeedback computeFeedback(const Remote remote, TxMode txmode, FeedbackType fbType,
-        RbAllocationType rbAllocationType,
-        int antennaCws, int numPreferredBands, FeedbackGeneratorType feedbackGeneratortype, int numRus,
-        std::vector<double> snr, MacNodeId id = 0);
+    LteFeedbackVector computeFeedback(const Remote remote, FeedbackType fbType,
+            RbAllocationType rbAllocationType, TxMode currentTxMode,
+            int antennaCws, int numPreferredBands, FeedbackGeneratorType feedbackGeneratortype, int numRus,
+            std::vector<double> snr, MacNodeId id = NODEID_NONE) override;
+
+    LteFeedback computeFeedback(const Remote remote, TxMode txmode, FeedbackType fbType,
+            RbAllocationType rbAllocationType,
+            int antennaCws, int numPreferredBands, FeedbackGeneratorType feedbackGeneratortype, int numRus,
+            std::vector<double> snr, MacNodeId id = NODEID_NONE) override;
 };
 
 } //namespace
 
 #endif
+

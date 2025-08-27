@@ -13,11 +13,17 @@
 package simu5g.stack.mac;
 
 //
-// User Equipment MAC layer of LTE stack
+// This module extends the ~LteMacBase module by providing specific MAC functions
+// at the User Equipment (UE) side.
+// For uplink connections, this module manages the initiation of the Random Access procedure (RAC)
+// and the sending of Buffer Status Reports (BSRs) to the eNodeBs. Once it receives an uplink scheduling
+// grant from the eNodeB, it is responsible for managing the local connections' scheduler and
+// constructing MAC Protocol Data Units (PDUs) to be transmitted to the physical layer.
 //
 simple LteMacUe extends LteMacBase
 {
     parameters:
         @class("LteMacUe");
+        string collectorModule = default("");
 }
 

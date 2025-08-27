@@ -17,16 +17,12 @@
 
 namespace simu5g {
 
-#define round(x) floor((x) + 0.5)
+#define round(x)    floor((x) + 0.5)
 
 Define_Module(AlertSender);
 using namespace inet;
 
-AlertSender::AlertSender()
-{
-    selfSender_ = nullptr;
-    nextSno_ = 0;
-}
+simsignal_t AlertSender::alertSentMsgSignal_ = registerSignal("alertSentMsg");
 
 AlertSender::~AlertSender()
 {
@@ -40,12 +36,12 @@ void AlertSender::initialize(int stage)
     cSimpleModule::initialize(stage);
 
     // avoid multiple initializations
-    if (stage!=inet::INITSTAGE_APPLICATION_LAYER)
+    if (stage != inet::INITSTAGE_APPLICATION_LAYER)
         return;
 
     selfSender_ = new cMessage("selfSender");
 
-    size_ = par("packetSize");
+    size_ = B(par("packetSize"));
     localPort_ = par("localPort");
     destPort_ = par("destPort");
     destAddress_ = inet::L3AddressResolver().resolve(par("destAddress").stringValue());
@@ -58,7 +54,7 @@ void AlertSender::initialize(int stage)
         socket.setTos(tos);
 
     // for multicast support
-    inet::IInterfaceTable *ift = inet::getModuleFromPar< inet::IInterfaceTable >(par("interfaceTableModule"), this);
+    inet::IInterfaceTable *ift = inet::getModuleFromPar<inet::IInterfaceTable>(par("interfaceTableModule"), this);
     inet::MulticastGroupList mgl = ift->collectMulticastGroups();
     socket.joinLocalMulticastGroups(mgl);
 
@@ -66,14 +62,12 @@ void AlertSender::initialize(int stage)
     const char *multicastInterface = par("multicastInterface");
     if (multicastInterface[0]) {
         NetworkInterface *ie = ift->findInterfaceByName(multicastInterface);
-        if (!ie)
+        if (ie == nullptr)
             throw cRuntimeError("Wrong multicastInterface setting: no interface named \"%s\"", multicastInterface);
         socket.setMulticastOutputInterface(ie->getInterfaceId());
     }
 
     // -------------------- //
-
-    alertSentMsg_ = registerSignal("alertSentMsg");
 
     EV << "AlertSender::initialize - binding to port: local:" << localPort_ << " , dest:" << destPort_ << endl;
 
@@ -83,17 +77,16 @@ void AlertSender::initialize(int stage)
 
     // TODO maybe un-necesessary
     // this conversion is made in order to obtain ms-aligned start time, even in case of random generated ones
-    simtime_t offset = (round(SIMTIME_DBL(startTime)*1000)/1000)+simTime();
+    simtime_t offset = (round(SIMTIME_DBL(startTime) * 1000) / 1000) + simTime();
 
-    scheduleAt(offset,selfSender_);
+    scheduleAt(offset, selfSender_);
     EV << "\t starting traffic in " << offset << " seconds " << endl;
 }
 
 void AlertSender::handleMessage(cMessage *msg)
 {
-    if (msg->isSelfMessage())
-    {
-        if (!strcmp(msg->getName(), "selfSender"))
+    if (msg->isSelfMessage()) {
+        if (msg == selfSender_)
             sendAlertPacket();
         else
             throw cRuntimeError("AlertSender::handleMessage - Unrecognized self message");
@@ -102,12 +95,12 @@ void AlertSender::handleMessage(cMessage *msg)
 
 void AlertSender::sendAlertPacket()
 {
-    Packet* packet = new inet::Packet("Alert");
+    Packet *packet = new inet::Packet("Alert");
 
     auto alert = makeShared<AlertPacket>();
     alert->setSno(nextSno_);
     alert->setPayloadTimestamp(simTime());
-    alert->setChunkLength(B(size_));
+    alert->setChunkLength(size_);
     alert->addTag<CreationTimeTag>()->setCreationTime(simTime());
 
     packet->insertAtBack(alert);
@@ -117,7 +110,7 @@ void AlertSender::sendAlertPacket()
     socket.sendTo(packet, destAddress_, destPort_);
     nextSno_++;
 
-    emit(alertSentMsg_, (long)1);
+    emit(alertSentMsgSignal_, (long)1);
 
     simtime_t d = simTime() + par("period");
     if (stopTime_ <= SIMTIME_ZERO || d < stopTime_) {

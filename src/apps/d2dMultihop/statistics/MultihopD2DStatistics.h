@@ -17,6 +17,8 @@
 
 namespace simu5g {
 
+using namespace omnetpp;
+
 //
 // MultihopD2DStatistics module
 //
@@ -31,7 +33,7 @@ namespace simu5g {
 // order to update statistics. For example, when a node receives a message, it
 // calls the recordReception() function.
 //
-class MultihopD2DStatistics : public omnetpp::cSimpleModule
+class MultihopD2DStatistics : public cSimpleModule
 {
 
     // the delivery status of an event is composed of the reception status
@@ -39,7 +41,7 @@ class MultihopD2DStatistics : public omnetpp::cSimpleModule
     // the reception status includes the reception delay and number of hops.
     // If delay < 0, the node has not (yet) received the message
     struct ReceptionStatus {
-        omnetpp::simtime_t delay_;
+        simtime_t delay_;
         int hops_;
     };
     typedef std::map<MacNodeId, ReceptionStatus> DeliveryStatus;
@@ -50,31 +52,31 @@ class MultihopD2DStatistics : public omnetpp::cSimpleModule
     // for each event, store the number of transmissions/duplicates/suppressions
     struct TransmissionInfo
     {
-        unsigned int numSent_;
-        unsigned int numSuppressed_;
-        unsigned int numDuplicates_;
+        unsigned int numSent_ = 0;
+        unsigned int numSuppressed_ = 0;
+        unsigned int numDuplicates_ = 0;
 
-        TransmissionInfo(){numSent_=0; numSuppressed_=0; numDuplicates_=0;}
+        TransmissionInfo()  { }
     };
     std::map<unsigned short, TransmissionInfo> eventTransmissionInfo_;
 
     // statistics
-    omnetpp::simsignal_t d2dMultihopEventDelay_;           // average reception delay of one event within the target area
-    omnetpp::simsignal_t d2dMultihopEventDelay95Per_;      // latency required to cover the 95% of nodes within the target area
-    omnetpp::simsignal_t d2dMultihopEventDeliveryRatio_;   // percentage of nodes covered within the target area
-    omnetpp::simsignal_t d2dMultihopEventSentMsg_;         // number of transmitted messages for broadcasting an event within the target area
-    omnetpp::simsignal_t d2dMultihopEventTrickleSuppressedMsg_;   // number of message relaying suppressed by the Trickle algorithm (if enabled)
-    omnetpp::simsignal_t d2dMultihopEventRcvdDupMsg_;      // number of duplicates within the target area
-    omnetpp::simsignal_t d2dMultihopEventCompleteDeliveries_;    // percentage of clusters completely-covered within the target area
+    static simsignal_t d2dMultihopEventDelaySignal_;           // average reception delay of one event within the target area
+    static simsignal_t d2dMultihopEventDelay95PerSignal_;      // latency required to cover the 95% of nodes within the target area
+    static simsignal_t d2dMultihopEventDeliveryRatioSignal_;   // percentage of nodes covered within the target area
+    static simsignal_t d2dMultihopEventSentMsgSignal_;         // number of transmitted messages for broadcasting an event within the target area
+    static simsignal_t d2dMultihopEventTrickleSuppressedMsgSignal_;   // number of message relaying suppressed by the Trickle algorithm (if enabled)
+    static simsignal_t d2dMultihopEventRcvdDupMsgSignal_;      // number of duplicates within the target area
+    static simsignal_t d2dMultihopEventCompleteDeliveriesSignal_;    // percentage of clusters completely-covered within the target area
 
-protected:
+  protected:
 
-    virtual void initialize();
-    virtual void finish();
+    void initialize() override;
+    void finish() override;
 
-public:
+  public:
     void recordNewBroadcast(unsigned int msgId, UeSet& destinations);
-    void recordReception(MacNodeId nodeId, unsigned int msgId, omnetpp::simtime_t delay, int hops);
+    void recordReception(MacNodeId nodeId, unsigned int msgId, simtime_t delay, int hops);
     void recordSentMessage(unsigned int msgId);
     void recordSuppressedMessage(unsigned int msgId);
     void recordDuplicateReception(unsigned int msgId);
@@ -83,3 +85,4 @@ public:
 } //namespace
 
 #endif /* MULTIHOPD2DSTATISTICS_H_ */
+

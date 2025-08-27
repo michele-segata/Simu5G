@@ -18,77 +18,67 @@ Define_Module(MultihopD2DStatistics);
 
 using namespace omnetpp;
 
+// register statistics
+simsignal_t MultihopD2DStatistics::d2dMultihopEventDeliveryRatioSignal_ = registerSignal("d2dMultihopEventDeliveryRatio");
+simsignal_t MultihopD2DStatistics::d2dMultihopEventDelaySignal_ = registerSignal("d2dMultihopEventDelay");
+simsignal_t MultihopD2DStatistics::d2dMultihopEventDelay95PerSignal_ = registerSignal("d2dMultihopEventDelay95Per");
+simsignal_t MultihopD2DStatistics::d2dMultihopEventSentMsgSignal_ = registerSignal("d2dMultihopEventSentMsg");
+simsignal_t MultihopD2DStatistics::d2dMultihopEventTrickleSuppressedMsgSignal_ = registerSignal("d2dMultihopEventTrickleSuppressedMsg");
+simsignal_t MultihopD2DStatistics::d2dMultihopEventRcvdDupMsgSignal_ = registerSignal("d2dMultihopEventRcvdDupMsg");
+simsignal_t MultihopD2DStatistics::d2dMultihopEventCompleteDeliveriesSignal_ = registerSignal("d2dMultihopEventCompleteDeliveries");
+
 void MultihopD2DStatistics::initialize()
 {
-    // register statistics
-    d2dMultihopEventDeliveryRatio_ = registerSignal("d2dMultihopEventDeliveryRatio");
-    d2dMultihopEventDelay_ = registerSignal("d2dMultihopEventDelay");
-    d2dMultihopEventDelay95Per_ = registerSignal("d2dMultihopEventDelay95Per");
-    d2dMultihopEventSentMsg_ = registerSignal("d2dMultihopEventSentMsg");
-    d2dMultihopEventTrickleSuppressedMsg_ = registerSignal("d2dMultihopEventTrickleSuppressedMsg");
-    d2dMultihopEventRcvdDupMsg_ = registerSignal("d2dMultihopEventRcvdDupMsg");
-    d2dMultihopEventCompleteDeliveries_ = registerSignal("d2dMultihopEventCompleteDeliveries");
 }
-
 
 void MultihopD2DStatistics::recordNewBroadcast(unsigned int msgId, UeSet& destinations)
 {
     // consider the least-significant 16 bits
     unsigned short eventId = (unsigned short)msgId;
-    if (eventDeliveryInfo_.find(eventId) == eventDeliveryInfo_.end())
-    {
+    if (eventDeliveryInfo_.find(eventId) == eventDeliveryInfo_.end()) {
         // initialize record for this message
         DeliveryStatus tmp;
-        UeSet::iterator it = destinations.begin();
-        for (; it != destinations.end(); ++it) {
+        for (const auto& destination : destinations) {
             ReceptionStatus status;
             status.delay_ = -1.0;
             status.hops_ = -1;
-            tmp.insert(std::pair<MacNodeId, ReceptionStatus>(*it,status));
+            tmp.insert({destination, status});
         }
         std::pair<unsigned short, DeliveryStatus> p(eventId, tmp);
         eventDeliveryInfo_.insert(p);
     }
-    else
-    {
+    else {
         DeliveryStatus entry = eventDeliveryInfo_.at(eventId);
-        UeSet::iterator it = destinations.begin();
-        for (; it != destinations.end(); ++it)
-        {
-            if (eventDeliveryInfo_[eventId].find(*it) == eventDeliveryInfo_[eventId].end())
-            {
+        for (const auto& destination : destinations) {
+            if (eventDeliveryInfo_[eventId].find(destination) == eventDeliveryInfo_[eventId].end()) {
                 // the UE is not in the map
                 ReceptionStatus status;
                 status.delay_ = -1.0;
                 status.hops_ = -1;
-                eventDeliveryInfo_[eventId].insert(std::pair<MacNodeId, ReceptionStatus>(*it,status));
+                eventDeliveryInfo_[eventId].insert({destination, status});
             }
         }
     }
 
-    if (eventTransmissionInfo_.find(eventId) == eventTransmissionInfo_.end())
-    {
+    if (eventTransmissionInfo_.find(eventId) == eventTransmissionInfo_.end()) {
         TransmissionInfo info;
         info.numSent_ = 1;
         eventTransmissionInfo_[eventId] = info;
     }
 }
 
-
-void MultihopD2DStatistics::recordReception(MacNodeId nodeId, unsigned int msgId, omnetpp::simtime_t delay, int hops)
+void MultihopD2DStatistics::recordReception(MacNodeId nodeId, unsigned int msgId, simtime_t delay, int hops)
 {
-    if (delay > 0.500)  // TODO fix this. packets with higher delay should be discarded by the sender
+    if (delay > 0.500)                         // TODO fix this. packets with higher delay should be discarded by the sender
         return;
 
     // consider the least-significant 16 bits
     unsigned short eventId = (unsigned short)msgId;
 
     if (eventDeliveryInfo_.find(eventId) == eventDeliveryInfo_.end())
-            throw cRuntimeError("d2dMultihopStatistics::recordReception - Event with ID %d does not exist.", eventId);
-    if (eventDeliveryInfo_[eventId].find(nodeId) != eventDeliveryInfo_[eventId].end())
-    {
-        if (eventDeliveryInfo_[eventId][nodeId].delay_ < 0)   // store only the minimum
-        {
+        throw cRuntimeError("d2dMultihopStatistics::recordReception - Event with ID %d does not exist.", eventId);
+    if (eventDeliveryInfo_[eventId].find(nodeId) != eventDeliveryInfo_[eventId].end()) {
+        if (eventDeliveryInfo_[eventId][nodeId].delay_ < 0) { // store only the minimum
             eventDeliveryInfo_[eventId][nodeId].delay_ = delay;
             eventDeliveryInfo_[eventId][nodeId].hops_ = hops;
         }
@@ -100,15 +90,16 @@ void MultihopD2DStatistics::recordSentMessage(unsigned int msgId)
     // consider the least-significant 16 bits
     unsigned short eventId = (unsigned short)msgId;
     if (eventTransmissionInfo_.find(eventId) == eventTransmissionInfo_.end())
-            throw cRuntimeError("d2dMultihopStatistics::recordDuplicateReception - Message with ID %d does not exist.", eventId);
+        throw cRuntimeError("d2dMultihopStatistics::recordDuplicateReception - Message with ID %d does not exist.", eventId);
     eventTransmissionInfo_[eventId].numSent_++;
 }
+
 void MultihopD2DStatistics::recordSuppressedMessage(unsigned int msgId)
 {
     // consider the least-significant 16 bits
     unsigned short eventId = (unsigned short)msgId;
     if (eventTransmissionInfo_.find(eventId) == eventTransmissionInfo_.end())
-            throw cRuntimeError("d2dMultihopStatistics::recordDuplicateReception - Message with ID %d does not exist.", eventId);
+        throw cRuntimeError("d2dMultihopStatistics::recordDuplicateReception - Message with ID %d does not exist.", eventId);
     eventTransmissionInfo_[eventId].numSuppressed_++;
 }
 
@@ -123,29 +114,22 @@ void MultihopD2DStatistics::recordDuplicateReception(unsigned int msgId)
 
 void MultihopD2DStatistics::finish()
 {
-    std::vector<simtime_t> sortedDelays;
 
     // scan structures and emit average statistics
-    std::map<unsigned short, DeliveryStatus>::iterator eit = eventDeliveryInfo_.begin();
-    for (; eit != eventDeliveryInfo_.end(); ++eit)
-    {
-        sortedDelays.clear();
+    for (const auto& [eventId, deliveryStatus] : eventDeliveryInfo_) {
+        std::vector<simtime_t> sortedDelays;
 
         unsigned int deliveredMsgCounter = 0;
         simtime_t maxDelay = 0.0;
-        DeliveryStatus::iterator jt = eit->second.begin();
-        for (; jt != eit->second.end(); ++jt)
-        {
+        for (const auto& [nodeId, receptionStatus] : deliveryStatus) {
             // for each message, insert all delays in this vector
-            if (jt->second.hops_ >= 0)
-            {
-                if (jt->second.hops_ >= 1)
-                {
-                    sortedDelays.push_back(jt->second.delay_);
-                    emit(d2dMultihopEventDelay_, jt->second.delay_);
+            if (receptionStatus.hops_ >= 0) {
+                if (receptionStatus.hops_ >= 1) {
+                    sortedDelays.push_back(receptionStatus.delay_);
+                    emit(d2dMultihopEventDelaySignal_, receptionStatus.delay_);
 
-                    if (jt->second.delay_ > maxDelay)
-                        maxDelay = jt->second.delay_;
+                    if (receptionStatus.delay_ > maxDelay)
+                        maxDelay = receptionStatus.delay_;
                 }
                 deliveredMsgCounter++;
             }
@@ -154,26 +138,24 @@ void MultihopD2DStatistics::finish()
         if (sortedDelays.empty())
             continue;
 
-        double deliveryRatio = (double)deliveredMsgCounter / eit->second.size();
-        emit(d2dMultihopEventDeliveryRatio_, deliveryRatio);
+        double deliveryRatio = (double)deliveredMsgCounter / deliveryStatus.size();
+        emit(d2dMultihopEventDeliveryRatioSignal_, deliveryRatio);
 
         // cluster complete covered with a delivery
-        int completeDelivery = (deliveredMsgCounter == eit->second.size())? 1 : 0;
-        emit(d2dMultihopEventCompleteDeliveries_, completeDelivery);
+        int completeDelivery = (deliveredMsgCounter == deliveryStatus.size()) ? 1 : 0;
+        emit(d2dMultihopEventCompleteDeliveriesSignal_, completeDelivery);
 
         // sort the delays and get the percentile you desire
-        std::sort(sortedDelays.begin(),sortedDelays.end());
+        std::sort(sortedDelays.begin(), sortedDelays.end());
         unsigned int numElements = sortedDelays.size();
         unsigned int index95Percentile = (double)numElements * 0.95;
-        emit(d2dMultihopEventDelay95Per_, sortedDelays[index95Percentile]);
+        emit(d2dMultihopEventDelay95PerSignal_, sortedDelays[index95Percentile]);
     }
 
-    std::map<unsigned short, TransmissionInfo>::iterator eventInfoIt = eventTransmissionInfo_.begin();
-    for (; eventInfoIt != eventTransmissionInfo_.end(); ++eventInfoIt)
-    {
-        emit(d2dMultihopEventSentMsg_, (long)eventInfoIt->second.numSent_);
-        emit(d2dMultihopEventTrickleSuppressedMsg_, (long)eventInfoIt->second.numSuppressed_);
-        emit(d2dMultihopEventRcvdDupMsg_, (long)eventInfoIt->second.numDuplicates_);
+    for (const auto& [eventId, transmissionInfo] : eventTransmissionInfo_) {
+        emit(d2dMultihopEventSentMsgSignal_, (long)transmissionInfo.numSent_);
+        emit(d2dMultihopEventTrickleSuppressedMsgSignal_, (long)transmissionInfo.numSuppressed_);
+        emit(d2dMultihopEventRcvdDupMsgSignal_, (long)transmissionInfo.numDuplicates_);
     }
 }
 

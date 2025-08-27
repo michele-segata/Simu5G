@@ -12,18 +12,12 @@
 #ifndef __MECWARNINGALERTAPP_H_
 #define __MECWARNINGALERTAPP_H_
 
-#include "omnetpp.h"
-
-#include "inet/networklayer/common/L3Address.h"
-#include "inet/networklayer/common/L3AddressResolver.h"
-
-//MEWarningAlertPacket
-//#include "nodes/mec/MECPlatform/MECAppPacket_Types.h"
-#include "apps/mec/WarningAlert/packets/WarningAlertPacket_m.h"
-
-#include "nodes/mec/MECPlatform/ServiceRegistry/ServiceRegistry.h"
+#include <inet/networklayer/common/L3Address.h>
+#include <inet/networklayer/common/L3AddressResolver.h>
 
 #include "apps/mec/MecApps/MecAppBase.h"
+#include "apps/mec/WarningAlert/packets/WarningAlertPacket_m.h"
+#include "nodes/mec/MECPlatform/ServiceRegistry/ServiceRegistry.h"
 
 namespace simu5g {
 
@@ -44,8 +38,8 @@ using namespace omnetpp;
 //  4) send the alert event to the UE app
 //  5) (optional) receive stop from the UE app
 //
-// TCP socket management is not fully controlled. It is assumed that connections works
-// at the first time (The scenarios used to test the app are simple). If a deeper control
+// TCP socket management is not fully controlled. It is assumed that connections work
+// the first time (The scenarios used to test the app are simple). If a deeper control
 // is needed, feel free to improve it.
 
 //
@@ -60,49 +54,47 @@ class MECWarningAlertApp : public MecAppBase
     inet::L3Address ueAppAddress;
     int ueAppPort;
 
-    inet::TcpSocket* serviceSocket_;
-    inet::TcpSocket* mp1Socket_;
+    inet::TcpSocket *serviceSocket_ = nullptr;
+    inet::TcpSocket *mp1Socket_ = nullptr;
 
-    HttpBaseMessage* mp1HttpMessage;
-    HttpBaseMessage* serviceHttpMessage;
+    HttpBaseMessage *mp1HttpMessage = nullptr;
+    HttpBaseMessage *serviceHttpMessage = nullptr;
 
     int size_;
     std::string subId;
 
     // circle danger zone
-    cOvalFigure * circle;
+    cOvalFigure *circle = nullptr;
     double centerPositionX;
     double centerPositionY;
     double radius;
 
-    protected:
-        virtual int numInitStages() const override { return inet::NUM_INIT_STAGES; }
-        virtual void initialize(int stage) override;
-        virtual void finish() override;
+  protected:
+    int numInitStages() const override { return inet::NUM_INIT_STAGES; }
+    void initialize(int stage) override;
+    void finish() override;
 
-        virtual void handleProcessedMessage(omnetpp::cMessage *msg) override;
+    void handleProcessedMessage(cMessage *msg) override;
 
-        virtual void handleHttpMessage(int connId) override;
-        virtual void handleServiceMessage(int connId) override;
-        virtual void handleMp1Message(int connId) override;
-        virtual void handleUeMessage(omnetpp::cMessage *msg) override;
+    void handleHttpMessage(int connId) override;
+    void handleServiceMessage(int connId) override;
+    void handleMp1Message(int connId) override;
+    void handleUeMessage(cMessage *msg) override;
 
-        virtual void modifySubscription();
-        virtual void sendSubscription();
-        virtual void sendDeleteSubscription();
+    virtual void modifySubscription();
+    virtual void sendSubscription();
+    virtual void sendDeleteSubscription();
 
-        virtual void handleSelfMessage(cMessage *msg) override;
+    void handleSelfMessage(cMessage *msg) override;
 
+    void established(int connId) override;
 
-//        /* TCPSocket::CallbackInterface callback methods */
-       virtual void established(int connId) override;
-
-    public:
-       MECWarningAlertApp();
-       virtual ~MECWarningAlertApp();
+  public:
+    ~MECWarningAlertApp() override;
 
 };
 
 } //namespace
 
 #endif
+

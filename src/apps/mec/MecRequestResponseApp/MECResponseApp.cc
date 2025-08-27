@@ -11,35 +11,24 @@
 
 #include "apps/mec/MecRequestResponseApp/MECResponseApp.h"
 
+#include <fstream>
+
+#include <inet/common/TimeTag_m.h>
+#include <inet/common/packet/Packet_m.h>
+#include <inet/networklayer/common/L3AddressTag_m.h>
+#include <inet/transportlayer/common/L4PortTag_m.h>
+
+#include "apps/mec/MecRequestResponseApp/packets/RequestResponsePacket_m.h"
 #include "nodes/mec/utils/httpUtils/httpUtils.h"
 #include "nodes/mec/utils/httpUtils/json.hpp"
 #include "nodes/mec/MECPlatform/MECServices/packets/HttpResponseMessage/HttpResponseMessage.h"
-
-#include "apps/mec/MecRequestResponseApp/packets/RequestResponsePacket_m.h"
-
-#include "inet/common/TimeTag_m.h"
-#include "inet/common/packet/Packet_m.h"
-#include "inet/networklayer/common/L3AddressTag_m.h"
-#include "inet/transportlayer/common/L4PortTag_m.h"
-
-#include <fstream>
-#include "MECResponseApp.h"
 
 namespace simu5g {
 
 Define_Module(MECResponseApp);
 
-
 using namespace inet;
 using namespace omnetpp;
-
-MECResponseApp::MECResponseApp(): MecAppBase()
-{
-    mp1Socket_ = nullptr;
-    serviceSocket_ = nullptr;
-    currentRequestfMsg_ = nullptr;
-    processingTimer_ = nullptr;
-}
 
 MECResponseApp::~MECResponseApp()
 {
@@ -61,9 +50,9 @@ void MECResponseApp::initialize(int stage)
     ueAppSocket_.setOutputGate(gate("socketOut"));
     ueAppSocket_.bind(localUePort_);
 
-    packetSize_ = par("responsePacketSize");
+    packetSize_ = B(par("responsePacketSize"));
 
-    processingTimer_  = new cMessage("computeMsg");
+    processingTimer_ = new cMessage("computeMsg");
 
     minInstructions_ = par("minInstructions");
     maxInstructions_ = par("maxInstructions");
@@ -80,13 +69,12 @@ void MECResponseApp::handleProcessedMessage(cMessage *msg)
     if (!msg->isSelfMessage()) {
         if (ueAppSocket_.belongsToSocket(msg)) {
             EV << "MECResponseApp::handleProcessedMessage: received message from UE" << endl;
-            inet::Packet* packet = check_and_cast<inet::Packet*>(msg);
+            inet::Packet *packet = check_and_cast<inet::Packet *>(msg);
             auto req = packet->peekAtFront<RequestResponseAppPacket>();
-            if(req->getType() == UEAPP_REQUEST)
+            if (req->getType() == UEAPP_REQUEST)
                 handleRequest(msg);
-            else if(req->getType() == UEAPP_STOP)
+            else if (req->getType() == UEAPP_STOP)
                 handleStopRequest(msg);
-
             else
                 throw cRuntimeError("MECResponseApp::handleProcessedMessage - Type not recognized!");
             return;
@@ -100,7 +88,6 @@ void MECResponseApp::finish()
     MecAppBase::finish();
     EV << "MECResponseApp::finish()" << endl;
     if (gate("socketOut")->isConnected()) {
-
     }
 }
 
@@ -111,18 +98,17 @@ double MECResponseApp::scheduleNextMsg(cMessage *msg)
 
 void MECResponseApp::handleSelfMessage(cMessage *msg)
 {
-    if(!strcmp(msg->getName(), "computeMsg"))
-    {
+    if (!strcmp(msg->getName(), "computeMsg")) {
         sendResponse();
     }
 }
 
-void MECResponseApp::handleRequest(cMessage* msg)
+void MECResponseApp::handleRequest(cMessage *msg)
 {
     EV << "MECResponseApp::handleRequest" << endl;
     // this method pretends to perform some computation after having
     //.request some info to the RNI
-    if(currentRequestfMsg_  != nullptr)
+    if (currentRequestfMsg_ != nullptr)
         throw cRuntimeError("MECResponseApp::handleRequest - currentRequestfMsg_ not null!");
 
     msgArrived_ = simTime();
@@ -131,17 +117,17 @@ void MECResponseApp::handleRequest(cMessage* msg)
     getRequestSent_ = simTime();
 }
 
-
-void MECResponseApp::handleStopRequest(cMessage* msg)
+void MECResponseApp::handleStopRequest(cMessage *msg)
 {
     EV << "MECResponseApp::handleStopRequest" << endl;
     serviceSocket_->close();
 }
+
 void MECResponseApp::sendResponse()
 {
-    inet::Packet* packet = check_and_cast<inet::Packet*>(currentRequestfMsg_);
+    inet::Packet *packet = check_and_cast<inet::Packet *>(currentRequestfMsg_);
     ueAppAddress = packet->getTag<L3AddressInd>()->getSrcAddress();
-    ueAppPort  = packet->getTag<L4PortInd>()->getSrcPort();
+    ueAppPort = packet->getTag<L4PortInd>()->getSrcPort();
 
     auto req = packet->removeAtFront<RequestResponseAppPacket>();
     req->setType(MECAPP_RESPONSE);
@@ -149,8 +135,8 @@ void MECResponseApp::sendResponse()
     req->setServiceResponseTime(getRequestArrived_ - getRequestSent_);
     req->setResponseSentTimestamp(simTime());
     req->setProcessingTime(processingTime_);
-    req->setChunkLength(B(packetSize_));
-    inet::Packet* pkt = new inet::Packet("ResponseAppPacket");
+    req->setChunkLength(packetSize_);
+    inet::Packet *pkt = new inet::Packet("ResponseAppPacket");
     pkt->insertAtBack(req);
 
     ueAppSocket_.sendTo(pkt, ueAppAddress, ueAppPort);
@@ -169,8 +155,7 @@ void MECResponseApp::handleHttpMessage(int connId)
     if (mp1Socket_ != nullptr && connId == mp1Socket_->getSocketId()) {
         handleMp1Message(connId);
     }
-    else                // if (connId == serviceSocket_->getSocketId())
-    {
+    else {
         handleServiceMessage(connId);
     }
 }
@@ -178,8 +163,8 @@ void MECResponseApp::handleHttpMessage(int connId)
 void MECResponseApp::handleMp1Message(int connId)
 {
     // for now I only have just one Service Registry
-    HttpMessageStatus *msgStatus = (HttpMessageStatus*) mp1Socket_->getUserData();
-    mp1HttpMessage = (HttpBaseMessage*) msgStatus->httpMessageQueue.front();
+    HttpMessageStatus *msgStatus = static_cast<HttpMessageStatus *>(mp1Socket_->getUserData());
+    mp1HttpMessage = check_and_cast_nullable<HttpBaseMessage *>(msgStatus->httpMessageQueue.front());
     EV << "MECPlatooningApp::handleMp1Message - payload: " << mp1HttpMessage->getBody() << endl;
 
     try {
@@ -187,7 +172,7 @@ void MECResponseApp::handleMp1Message(int connId)
         if (!jsonBody.empty()) {
             jsonBody = jsonBody[0];
             std::string serName = jsonBody["serName"];
-            if (serName.compare("RNIService") == 0) {
+            if (serName == "RNIService") {
                 if (jsonBody.contains("transportInfo")) {
                     nlohmann::json endPoint = jsonBody["transportInfo"]["endPoint"]["addresses"];
                     EV << "address: " << endPoint["host"] << " port: " << endPoint["port"] << endl;
@@ -195,7 +180,7 @@ void MECResponseApp::handleMp1Message(int connId)
                     serviceAddress_ = L3AddressResolver().resolve(address.c_str());
                     servicePort_ = endPoint["port"];
                     serviceSocket_ = addNewSocket();
-                    connect(serviceSocket_ , serviceAddress_, servicePort_);
+                    connect(serviceSocket_, serviceAddress_, servicePort_);
                 }
             }
             else {
@@ -206,7 +191,6 @@ void MECResponseApp::handleMp1Message(int connId)
 
         //close service registry socket
         mp1Socket_->close();
-
     }
     catch (nlohmann::detail::parse_error e) {
         EV << e.what() << std::endl;
@@ -217,24 +201,17 @@ void MECResponseApp::handleMp1Message(int connId)
 
 void MECResponseApp::handleServiceMessage(int connId)
 {
-    HttpBaseMessage *httpMessage = nullptr;
-    HttpMessageStatus *msgStatus = (HttpMessageStatus*) serviceSocket_->getUserData();
-    httpMessage = (HttpBaseMessage*) msgStatus->httpMessageQueue.front();
-
-    if (httpMessage == nullptr) {
-        throw cRuntimeError("MECResponseApp::handleServiceMessage() - httpMessage is null!");
-    }
+    HttpMessageStatus *msgStatus = static_cast<HttpMessageStatus *>(serviceSocket_->getUserData());
+    HttpBaseMessage *httpMessage = check_and_cast<HttpBaseMessage *>(msgStatus->httpMessageQueue.front());
 
     if (httpMessage->getType() == RESPONSE) {
-        HttpResponseMessage *rspMsg = dynamic_cast<HttpResponseMessage*>(httpMessage);
-        if (rspMsg->getCode() == 200) // in response to a successful GET request
-        {
+        HttpResponseMessage *rspMsg = dynamic_cast<HttpResponseMessage *>(httpMessage);
+        if (rspMsg->getCode() == 200) { // in response to a successful GET request
             EV << "MECResponseApp::handleServiceMessage - response 200 from Socket with Id [" << connId << "]" << endl;
             getRequestArrived_ = simTime();
             EV << "response time " << getRequestArrived_ - getRequestSent_ << endl;
             doComputation();
         }
-
         // some error occured, show the HTTP code for now
         else {
             EV << "MECResponseApp::handleServiceMessage - response with HTTP code:  " << rspMsg->getCode() << endl;
@@ -246,7 +223,7 @@ void MECResponseApp::doComputation()
 {
     processingTime_ = vim->calculateProcessingTime(mecAppId, uniform(minInstructions_, maxInstructions_));
     EV << "time " << processingTime_ << endl;
-    scheduleAt(simTime()+ processingTime_, processingTimer_);
+    scheduleAt(simTime() + processingTime_, processingTimer_);
 }
 
 void MECResponseApp::sendGetRequest()
@@ -279,32 +256,29 @@ void MECResponseApp::established(int connId)
 
         Http::sendGetRequest(mp1Socket_, host.c_str(), uri);
     }
-
 }
 
 void MECResponseApp::socketClosed(inet::TcpSocket *sock)
 {
     EV << "MECResponseApp::socketClosed" << endl;
     std::cout << "MECResponseApp::socketClosed with sockId " << sock->getSocketId() << std::endl;
-    if(mp1Socket_!= nullptr && sock->getSocketId() == mp1Socket_->getSocketId()){
+    if (mp1Socket_ != nullptr && sock->getSocketId() == mp1Socket_->getSocketId()) {
         removeSocket(sock);
         mp1Socket_ = nullptr;
     }
-    else
-    {
-        EV <<"Service socket closed" << endl;
+    else {
+        EV << "Service socket closed" << endl;
         removeSocket(sock);
         sendStopAck();
     }
-
 }
 
 void MECResponseApp::sendStopAck()
 {
-    inet::Packet* pkt = new inet::Packet("RequestResponseAppPacket");
+    inet::Packet *pkt = new inet::Packet("RequestResponseAppPacket");
     auto req = inet::makeShared<RequestResponseAppPacket>();
-    req->setType(UEAPP_ACK_STOP);;
-    req->setChunkLength(B(packetSize_));
+    req->setType(UEAPP_ACK_STOP);
+    req->setChunkLength(packetSize_);
     pkt->insertAtBack(req);
 
     ueAppSocket_.sendTo(pkt, ueAppAddress, ueAppPort);

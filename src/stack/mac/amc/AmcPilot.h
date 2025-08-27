@@ -19,12 +19,6 @@
 
 namespace simu5g {
 
-// specifies a list of bands that can be used by a user
-typedef std::vector<unsigned short> UsableBands;
-
-// maps a user with a set of usable bands. If a UE is not in the list, the set of usable bands comprises the whole spectrum
-typedef std::map<MacNodeId,UsableBands> UsableBandsList;
-
 /// Forward declaration of LteAmc class, used by AmcPilot.
 class LteAmc;
 
@@ -34,15 +28,16 @@ class LteAmc;
  *
  * This is the base class for all AMC pilots.
  * If you want to add a new AMC pilot, you have to subclass
- * from this class and to implement the computeTxParams method
+ * from this class and implement the computeTxParams method
  * according to your policy.
  */
 class AmcPilot
 {
   protected:
+    Binder *binder_ = nullptr;
 
     //! LteAmc owner module
-    LteAmc *amc_;
+    LteAmc *amc_ = nullptr;
 
     //! Pilot Name
     std::string name_;
@@ -59,16 +54,14 @@ class AmcPilot
      * Constructor
      * @param amc LteAmc owner module
      */
-    AmcPilot(LteAmc *amc)
+    AmcPilot(Binder *binder, LteAmc *amc) : binder_(binder), amc_(amc), name_("NONE")
     {
-        amc_ = amc;
-        name_ = "NONE";
     }
+
     /**
      * Destructor
      */
-    virtual ~AmcPilot(){
-
+    virtual ~AmcPilot() {
     }
 
     /**
@@ -88,14 +81,15 @@ class AmcPilot
         return name_;
     }
 
-    virtual std::vector<Cqi>  getMultiBandCqi(MacNodeId id, const Direction dir, double carrierFrequency) = 0;
+    virtual std::vector<Cqi> getMultiBandCqi(MacNodeId id, const Direction dir, double carrierFrequency) = 0;
 
-    virtual void setUsableBands(MacNodeId id , UsableBands usableBands) = 0;
-    virtual bool getUsableBands(MacNodeId id, UsableBands*& uBands) = 0;
+    virtual void setUsableBands(MacNodeId id, UsableBands usableBands) = 0;
+    virtual UsableBands *getUsableBands(MacNodeId id) = 0;
 
-    void setMode(PilotComputationModes mode ) { mode_ = mode; }
+    void setMode(PilotComputationModes mode) { mode_ = mode; }
 };
 
 } //namespace
 
 #endif
+

@@ -10,7 +10,6 @@
 //
 
 #include "stack/d2dModeSelection/D2DModeSelectionBase.h"
-#include "stack/mac/layer/LteMacEnbD2D.h"
 
 namespace simu5g {
 
@@ -21,15 +20,12 @@ using namespace omnetpp;
 
 void D2DModeSelectionBase::initialize(int stage)
 {
-    if (stage == inet::INITSTAGE_LOCAL)
-    {
-        switchList_.clear();
-
+    if (stage == inet::INITSTAGE_LOCAL) {
         // get reference to mac layer
-        mac_ = check_and_cast<LteMacEnb*>(getParentModule()->getSubmodule("mac"));
+        mac_.reference(this, "macModule", true);
 
         // get reference to the binder
-        binder_ = getBinder();
+        binder_.reference(this, "binderModule", true);
 
         // get mode selection period
         modeSelectionPeriod_ = par("modeSelectionPeriod").doubleValue();
@@ -48,24 +44,21 @@ void D2DModeSelectionBase::initialize(int stage)
 
 void D2DModeSelectionBase::handleMessage(cMessage *msg)
 {
-    if (msg->isSelfMessage())
-    {
-        if (strcmp(msg->getName(),"modeSelectionTick") == 0)
-        {
+    if (msg->isSelfMessage()) {
+        if (msg == modeSelectionTick_) {
             // run mode selection algorithm
             doModeSelection();
 
             // send switch notifications to selected flows
             sendModeSwitchNotifications();
 
-            scheduleAt(NOW+modeSelectionPeriod_, msg);
+            scheduleAt(NOW + modeSelectionPeriod_, msg);
         }
         else
             throw cRuntimeError("D2DModeSelectionBase::handleMessage - Unrecognized self message %s", msg->getName());
     }
-    else
-    {
-         delete msg;
+    else {
+        delete msg;
     }
 }
 
@@ -80,18 +73,11 @@ void D2DModeSelectionBase::doModeSwitchAtHandover(MacNodeId nodeId, bool handove
         newMode = IM;
 
     switchList_.clear();
-    std::map<MacNodeId, std::map<MacNodeId, LteD2DMode> >::iterator it = peeringModeMap_->begin();
-    for (; it != peeringModeMap_->end(); ++it)
-    {
-        MacNodeId srcId = it->first;
-        std::map<MacNodeId, LteD2DMode>::iterator jt = it->second.begin();
-        for (; jt != it->second.end(); ++jt)
-        {
-            MacNodeId dstId = jt->first;
+    for (auto& [srcId, peerModes] : *peeringModeMap_) {
+        for (const auto& [dstId, oldMode] : peerModes) {
             if (srcId != nodeId && dstId != nodeId)
                 continue;
 
-            LteD2DMode oldMode = jt->second;
             if (oldMode == newMode)
                 continue;
 
@@ -109,7 +95,7 @@ void D2DModeSelectionBase::doModeSwitchAtHandover(MacNodeId nodeId, bool handove
             switchList_.push_back(info);
 
             // update peering map
-            jt->second = newMode;
+            peerModes.at(dstId) = newMode;
 
             EV << NOW << " D2DModeSelectionBase::doModeSwitchAtHandover - Flow: " << srcId << " --> " << dstId << " [" << d2dModeToA(newMode) << "]" << endl;
         }
@@ -121,18 +107,15 @@ void D2DModeSelectionBase::doModeSwitchAtHandover(MacNodeId nodeId, bool handove
     switchList_.clear();
 }
 
-
 void D2DModeSelectionBase::sendModeSwitchNotifications()
 {
-    SwitchList::iterator it = switchList_.begin();
-    for (; it != switchList_.end(); ++it)
-    {
-        MacNodeId srcId = it->flow.first;
-        MacNodeId dstId = it->flow.second;
-        LteD2DMode oldMode = it->oldMode;
-        LteD2DMode newMode = it->newMode;
+    for (const auto& switchItem : switchList_) {
+        MacNodeId srcId = switchItem.flow.first;
+        MacNodeId dstId = switchItem.flow.second;
+        LteD2DMode oldMode = switchItem.oldMode;
+        LteD2DMode newMode = switchItem.newMode;
 
-        check_and_cast<LteMacEnbD2D*>(mac_)->sendModeSwitchNotification(srcId, dstId, oldMode, newMode);
+        mac_->sendModeSwitchNotification(srcId, dstId, oldMode, newMode);
     }
 }
 

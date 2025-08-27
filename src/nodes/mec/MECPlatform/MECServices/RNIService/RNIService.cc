@@ -9,183 +9,143 @@
 // and cannot be removed from it.
 //
 
-#include "inet/networklayer/common/L3AddressResolver.h"
-#include "inet/common/ModuleAccess.h"
-#include "inet/common/lifecycle/NodeStatus.h"
-#include "inet/transportlayer/contract/tcp/TcpSocket.h"
-#include "inet/transportlayer/contract/tcp/TcpCommand_m.h"
-#include "inet/applications/tcpapp/GenericAppMsg_m.h"
-#include <iostream>
 #include "nodes/mec/MECPlatform/MECServices/RNIService/RNIService.h"
 
+#include <iostream>
 #include <string>
 #include <vector>
-//#include "apps/mec/MECServices/packets/HttpResponsePacket.h"
-#include "nodes/mec/utils/httpUtils/httpUtils.h"
-#include "common/utils/utils.h"
-#include "inet/networklayer/contract/ipv4/Ipv4Address.h"
 
+#include <inet/applications/tcpapp/GenericAppMsg_m.h>
+#include <inet/common/ModuleAccess.h>
+#include <inet/common/lifecycle/NodeStatus.h>
+#include <inet/networklayer/common/L3AddressResolver.h>
+#include <inet/networklayer/contract/ipv4/Ipv4Address.h>
+#include <inet/transportlayer/contract/tcp/TcpCommand_m.h>
+#include <inet/transportlayer/contract/tcp/TcpSocket.h>
+
+#include "common/utils/utils.h"
 #include "nodes/mec/MECPlatform/MECServices/Resources/SubscriptionBase.h"
+#include "nodes/mec/utils/httpUtils/httpUtils.h"
 
 namespace simu5g {
+
 Define_Module(RNIService);
 
-
-RNIService::RNIService():L2MeasResource_(){
+RNIService::RNIService():L2MeasResource_() {
     baseUriQueries_ = "/example/rni/v2/queries";
     baseUriSubscriptions_ = "/example/rni/v2/subscriptions";
     supportedQueryParams_.insert("cell_id");
     supportedQueryParams_.insert("ue_ipv4_address");
-    // supportedQueryParams_s_.insert("ue_ipv6_address");
+    // supportedQueryParams_.insert("ue_ipv6_address");
 }
 
 void RNIService::initialize(int stage)
 {
-    MecServiceBase::initialize(stage);
+    MecServiceBase2::initialize(stage);
 
-    if (stage == inet::INITSTAGE_APPLICATION_LAYER) {
+    if (stage == inet::INITSTAGE_LOCAL) {
+        L2MeasResource_.setBinder(binder_);
+    }
+    else if (stage == inet::INITSTAGE_APPLICATION_LAYER) {
         L2MeasResource_.addEnodeB(eNodeB_);
-        baseSubscriptionLocation_ = host_+ baseUriSubscriptions_ + "/";
+        baseSubscriptionLocation_ = host_ + baseUriSubscriptions_ + "/";
     }
 }
 
-
-void RNIService::handleGETRequest(const HttpRequestMessage *currentRequestMessageServed, inet::TcpSocket* socket)
+void RNIService::handleGETRequest(const HttpRequestMessage *currentRequestMessageServed, inet::TcpSocket *socket)
 {
     std::string uri = currentRequestMessageServed->getUri();
-    // std::vector<std::string> splittedUri = simu5g::utils::splitString(uri, "?");
-    // // uri must be in form example/v1/rni/queries/resource
-    // std::size_t lastPart = splittedUri[0].find_last_of("/");
-    // if(lastPart == std::string::npos)
-    // {
-    //     Http::send404Response(socket); //it is not a correct uri
-    //     return;
-    // }
-    // // find_last_of does not take in to account if the uri has a last /
-    // // in this case resourceType would be empty and the baseUri == uri
-    // // by the way the next if statement solve this problem
-    // std::string baseUri = splittedUri[0].substr(0,lastPart);
-    // std::string resourceType =  splittedUri[0].substr(lastPart+1);
 
-    // check it is a GET for a query or a subscription
-    if(uri.compare(baseUriQueries_ + "/layer2_meas") == 0 ) //queries
-    {
+    // check if it is a GET for a query or a subscription
+    if (uri == (baseUriQueries_ + "/layer2_meas")) { //queries
         std::string params = currentRequestMessageServed->getParameters();
         //look for query parameters
-        if(!params.empty())
-        {
+        if (!params.empty()) {
             std::vector<std::string> queryParameters = simu5g::utils::splitString(params, "&");
             /*
-            * supported paramater:
-            * - cell_id
-            * - ue_ipv4_address
-            * - ue_ipv6_address // not implemented yet
-            */
+             * supported parameters:
+             * - cell_id
+             * - ue_ipv4_address
+             * - ue_ipv6_address // not implemented yet
+             */
 
             std::vector<MacNodeId> cellIds;
             std::vector<inet::Ipv4Address> ues;
 
-            typedef std::map<std::string, std::vector<std::string>> queryMap;
-            queryMap queryParamsMap; // e.g cell_id -> [0, 1]
+            std::map<std::string, std::vector<std::string>> queryParamsMap; // e.g cell_id -> [0, 1]
 
-            std::vector<std::string>::iterator it  = queryParameters.begin();
-            std::vector<std::string>::iterator end = queryParameters.end();
             std::vector<std::string> params;
             std::vector<std::string> splittedParams;
-            for(; it != end; ++it){
-                if(it->rfind("cell_id", 0) == 0) // cell_id=par1,par2
-                {
-                    params = simu5g::utils::splitString(*it, "=");
-                    if(params.size()!= 2) //must be param=values
-                    {
+            for (const auto &queryParam : queryParameters) {
+                if (queryParam.rfind("cell_id", 0) == 0) { // cell_id=par1,par2
+                    params = simu5g::utils::splitString(queryParam, "=");
+                    if (params.size() != 2) { //must be param=values
                         Http::send400Response(socket);
                         return;
                     }
                     splittedParams = simu5g::utils::splitString(params[1], ",");
-                    std::vector<std::string>::iterator pit  = splittedParams.begin();
-                    std::vector<std::string>::iterator pend = splittedParams.end();
-                    for(; pit != pend; ++pit){
-                        cellIds.push_back((MacNodeId)std::stoi(*pit));
+                    for (const auto &cellIdParam : splittedParams) {
+                        cellIds.push_back((MacNodeId)std::stoi(cellIdParam));
                     }
                 }
-                else if(it->rfind("ue_ipv4_address", 0) == 0)
-                {
+                else if (queryParam.rfind("ue_ipv4_address", 0) == 0) {
                     // TO DO manage acr:10.12
-                    params = simu5g::utils::splitString(*it, "=");
-                    if(params.size()!= 2) //must be param=values
-                    {
+                    params = simu5g::utils::splitString(queryParam, "=");
+                    if (params.size() != 2) { //must be param=values
                         Http::send400Response(socket);
                         return;
                     }
                     splittedParams = simu5g::utils::splitString(params[1], ",");
-                    std::vector<std::string>::iterator pit  = splittedParams.begin();
-                    std::vector<std::string>::iterator pend = splittedParams.end();
-                    for(; pit != pend; ++pit)
-                       ues.push_back(inet::Ipv4Address((*pit).c_str()));
+                    for (const auto &ueAddress : splittedParams)
+                        ues.push_back(inet::Ipv4Address(ueAddress.c_str()));
                 }
-                else // bad parameters
-                {
+                else { // bad parameters
                     Http::send400Response(socket);
                     return;
                 }
-
             }
 
             //send response
-            if(!ues.empty() && !cellIds.empty())
-            {
+            if (!ues.empty() && !cellIds.empty()) {
                 Http::send200Response(socket, L2MeasResource_.toJson(cellIds, ues).dump().c_str());
             }
-            else if(ues.empty() && !cellIds.empty())
-            {
+            else if (ues.empty() && !cellIds.empty()) {
                 Http::send200Response(socket, L2MeasResource_.toJsonCell(cellIds).dump().c_str());
             }
-            else if(!ues.empty() && cellIds.empty())
-           {
-              Http::send200Response(socket, L2MeasResource_.toJsonUe(ues).dump().c_str());
-           }
-           else
-           {
-               Http::send400Response(socket);
-           }
-
+            else if (!ues.empty() && cellIds.empty()) {
+                Http::send200Response(socket, L2MeasResource_.toJsonUe(ues).dump().c_str());
+            }
+            else {
+                Http::send400Response(socket);
+            }
         }
-        else{
+        else {
             //no query params
-            Http::send200Response(socket,L2MeasResource_.toJson().dump().c_str());
+            Http::send200Response(socket, L2MeasResource_.toJson().dump().c_str());
             return;
         }
     }
-
-    else if (uri.compare(baseUriSubscriptions_) == 0) //subs
-    {
+    else if (uri == baseUriSubscriptions_) { //subs
         // TODO implement subscription?
         Http::send404Response(socket);
     }
-    else // not found
-    {
+    else { // not found
         Http::send404Response(socket);
     }
-
 }
 
-void RNIService::handlePOSTRequest(const HttpRequestMessage *currentRequestMessageServed, inet::TcpSocket* socket){}
+void RNIService::handlePOSTRequest(const HttpRequestMessage *currentRequestMessageServed, inet::TcpSocket *socket) {}
 
-void RNIService::handlePUTRequest(const HttpRequestMessage *currentRequestMessageServed, inet::TcpSocket* socket){}
+void RNIService::handlePUTRequest(const HttpRequestMessage *currentRequestMessageServed, inet::TcpSocket *socket) {}
 
-void RNIService::handleDELETERequest(const HttpRequestMessage *currentRequestMessageServed, inet::TcpSocket* socket)
+void RNIService::handleDELETERequest(const HttpRequestMessage *currentRequestMessageServed, inet::TcpSocket *socket)
 {
 }
 
 void RNIService::finish()
 {
-// TODO
-    return;
 }
 
-RNIService::~RNIService(){
-
-}
 
 } //namespace
 

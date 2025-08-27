@@ -13,7 +13,6 @@
 #define APPS_MEC_MEAPPS_MEBG_APP_H_
 
 #include "apps/mec/MecApps/MecAppBase.h"
-#include "inet/common/lifecycle/NodeStatus.h"
 
 namespace simu5g {
 
@@ -21,46 +20,43 @@ using namespace omnetpp;
 
 class MecRequestBackgroundApp : public MecAppBase
 {
-protected:
+  protected:
 
-    inet::NodeStatus *nodeStatus = nullptr;
     int numberOfApplications_;    // requests to send in this session
-    cMessage *burstTimer;
-    cMessage *burstPeriod;
-    bool      burstFlag;
-    cMessage *sendBurst;
+    cMessage *burstTimer = nullptr;
+    cMessage *burstPeriod = nullptr;
+    bool burstFlag;
+    cMessage *sendBurst = nullptr;
 
     double lambda; // it is the mean, not the rate
-    inet::TcpSocket* serviceSocket_;
-    inet::TcpSocket* mp1Socket_;
+    inet::TcpSocket *serviceSocket_ = nullptr;
+    inet::TcpSocket *mp1Socket_ = nullptr;
 
-    HttpBaseMessage* mp1HttpMessage;
-    HttpBaseMessage* serviceHttpMessage;
+    HttpBaseMessage *mp1HttpMessage = nullptr;
+    HttpBaseMessage *serviceHttpMessage = nullptr;
 
-    virtual void handleSelfMessage(cMessage *msg) override;
+    void handleSelfMessage(cMessage *msg) override;
 
-    virtual int numInitStages() const override { return inet::NUM_INIT_STAGES; }
-    virtual void initialize(int stage) override;
+    int numInitStages() const override { return inet::NUM_INIT_STAGES; }
+    void initialize(int stage) override;
 
+    void handleHttpMessage(int connId) override;
+    void handleServiceMessage(int connId) override;
+    void handleMp1Message(int connId) override;
 
-    virtual void handleHttpMessage(int connId) override;
-    virtual void handleServiceMessage(int connId) override;
-    virtual void handleMp1Message(int connId) override;
+    void handleUeMessage(cMessage *msg) override {};
 
-    virtual void handleUeMessage(omnetpp::cMessage *msg) override {};
-
-
-    virtual void established(int connId) override;
+    void established(int connId) override;
 
     virtual void sendRequest();
 
-    virtual void finish() override;
+    void finish() override;
 
-   public:
-     MecRequestBackgroundApp();
-     virtual ~MecRequestBackgroundApp();
+  public:
+    ~MecRequestBackgroundApp() override;
 };
 
 } //namespace
 
 #endif /* APPS_MEC_MEAPPS_MEBGAPP_H_ */
+

@@ -13,16 +13,21 @@
 #define __BACKGROUNDCELLCHANNELMODEL_H_
 
 #include <omnetpp.h>
+
+#include <inet/common/ModuleRefByPar.h>
+
 #include "common/LteCommon.h"
 #include "common/binder/Binder.h"
 
 namespace simu5g {
 
+using namespace omnetpp;
+
 // attenuation value to be returned if max. distance of a scenario has been violated
 // and tolerating the maximum distance violation is enabled
-#define ATT_MAXDISTVIOLATED 1000
+#define ATT_MAXDISTVIOLATED    1000
 
-class BackgroundCellChannelModel : public omnetpp::cSimpleModule
+class BackgroundCellChannelModel : public cSimpleModule
 {
     // carrier frequency for this cell
     double carrierFrequency_;
@@ -42,7 +47,7 @@ class BackgroundCellChannelModel : public omnetpp::cSimpleModule
     // distance from the building wall
     double inside_distance_;
 
-    // Average street's wide
+    // Average street's width
     double wStreet_;
 
     // scenario
@@ -61,7 +66,7 @@ class BackgroundCellChannelModel : public omnetpp::cSimpleModule
     double thermalNoise_;
 
     //pointer to Binder module
-    Binder* binder_;
+    inet::ModuleRefByPar<Binder> binder_;
 
     //Cable loss
     double cableLoss_;
@@ -75,13 +80,13 @@ class BackgroundCellChannelModel : public omnetpp::cSimpleModule
     //if true, shadowing is enabled
     bool shadowing_;
 
-    //Enabale disable fading
+    //Enable or disable fading
     bool fading_;
 
     //Number of fading paths in jakes fading
     int fadingPaths_;
 
-    //avg delay spred in jakes fading
+    //avg delay spread in jakes fading
     double delayRMS_;
 
     // enable/disable intercell interference computation
@@ -90,7 +95,7 @@ class BackgroundCellChannelModel : public omnetpp::cSimpleModule
     bool enableUplinkInterference_;
 
     // Store the last computed shadowing for each user
-    std::map<MacNodeId, std::pair<inet::simtime_t, double> > lastComputedSF_;
+    std::map<MacNodeId, std::pair<inet::simtime_t, double>> lastComputedSF_;
 
     // map that stores for each user if is in Line of Sight or not with eNodeB
     std::map<MacNodeId, bool> losMap_;
@@ -102,7 +107,7 @@ class BackgroundCellChannelModel : public omnetpp::cSimpleModule
     typedef std::pair<inet::simtime_t, inet::Coord> Position;
 
     // last position of current user
-    std::map<MacNodeId, std::queue<Position> > positionHistory_;
+    std::map<MacNodeId, std::queue<Position>> positionHistory_;
 
     // last position of current user at which probability of LOS
     // was computed.
@@ -114,11 +119,11 @@ class BackgroundCellChannelModel : public omnetpp::cSimpleModule
     struct JakesFadingData
     {
         std::vector<double> angleOfArrival;
-        std::vector<omnetpp::simtime_t> delaySpread;
+        std::vector<simtime_t> delaySpread;
     };
 
     // for each node and for each band we store information about jakes fading
-    std::map<MacNodeId, std::vector<JakesFadingData> > jakesFadingMap_;
+    std::map<MacNodeId, std::vector<JakesFadingData>> jakesFadingMap_;
 
     typedef std::vector<JakesFadingData> JakesFadingVector;
     typedef std::map<MacNodeId, JakesFadingVector> JakesFadingMap;
@@ -134,7 +139,7 @@ class BackgroundCellChannelModel : public omnetpp::cSimpleModule
     //enable or disable the dynamic computation of LOS NLOS probability for each user
     bool dynamicLos_;
 
-    //if dynamicLos is false this boolean is initialized to true if all user will be in LOS or false otherwise
+    //if dynamicLos is false this boolean is initialized to true if all users will be in LOS or false otherwise
     bool fixedLos_;
     /*
      * Compute Attenuation caused by pathloss and shadowing (optional)
@@ -162,21 +167,21 @@ class BackgroundCellChannelModel : public omnetpp::cSimpleModule
      */
     double computeUrbanMicro(double distance, bool los);
     /*
-     * compute scenario for Urban Macro cell
+     * Compute attenuation for Urban Macro cell
      *
      * @param distance between UE and eNodeB
      * @param los line-of-sight flag
      */
     double computeUrbanMacro(double distance, bool los);
     /*
-     * compute scenario for Sub Urban Macro cell
+     * Compute attenuation for Sub Urban Macro cell
      *
      * @param distance between UE and eNodeB
      * @param los line-of-sight flag
      */
     double computeSubUrbanMacro(double distance, double& dbp, bool los);
     /*
-     * Compute scenario for rural macro cell
+     * Compute attenuation for rural macro cell
      *
      * @param distance between UE and eNodeB
      * @param los line-of-sight flag
@@ -202,23 +207,24 @@ class BackgroundCellChannelModel : public omnetpp::cSimpleModule
      *
      * @param speed speed of UE
      * @param nodeid mac node id of UE
-     * @param band logical bend id
+     * @param band logical band id
      * @param cqiDl if true, the jakesMap in the UE side should be used
      * @param isBgUe if true, this is called for a background UE
      */
-    double jakesFading(MacNodeId noedId, double speed, unsigned int band, unsigned int numBands);
+    double jakesFading(MacNodeId nodeId, double speed, unsigned int band, unsigned int numBands);
     /*
      * Compute LOS probability
      *
-     * @param d between UE and eNodeB
+     * @param d distance between UE and eNodeB
      * @param nodeid mac node id of UE
      */
     void computeLosProbability(double d, MacNodeId nodeId);
 
-    JakesFadingMap * getJakesMap()
+    JakesFadingMap *getJakesMap()
     {
         return &jakesFadingMap_;
     }
+
     /* compute speed (m/s) for a given node
      * @param nodeid mac node id of UE
      * @return the speed in m/s
@@ -232,7 +238,7 @@ class BackgroundCellChannelModel : public omnetpp::cSimpleModule
     double computeCorrelationDistance(const MacNodeId nodeId, const inet::Coord coord);
 
     /*
-     * update base point if distance to previous value is greater than the
+     * update base point if the distance to the previous value is greater than the
      * correlationDistance_
      */
     void updateCorrelationDistance(const MacNodeId nodeId, const inet::Coord coord);
@@ -250,13 +256,13 @@ class BackgroundCellChannelModel : public omnetpp::cSimpleModule
     double getTwoDimDistance(inet::Coord a, inet::Coord b);
     double computeAngularAttenuation(double hAngle, double vAngle);
 
-    bool computeDownlinkInterference(MacNodeId bgUeId, inet::Coord bgUePos, double carrierFrequency, const RbMap& rbmap, unsigned int numBands, std::vector<double> * interference);
-    bool computeUplinkInterference(MacNodeId bgUeId, inet::Coord bgUePos, double carrierFrequency, const RbMap& rbmap, unsigned int numBands, std::vector<double> * interference);
-    bool computeBackgroundCellInterference(MacNodeId bgUeId, inet::Coord bgUeCoord, int bgBsId, inet::Coord bgBsCoord, double carrierFrequency, const RbMap& rbmap, Direction dir, unsigned int numBands, std::vector<double>* interference);
+    bool computeDownlinkInterference(MacNodeId bgUeId, inet::Coord bgUePos, double carrierFrequency, const RbMap& rbmap, unsigned int numBands, std::vector<double> *interference);
+    bool computeUplinkInterference(MacNodeId bgUeId, inet::Coord bgUePos, double carrierFrequency, const RbMap& rbmap, unsigned int numBands, std::vector<double> *interference);
+    bool computeBackgroundCellInterference(MacNodeId bgUeId, inet::Coord bgUeCoord, int bgBsId, inet::Coord bgBsCoord, double carrierFrequency, const RbMap& rbmap, Direction dir, unsigned int numBands, std::vector<double> *interference);
 
   protected:
-    virtual void initialize(int stage);
-    virtual int numInitStages() const { return inet::INITSTAGE_LOCAL+1; }
+    void initialize(int stage) override;
+    int numInitStages() const override { return inet::INITSTAGE_LOCAL + 1; }
 
   public:
 
@@ -264,17 +270,18 @@ class BackgroundCellChannelModel : public omnetpp::cSimpleModule
     void setCarrierFrequency(double carrierFrequency) { carrierFrequency_ = carrierFrequency; }
 
     /*
-     * Compute sinr for each band for user nodeId according to pathloss, shadowing (optional) and multipath fading
+     * Compute SINR for each band for user nodeId according to pathloss, shadowing (optional) and multipath fading
      */
-    virtual std::vector<double> getSINR(MacNodeId bgUeId, inet::Coord bgUePos, TrafficGeneratorBase* bgUe, BackgroundScheduler* bgScheduler, Direction dir);
+    virtual std::vector<double> getSINR(MacNodeId bgUeId, inet::Coord bgUePos, TrafficGeneratorBase *bgUe, BackgroundScheduler *bgScheduler, Direction dir);
 
     /*
      * Compute received power for a background UE according to pathloss
      *
      */
-    virtual double getReceivedPower_bgUe(double txPower, inet::Coord txPos, inet::Coord rxPos, Direction dir, bool losStatus, const BackgroundScheduler* bgScheduler);
+    virtual double getReceivedPower_bgUe(double txPower, inet::Coord txPos, inet::Coord rxPos, Direction dir, bool losStatus, const BackgroundScheduler *bgScheduler);
 };
 
 } //namespace
 
 #endif
+

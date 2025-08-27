@@ -20,15 +20,14 @@ using namespace omnetpp;
 void FeedbackTester::initialize()
 {
     interval_ = par("interval");
-    generator_ = check_and_cast<LteDlFeedbackGenerator*>(getSimulation()->getModuleByPath("lteDlFbGenerator"));
+    generator_.reference(this, "feedbackGeneratorModule", true);
     aperiodic_ = new cMessage("aperiodic");
     scheduleAt(simTime(), aperiodic_);
 }
 
 void FeedbackTester::handleMessage(cMessage *msg)
 {
-    if (msg == aperiodic_)
-    {
+    if (msg == aperiodic_) {
         scheduleAt(simTime() + interval_, aperiodic_);
         generator_->aperiodicRequest();
     }

@@ -13,25 +13,29 @@
 package simu5g.stack;
 
 import simu5g.stack.backgroundTrafficGenerator.BackgroundTrafficGenerator;
-import simu5g.stack.compManager.LteCompManager;
+import simu5g.stack.compManager.ILteCompManager;
 import simu5g.stack.dualConnectivityManager.DualConnectivityManager;
 import simu5g.stack.handoverManager.LteHandoverManager;
 import simu5g.x2.LteX2Manager;
 
 
 //
-// eNodeB of LTE stack
+// The LteNicEnb module is a network interface that provides LTE connectivity
+// within an eNodeB. It implements the data and signaling planes of the LTE stack,
+// which includes the PDCP, RLC, MAC, and PHY layers. The parameters and submodules
+// allow customization of the eNodeB's behavior, including whether it supports
+// D2D communication, CoMP (Coordinated MultiPoint), or dual connectivity.
 //
 module LteNicEnb extends LteNicBase
 {
     parameters:
-        LtePdcpRrcType = default("LtePdcpRrcEnb");
-        LteMacType = default("LteMacEnb");
-        LtePhyType = default("LtePhyEnb");
-        PacketFlowManagerType = default("PacketFlowManagerEnb");
+        pdcpRrc.typename = default("LtePdcpRrcEnb");
+        mac.typename = default("LteMacEnb");
+        phy.typename = default("LtePhyEnb");
+        packetFlowManager.typename = default("PacketFlowManagerEnb");
         d2dCapable = default(false);          // DO NOT CHANGE
         bool compEnabled = default(false);
-        string LteCompManagerType = default("LteCompManagerProportional");
+        *.handoverManagerModule = "^.handoverManager";
 
     submodules:
         //#
@@ -44,7 +48,7 @@ module LteNicEnb extends LteNicBase
         //#
         //# Modules exploiting X2 interface
         //#
-        compManager: <LteCompManagerType> like LteCompManager if compEnabled {
+        compManager: <default("LteCompManagerProportional")> like ILteCompManager if compEnabled {
             @display("p=493,314,row");
         }
         handoverManager: LteHandoverManager {

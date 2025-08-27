@@ -13,9 +13,11 @@
 #define _LTE_LCGSCHEDULER_H_
 
 #include "common/LteCommon.h"
-#include "stack/mac/layer/LteMacUe.h"
+#include "stack/mac/LteMacUe.h"
 
 namespace simu5g {
+
+using namespace omnetpp;
 
 /// forward declarations
 class LteSchedulerUeUl;
@@ -42,15 +44,13 @@ class LcgScheduler
 
         /// Comparison operator to enable sorting.
         bool operator<(const SortedDesc& y) const
-            {
+        {
             return score_ < y.score_;
         }
 
-    public:
-        SortedDesc(const T x, const S score)
+      public:
+        SortedDesc(const T x, const S score) : x_(x), score_(score)
         {
-            x_ = x;
-            score_ = score;
         }
     };
 
@@ -63,13 +63,13 @@ class LcgScheduler
     };
 
     // last execution time
-    omnetpp::simtime_t lastExecutionTime_;
+    simtime_t lastExecutionTime_;
 
     /// MAC module, used to get parameters from NED
-    LteMacUe *mac_;
+    opp_component_ptr<LteMacUe> mac_;
 
     /// Associated LteSchedulerUeUl (it is the one who creates the LteScheduler)
-    LteSchedulerUeUl* ueScheduler_;
+    LteSchedulerUeUl *ueScheduler_ = nullptr;
 
     // schedule List - returned by reference on scheduler invocation
     ScheduleList scheduleList_;
@@ -88,19 +88,19 @@ class LcgScheduler
     /**
      * Default constructor.
      */
-    LcgScheduler(LteMacUe * mac);
+    LcgScheduler(LteMacUe *mac);
     LcgScheduler(const LcgScheduler& other) { operator=(other); }
     LcgScheduler& operator=(const LcgScheduler& other);
     /**
      * Destructor.
      */
-    virtual ~LcgScheduler();
+    virtual ~LcgScheduler() {}
 
     /**
      * Initializes the LteScheduler.
      * @param ueScheduler UE scheduler
      */
-    inline virtual void setUeUlScheduler(LteSchedulerUeUl* ueScheduler)
+    inline virtual void setUeUlScheduler(LteSchedulerUeUl *ueScheduler)
     {
         ueScheduler_ = ueScheduler;
     }
@@ -115,23 +115,9 @@ class LcgScheduler
      * scheduled for each connection
      */
     virtual ScheduleList& getScheduledBytesList();
-
-    // *****************************************************************************************
-
-//        /// performs request of grant to the eNbScheduler
-//        virtual unsigned int grant(MacCid cid,unsigned int bytes, bool& terminate,bool& active,bool& eligible);
-//
-//        /// calls eNbScheduler rtxschedule()
-//        virtual bool rtxschedule();
-//
-//        virtual void notify( MacCid activeCid ) {;}
-//
-//        virtual void remove( MacCid cid ) {;}
-//
-//        virtual void update() {;}
 };
 
-} //namespace
+} //namespace simu5g
 
 #endif
 

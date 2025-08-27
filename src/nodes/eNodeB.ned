@@ -7,7 +7,6 @@
 // and cannot be removed from it.
 //
 
-
 package simu5g.nodes;
 
 import inet.applications.contract.IApp;
@@ -22,16 +21,24 @@ import inet.transportlayer.udp.Udp;
 import simu5g.common.cellInfo.CellInfo;
 import simu5g.corenetwork.gtp.GtpUser;
 import simu5g.corenetwork.gtp.GtpUserX2;
-import simu5g.corenetwork.statsCollector.StatsCollector;
+import simu5g.corenetwork.statsCollector.IStatsCollector;
 import simu5g.corenetwork.trafficFlowFilter.TrafficFlowFilter;
 import simu5g.stack.ICellularNic;
 import simu5g.x2.LteX2App;
 
-
 //
-// eNodeB Module
-//
-// Module for eNodeB functionalities
+// This module models an evolved Node B (eNB) of a 4G LTE network. It is a specialized device equipped
+// with a Network Interface Card (NIC) that enables communication with the ~Ue devices connected
+// to it. It serves as an access point that routes packets between the UEs and the 4G Core Network.
+// Packets arriving from the UEs are tunneled to the appropriate next hop in the core network (e.g.,
+// the PDN Gateway, PGW) using the GPRS Tunneling Protocol (GTP). Conversely, packets
+// received from the core network are detunneled and sent to the appropriate destination UE.
+// In addition to the 4G NIC, this compound module includes a configurable number of wired interfaces
+// to connect with routers of the core network or directly to the ~PgwStandard module, which serves
+// as the IP module to perform forwarding, and the ~GtpUser module that handles GTP (de)tunneling. The latter
+// utilizes the ~TrafficFlowFilter module to classify incoming packets and determine the next hop.
+// Furthermore, it features a configurable number of ~LteX2App modules to facilitate peer-to-peer communications with
+// other eNodeBs within the same LTE network.
 //
 module eNodeB
 {
@@ -59,7 +66,6 @@ module eNodeB
         int macNodeId @mutable = default(0); // TODO: this is not a real parameter
         int macCellId @mutable = default(0);  // TODO: this is not a real parameter
         double txPower @unit(mw) = default(100mw);
-        string nicType = default("LteNicEnb");
 
         //# Network Layer specs
         bool hasIpv4 = default(true);
@@ -68,6 +74,7 @@ module eNodeB
         *.routingTableModule = default("^.ipv4.routingTable");
         *.forwarding = true;
         *.multicastForwarding = false;
+        **.cellInfoModule = default(absPath(".cellInfo"));
 
         //# Apps
         int numApps = default(0);     // no of apps.
@@ -82,7 +89,6 @@ module eNodeB
         string mecHost = default("");		// symbolic name of the connected MEHost in the Network
 
         //# @author Alessandro Noferi
-        string StatsCollectorType = default("BaseStationStatsCollector");
         bool hasRNISupport = default(false);
 
         //# use it in case of emulation
@@ -102,45 +108,45 @@ module eNodeB
     submodules:
         interfaceTable: InterfaceTable {
             parameters:
-                @display("p=110.43,158.4875;is=s");
+                @display("p=110,158;is=s");
         }
         mobility: StationaryMobility {
             parameters:
-                @display("p=110.43,343.56;is=s");
+                @display("p=110,343;is=s");
         }
         cellInfo: CellInfo {
             parameters:
-                @display("p=110.43,244.3775;is=s");
+                @display("p=110,244;is=s");
         }
 
-        collector: <StatsCollectorType> like StatsCollector if hasRNISupport {
+        collector: <default("BaseStationStatsCollector")> like IStatsCollector if hasRNISupport {
             @display("p=50,275;is=s");
         }
 
         //#
         //# cellularNic modules
         //#
-        cellularNic: <nicType> like ICellularNic {
+        cellularNic: <default("LteNicEnb")> like ICellularNic {
             parameters:
-                @display("p=433.54,520.4525");
+                @display("p=433,520");
                 nodeType = parent.nodeType;
         }
 
         pppIf: PppInterface {
             parameters:
-                @display("p=824.76,519.82");
+                @display("p=824,519");
         }
 
         x2ppp[sizeof(x2)]: PppInterface {
             parameters:
-                @display("p=979.60004,519.82");
+                @display("p=980,519");
         }
 
         //#
         //# Mec interface
         //#
         pppMEHostIf: PppInterface {
-            @display("p=657.28,519.82");
+            @display("p=657,519");
         }
 
         //#
@@ -148,11 +154,11 @@ module eNodeB
         //#
         ipv4: <default("Ipv4NetworkLayer")> like INetworkLayer if hasIpv4 {
             parameters:
-                @display("p=494.54,372.88;q=queue");
+                @display("p=494,372;q=queue");
         }
         ipv6: <default("Ipv6NetworkLayer")> like INetworkLayer if hasIpv6 {
             parameters:
-                @display("p=657.28,374.46;q=queue");
+                @display("p=657,374;q=queue");
         }
 
         //#
@@ -161,25 +167,25 @@ module eNodeB
 		// =============== Udp ============== //
         app[numApps]: <> like IApp {
             parameters:
-                @display("p=748.92,75.840004,row,140");
+                @display("p=748,75,row,140");
         }
         udp: Udp {
             parameters:
-                @display("p=682.0075,212.68001");
+                @display("p=682,212");
         }
         tcp: Tcp if hasTcp {
             parameters:
-                @display("p=963.195,212.68001");
+                @display("p=963,212");
         }
 
 	    // =============== X2AP ============== //
         x2App[numX2Apps]: LteX2App {
             parameters:
-                @display("p=371.30002,75.840004,row");
+                @display("p=371,75,row");
         }
         sctp: Sctp {
             parameters:
-                @display("p=494.54,211.72");
+                @display("p=494,211");
         }
 
 	    // message dispatcher for SAP between application and transport layer
@@ -190,7 +196,7 @@ module eNodeB
         // message dispatcher for SAP between transport and network layer
         tn: MessageDispatcher {
             parameters:
-                @display("p=750,296;b=1000,5,,,,1");
+                @display("p=750,300;b=1000,5,,,,1");
         }
         // message dispatcher for SAP to link layer
         nl: MessageDispatcher {
@@ -203,18 +209,19 @@ module eNodeB
         //#
         trafficFlowFilter: TrafficFlowFilter {
             parameters:
-                @display("p=1172.36,372.88");
+                @display("p=1172,372");
                 ownerType = parent.nodeType;
         }
         gtpUser: GtpUser {
             parameters:
-                @display("p=1041.22,372.88");
+                @display("p=1041,372");
                 ipOutInterface = "cellular";
+                gateway = parent.gateway;
         }
 
         gtpUserX2: GtpUserX2 {
             parameters:
-                @display("p=900.60004,372.88");
+                @display("p=900,372");
         }
 
     connections allowunconnected:

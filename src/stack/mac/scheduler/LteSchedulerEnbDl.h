@@ -26,7 +26,7 @@ namespace simu5g {
  */
 class LteSchedulerEnbDl : public LteSchedulerEnb
 {
-    // XXX debug: to call grant from mac
+    // XXX debug: to call grant from MAC
     friend class LteMacEnb;
 
   protected:
@@ -34,33 +34,33 @@ class LteSchedulerEnbDl : public LteSchedulerEnb
     //---------------------------------------------
 
     /**
-     * Checks Harq Descriptors and return the first free codeword.
+     * Checks HARQ descriptors and returns the first free codeword.
      *
      * @param id
      * @param cw
      * @param carrierFreq
      * @return
      */
-    bool checkEligibility(MacNodeId id, Codeword& cw, double carrierFrequency);
+    bool checkEligibility(MacNodeId id, Codeword& cw, double carrierFrequency) override;
 
-    virtual bool racschedule(double carrierFrequency, BandLimitVector* bandLim = NULL) { return false; }
+    bool racschedule(double carrierFrequency, BandLimitVector *bandLim = nullptr) override { return false; }
 
     /**
      * Updates current schedule list with HARQ retransmissions.
-     * @return TRUE if OFDM space is exhausted.
+     * @return true if OFDM space is exhausted.
      */
-    virtual bool rtxschedule(double carrierFrequency, BandLimitVector* bandLim = NULL);
+    bool rtxschedule(double carrierFrequency, BandLimitVector *bandLim = nullptr) override;
 
     /**
      * Schedule retransmissions for background UEs
-     * @return TRUE if OFDM space is exhausted.
+     * @return true if OFDM space is exhausted.
      */
-    virtual bool rtxscheduleBackground(double carrierFrequency, BandLimitVector* bandLim = NULL);
+    bool rtxscheduleBackground(double carrierFrequency, BandLimitVector *bandLim = nullptr) override;
 
     /**
-     * Schedules retransmission for the Harq Process of the given UE on a set of logical bands.
+     * Schedules retransmission for the HARQ process of the given UE on a set of logical bands.
      * Each band has also assigned a band limit amount of bytes: no more than the specified
-     * amount will be served on the given band for the acid.
+     * amount will be served on the given band for the ACID.
      *
      * @param nodeId The node ID
      * @param cw The codeword used to serve the acid process
@@ -68,16 +68,17 @@ class LteSchedulerEnbDl : public LteSchedulerEnb
      * @param acid The ACID
      * @return The allocated bytes. 0 if retransmission was not possible
      */
-    virtual unsigned int schedulePerAcidRtx(MacNodeId nodeId, double carrierFrequency, Codeword cw, unsigned char acid,
-        std::vector<BandLimit>* bandLim = nullptr, Remote antenna = MACRO, bool limitBl = false);
+    unsigned int schedulePerAcidRtx(MacNodeId nodeId, double carrierFrequency, Codeword cw, unsigned char acid,
+            std::vector<BandLimit> *bandLim = nullptr, Remote antenna = MACRO, bool limitBl = false) override;
 
-    virtual unsigned int scheduleBgRtx(MacNodeId bgUeId, double carrierFrequency, Codeword cw, std::vector<BandLimit>* bandLim = nullptr,
-            Remote antenna = MACRO, bool limitBl = false);
+    unsigned int scheduleBgRtx(MacNodeId bgUeId, double carrierFrequency, Codeword cw, std::vector<BandLimit> *bandLim = nullptr,
+            Remote antenna = MACRO, bool limitBl = false) override;
 
-    bool getBandLimit(std::vector<BandLimit>* bandLimit, MacNodeId ueId);
+    bool getBandLimit(std::vector<BandLimit> *bandLimit, MacNodeId ueId);
 
 };
 
 } //namespace
 
 #endif // _LTE_LTE_SCHEDULER_ENB_DL_H_
+

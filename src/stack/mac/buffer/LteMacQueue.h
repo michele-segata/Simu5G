@@ -13,16 +13,20 @@
 #define _LTE_LTEMACQUEUE_H_
 
 #include <omnetpp.h>
-#include "inet/common/packet/Packet.h"
+
+#include <inet/common/packet/Packet.h>
+
 #include "stack/rlc/packet/LteRlcPdu_m.h"
 
 namespace simu5g {
+
+using namespace omnetpp;
 
 /**
  * @class LteMacQueue
  * @brief Queue for MAC SDU packets
  *
- * The Queue registers the following informations:
+ * The Queue registers the following information:
  * - Packets
  * - Occupation (in bytes)
  * - Maximum size
@@ -30,11 +34,11 @@ namespace simu5g {
  * - Head Of Line Timestamp
  *
  * The Queue size can be configured, and packets are
- * dropped if stored packets exceeds the queue size
+ * dropped if stored packets exceed the queue size
  * A size equal to 0 means that the size is infinite.
  *
  */
-class LteMacQueue : public omnetpp::cPacketQueue
+class LteMacQueue : public cPacketQueue
 {
   public:
 
@@ -44,17 +48,13 @@ class LteMacQueue : public omnetpp::cPacketQueue
      */
     LteMacQueue(int queueSize);
 
-    virtual ~LteMacQueue()
-    {
-    }
 
     /**
-     * Copy Constructors
+     * Copy Constructor
      */
-
     LteMacQueue(const LteMacQueue& queue);
     LteMacQueue& operator=(const LteMacQueue& queue);
-    LteMacQueue* dup() const;
+    LteMacQueue *dup() const override;
 
     /**
      * pushBack() inserts a new packet in the back
@@ -65,7 +65,7 @@ class LteMacQueue : public omnetpp::cPacketQueue
      * @return false if queue is full,
      *            true on successful insertion
      */
-    bool pushBack(omnetpp::cPacket *pkt);
+    bool pushBack(cPacket *pkt);
 
     /**
      * pushFront() inserts a new packet in the front
@@ -75,25 +75,25 @@ class LteMacQueue : public omnetpp::cPacketQueue
      * @return false if queue is full,
      *            true on successful insertion
      */
-    bool pushFront(omnetpp::cPacket *pkt);
+    bool pushFront(cPacket *pkt);
 
     /**
      * popFront() extracts a packet from the
      * front of the queue (standard operation).
      *
-     * @return NULL if queue is empty,
+     * @return nullptr if queue is empty,
      *            pkt on successful operation
      */
-    omnetpp::cPacket* popFront();
+    cPacket *popFront();
 
     /**
-     * popFront() extracts a packet from the
+     * popBack() extracts a packet from the
      * back of the queue.
      *
-     * @return NULL if queue is empty,
+     * @return nullptr if queue is empty,
      *            pkt on successful operation
      */
-    omnetpp::cPacket* popBack();
+    cPacket *popBack();
 
     /**
      * getQueueOccupancy() returns the occupancy
@@ -123,11 +123,11 @@ class LteMacQueue : public omnetpp::cPacketQueue
      * getHolTimestamp() returns the timestamp
      * of the Head Of Line (front) packet of the queue
      *
-     * @return Hol Timestamp (0 if queue empty)
+     * @return Hol Timestamp (0 if queue is empty)
      */
-    omnetpp::simtime_t getHolTimestamp() const;
+    simtime_t getHolTimestamp() const;
 
-    friend std::ostream &operator << (std::ostream &stream, const LteMacQueue* queue);
+    friend std::ostream& operator<<(std::ostream& stream, const LteMacQueue *queue);
 
   protected:
     /**
@@ -140,8 +140,9 @@ class LteMacQueue : public omnetpp::cPacketQueue
      *    b) we have enough space in the queue to hold all remaining fragments of the same packet
      *
      */
-    bool isEnqueueablePacket(inet::Packet* pkt);
+    bool isEnqueueablePacket(inet::Packet *pkt);
     unsigned int lastUnenqueueableMainSno; //<seq. number of
+
   private:
     /// Size of queue
     int queueSize_;
@@ -150,3 +151,4 @@ class LteMacQueue : public omnetpp::cPacketQueue
 } //namespace
 
 #endif
+

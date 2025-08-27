@@ -11,21 +11,12 @@
 
 package simu5g.x2;
 
-// LteX2App
 //
-// This module represents the X2 application, which works on top of the
-// Sctp transport protocol (see 3GPP TS 36.423)
-// It contains two submodules:
-// - a server that sends data to the peering X2App
-// - a client that receive data from the peering X2App
-//
-// An eNodeB has one X2App module for each peering eNodeB (see eNodeB.ned).
-// Since Sctp is connection-oriented, the client submodule starts the association
-// by sending INIT message at given time instant (configurable from .ini) to the
-// peer's server module.
-// Once the connection has been established, the server submodule receives messages
-// from the X2 Manager and send them to the peer (via Sctp). The client submodule receives the
-// message and forward it to the X2 Manager for processing.
+// This module represents the container for all X2 applications that an e/gNodeB instantiates
+// to enable X2 communications with its peer e/gNodeBs. Specifically, for each peer,
+// this module contains two submodules:
+// - a server that sends data to the peer X2App
+// - a client that receives data from the peer X2App
 //
 module LteX2App
 {

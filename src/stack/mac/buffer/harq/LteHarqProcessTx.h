@@ -13,12 +13,15 @@
 #define _LTE_LTEHARQPROCESSTX_H_
 
 #include "stack/mac/buffer/harq/LteHarqUnitTx.h"
+#include "stack/mac/LteMacBase.h"
 
 namespace simu5g {
 
+using namespace omnetpp;
+
 typedef std::vector<LteHarqUnitTx *> UnitVector;
 typedef std::pair<unsigned char, TxHarqPduStatus> UnitStatus;
-typedef std::vector<std::vector<UnitStatus> > BufferStatus;
+typedef std::vector<std::vector<UnitStatus>> BufferStatus;
 
 /**
  * Container of H-ARQ units.
@@ -29,15 +32,15 @@ typedef std::vector<std::vector<UnitStatus> > BufferStatus;
  * H-ARQ feedback.
  */
 
-class LteHarqProcessTx
+class LteHarqProcessTx : noncopyable
 {
   protected:
 
     /// reference to mac module, used to handle errors
-    LteMacBase *macOwner_;
+    opp_component_ptr<LteMacBase> macOwner_;
 
     /// contained units vector
-    UnitVector *units_;
+    UnitVector units_;
 
     /// total number of processes in this H-ARQ buffer
     unsigned int numProcesses_;
@@ -49,10 +52,10 @@ class LteHarqProcessTx
     unsigned char acid_;
 
     /// Number of empty units inside this process
-    unsigned char numEmptyUnits_;
+    unsigned char numEmptyUnits_; //++ @ insert, -- @ unit reset (ack or fourth nack)
 
     /// Number of selected units inside this process
-    unsigned int numSelected_;
+    unsigned int numSelected_; //++ @ markSelected and insert, -- @ extract/sendDown
 
     /// Set this flag when a handover or a D2D switch occurs, so that the HARQ process was interrupted.
     /// This is useful in case the process receives a feedback after reset.
@@ -73,22 +76,13 @@ class LteHarqProcessTx
      * @param numProcesses number of processes contained in the H-ARQ buffer.
      * @return
      */
-    LteHarqProcessTx(unsigned char acid, unsigned int numUnits, unsigned int numProcesses, LteMacBase *macOwner,
-        LteMacBase *dstMac);
+    LteHarqProcessTx(Binder *binder, unsigned char acid, unsigned int numUnits, unsigned int numProcesses, LteMacBase *macOwner,
+            LteMacBase *dstMac);
 
     /**
-     * Copy constructor and operator=
-     */
-    LteHarqProcessTx(const LteHarqProcessTx& other)
-    {
-        operator=(other);
-    }
-    LteHarqProcessTx& operator=(const LteHarqProcessTx& other);
-
-    /**
-     * Insert a pdu into an H-ARQ unit contained in this process.
+     * Insert a PDU into an H-ARQ unit contained in this process.
      *
-     * @param pdu pdu to be inserted
+     * @param pdu PDU to be inserted
      * @param unitId id of destination unit
      */
     void insertPdu(inet::Packet *pdu, Codeword cw);
@@ -109,40 +103,40 @@ class LteHarqProcessTx
     std::vector<UnitStatus> getProcessStatus();
 
     /**
-     * Checks if this process has one or more H-ARQ unit ready for retransmission.
+     * Checks if this process has one or more H-ARQ units ready for retransmission.
      *
-     * @return true if there is at least one unit ready for rtx, false if none
+     * @return true if there is at least one unit ready for RTX, false if none
      */
     bool hasReadyUnits();
 
     /**
-     * Returns the tx time of the unit which is not retransmitting for
+     * Returns the TX time of the unit which is not retransmitting for
      * the longest period of time, inside this process (the oldest
-     * pdu tx time).
+     * PDU TX time).
      *
-     * @return tx time of the oldest unit in this process
+     * @return TX time of the oldest unit in this process
      */
-    omnetpp::simtime_t getOldestUnitTxTime();
+    simtime_t getOldestUnitTxTime();
 
     /**
-     * Returns a list of ids of ready for retransmission units of
+     * Returns a list of IDs of ready for retransmission units of
      * this process.
      *
-     * @return list of unit ids which are ready for rtx
+     * @return list of unit IDs which are ready for RTX
      */
     CwList readyUnitsIds();
 
     /**
-     * Returns a list of ids of empty units inside this process.
+     * Returns a list of IDs of empty units inside this process.
      *
-     * @return empty units ids list.
+     * @return empty units IDs list.
      */
     CwList emptyUnitsIds();
 
     /**
-     * Returns a list of ids of selected units.
+     * Returns a list of IDs of selected units.
      *
-     * @return selected units ids list.
+     * @return selected units IDs list.
      */
     CwList selectedUnitsIds();
 
@@ -156,14 +150,14 @@ class LteHarqProcessTx
     inet::Packet *getPdu(Codeword cw);
 
     /**
-     * This is necessary because when a pdu is in CORRECT state at the
-     * corresponding H-ARQ rx process, it may be extracted and potentially
-     * deleted, so pdu_ reference cannot be used to retrieve the pdu id
+     * This is necessary because when a PDU is in CORRECT state at the
+     * corresponding H-ARQ RX process, it may be extracted and potentially
+     * deleted, so PDU reference cannot be used to retrieve the PDU ID
      * when feedback is received, because feedback is received 1 TTI after
-     * pdu extraction at rx process!
+     * PDU extraction at the RX process!
      *
-     * @param unitId unit id
-     * @return pdu id
+     * @param unitId unit ID
+     * @return PDU ID
      */
     long getPduId(Codeword cw);
 
@@ -183,25 +177,24 @@ class LteHarqProcessTx
     bool isUnitReady(Codeword cw);
     unsigned char getTransmissions(Codeword cw);
     int64_t getPduLength(Codeword cw);
-    omnetpp::simtime_t getTxTime(Codeword cw);
+    simtime_t getTxTime(Codeword cw);
     bool isUnitMarked(Codeword cw);
     bool isDropped();
 
     /**
-     * @author Alessandro noferi
+     * @author Alessandro Noferi
      *
      * Check if the process is active
      *
-     * @return true if at least on unit status is not TXHARQ_PDU_EMPTY
+     * @return true if at least one unit status is not TXHARQ_PDU_EMPTY
      */
 
     bool isHarqProcessActive();
 
     virtual ~LteHarqProcessTx();
-
-  protected:
 };
 
 } //namespace
 
 #endif
+

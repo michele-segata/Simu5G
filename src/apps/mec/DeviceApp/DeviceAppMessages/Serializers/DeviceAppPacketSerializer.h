@@ -9,17 +9,16 @@
 // and cannot be removed from it.
 //
 
-
 #ifndef _DEVAPPPACKETSERIALIZER_H_
 #define _DEVAPPPACKETSERIALIZER_H_
 
-#include "inet/common/packet/serializer/FieldsChunkSerializer.h"
+#include <inet/common/packet/serializer/FieldsChunkSerializer.h>
 
 namespace simu5g {
 
 using namespace inet;
 
-enum DevAppCode {START_MECAPP_CODE, STOP_MECAPP_CODE, START_ACK_CODE, STOP_ACK_CODE, START_NACK_CODE, STOP_NACK_CODE};
+enum DevAppCode { START_MECAPP_CODE, STOP_MECAPP_CODE, START_ACK_CODE, STOP_ACK_CODE, START_NACK_CODE, STOP_NACK_CODE };
 
 /**
  * Converts between ApplicationPacket and binary (network byte order) application packet.
@@ -46,11 +45,8 @@ enum DevAppCode {START_MECAPP_CODE, STOP_MECAPP_CODE, START_ACK_CODE, STOP_ACK_C
 class DeviceAppMessageSerializer : public inet::FieldsChunkSerializer
 {
   protected:
-    virtual void serialize(MemoryOutputStream& stream, const Ptr<const Chunk>& chunk) const override;
-    virtual const Ptr<Chunk> deserialize(MemoryInputStream& stream) const override;
-
-  public:
-    DeviceAppMessageSerializer() : FieldsChunkSerializer() {}
+    void serialize(MemoryOutputStream& stream, const Ptr<const Chunk>& chunk) const override;
+    const Ptr<Chunk> deserialize(MemoryInputStream& stream) const override;
 };
 
 } //namespace

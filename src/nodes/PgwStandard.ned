@@ -18,7 +18,14 @@ import simu5g.corenetwork.gtp.GtpUser;
 import simu5g.corenetwork.trafficFlowFilter.TrafficFlowFilter;
 
 //
-// Implements a simplified EPC PDN Gateway (P-GW)
+// This module implements a simplified model of the EPC PDN Gateway (P-GW) of a 4G LTE network.
+// It serves as the entry point to the core network of an LTE network, thus bridging it to the rest
+// of the Internet. Packets arriving from the Internet are tunneled to the appropriate next hop in
+// the core network (e.g., the ~eNodeB that will transmit the packet to the destination User Equipment
+// through the radio access network) using the GPRS Tunneling Protocol (GTP). Conversely, packets
+// received from the core network are detunneled and sent to the Internet (e.g., towards a remote server).
+// To accomplish this, it utilizes a ~GtpUser module that handles GTP (de)tunneling, along with the
+// ~TrafficFlowFilter module, which classifies incoming packets.
 //
 module PgwStandard extends NetworkLayerNodeBase
 {
@@ -46,7 +53,7 @@ module PgwStandard extends NetworkLayerNodeBase
         }
         udp: Udp {
             parameters:
-                @display("p=329,206");
+                @display("p=330,206");
         }
         trafficFlowFilter: TrafficFlowFilter {
             parameters:
@@ -59,7 +66,7 @@ module PgwStandard extends NetworkLayerNodeBase
         }
         tn: MessageDispatcher {
             parameters:
-                @display("p=750,296;b=1000,5,,,,1");
+                @display("p=750,300;b=1000,5,,,,1");
         }
         at: MessageDispatcher {
             parameters:

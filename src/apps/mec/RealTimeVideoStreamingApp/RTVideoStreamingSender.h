@@ -12,20 +12,17 @@
 #ifndef APPS_MEC_RTVIDEOSTREAMINGSENDER_H_
 #define APPS_MEC_RTVIDEOSTREAMINGSENDER_H_
 
-#include "inet/transportlayer/contract/udp/UdpSocket.h"
-#include "inet/networklayer/common/L3Address.h"
-#include "inet/networklayer/common/L3AddressResolver.h"
+#include <inet/common/ModuleRefByPar.h>
+#include <inet/common/geometry/common/Coord.h>
+#include <inet/common/geometry/common/EulerAngles.h>
+#include <inet/mobility/contract/IMobility.h>
+#include <inet/networklayer/common/L3Address.h>
+#include <inet/networklayer/common/L3AddressResolver.h>
+#include <inet/transportlayer/contract/udp/UdpSocket.h>
 
 #include "common/binder/Binder.h"
-
-//inet mobility
-#include "inet/common/geometry/common/Coord.h"
-#include "inet/common/geometry/common/EulerAngles.h"
-#include "inet/mobility/contract/IMobility.h"
-
-//WarningAlertPacket
-#include "nodes/mec/MECPlatform/MEAppPacket_Types.h"
 #include "apps/mec/WarningAlert/packets/WarningAlertPacket_m.h"
+#include "nodes/mec/MECPlatform/MEAppPacket_Types.h"
 
 namespace simu5g {
 
@@ -44,15 +41,14 @@ struct FragmentedFrameStatus {
     int remainingFramesSlices;
 };
 
-
 /**
- * This is a UE app that asks to a Device App to instantiate the MECRTVideoStreamingReceiver app
+ * This is a UE app that asks a Device App to instantiate the MECRTVideoStreamingReceiver app
  * @author Alessandro Noferi
  */
 
-class RTVideoStreamingSender: public cSimpleModule
+class RTVideoStreamingSender : public cSimpleModule
 {
-    //communication to device app and Mec app
+    //communication to device app and MEC app
     inet::UdpSocket socket;
 
     int size_;
@@ -61,9 +57,6 @@ class RTVideoStreamingSender: public cSimpleModule
     int deviceAppPort_;
     inet::L3Address deviceAppAddress_;
 
-    char* sourceSimbolicAddress;            //Ue[x]
-    char* deviceSimbolicAppAddress_;        //meHost.virtualisationInfrastructure
-
     // MEC application endPoint (returned by the device app)
     inet::L3Address mecAppAddress_;
     int mecAppPort_;
@@ -71,28 +64,39 @@ class RTVideoStreamingSender: public cSimpleModule
     std::string mecAppName;
 
     //scheduling
-    cMessage *selfRTVideoStreamingAppStart_;
-    cMessage *selfRTVideoStreamingAppStop_;
+    enum MsgKind {
+        KIND_SELF_RT_VIDEO_STREAMING_APP_START = 1000,
+        KIND_SELF_RT_VIDEO_STREAMING_APP_STOP,
+        KIND_SELF_MEC_APP_START,
+        KIND_SELF_MEC_APP_STOP,
+        KIND_SELF_SESSION_START,
+        KIND_SELF_SESSION_STOP,
+        KIND_SELF_NEXT_FRAME,
+        KIND_SELF_MOBILITY_STATS,
+    };
 
-    cMessage *selfMecAppStart_;
-    cMessage *selfMecAppStop_;
+    cMessage *selfRTVideoStreamingAppStart_ = nullptr;
+    cMessage *selfRTVideoStreamingAppStop_ = nullptr;
 
-    cMessage* selfSessionStart_;
-    cMessage* selfSessionStop_;
+    cMessage *selfMecAppStart_ = nullptr;
+    cMessage *selfMecAppStop_ = nullptr;
+
+    cMessage *selfSessionStart_ = nullptr;
+    cMessage *selfSessionStop_ = nullptr;
 
     inet::UdpSocket videoStreamSocket_;
 
-    const char* fileName;
+    const char *fileName;
     /**
      * The input file stream for the data file.
      */
     std::ifstream _inputFileStream;
 
     int mtu_;
-    cMessage* _nextFrame;
+    cMessage *_nextFrame = nullptr;
 
     /**
-     * The initial delay of the mpeg video.
+     * The initial delay of the MPEG video.
      */
     double _initialDelay;
 
@@ -103,73 +107,72 @@ class RTVideoStreamingSender: public cSimpleModule
 
     /**
      * The number of the current frame. Needed for calculating
-     * the rtp time stamp in the rtp data packets.
+     * the RTP time stamp in the RTP data packets.
      */
-    unsigned long _frameNumber;
-    unsigned long _sequenceNumber;
+    unsigned long _frameNumber = 0;
+    unsigned long _sequenceNumber = 0;
 
-    int sessionId_;
+    int sessionId_ = 0;
 
     bool sendAllOnOneTime_;
 
-    // mobility informations
-    cModule* ue;
-    inet::IMobility *mobility;
+    // mobility information
+    opp_component_ptr<cModule> ue;
+    inet::ModuleRefByPar<inet::IMobility> mobility;
     inet::Coord position;
-    omnetpp::cMessage *mobilityStats_;
+    cMessage *mobilityStats_ = nullptr;
 
-    omnetpp::simsignal_t positionSignalX;
-    omnetpp::simsignal_t positionSignalY;
-    omnetpp::simsignal_t positionSignalZ;
+    static simsignal_t positionSignalXSignal_;
+    static simsignal_t positionSignalYSignal_;
+    static simsignal_t positionSignalZSignal_;
 
-    omnetpp::simsignal_t velocitySignal;
-    double mobilityUpdateInterval_; // send pos and speed info
+    static simsignal_t velocitySignal_;
+    double mobilityUpdateInterval_; // send position and speed info
 
     FragmentedFrameStatus fragFrameStatus_;
 
-    public:
-        ~RTVideoStreamingSender();
-        RTVideoStreamingSender();
+  public:
+    ~RTVideoStreamingSender() override;
 
-    protected:
+  protected:
 
-        virtual int numInitStages() const { return inet::NUM_INIT_STAGES; }
-        void initialize(int stage);
-        virtual void handleMessage(cMessage *msg);
-        virtual void finish();
+    int numInitStages() const override { return inet::NUM_INIT_STAGES; }
+    void initialize(int stage) override;
+    void handleMessage(cMessage *msg) override;
+    void finish() override;
 
-        // communication with device app
-        void sendStartMECApp();
-        void sendStopMECApp();
-        // communication with mec app
-        void sendMessage();
-        void sendStartMessage();
-        void sendStopMessage();
-        void sendSessionStopMessage();
-        void sendSessionStartMessage();
+    // communication with device app
+    void sendStartMECApp();
+    void sendStopMECApp();
+    // communication with MEC app
+    void sendMessage();
+    void sendStartMessage();
+    void sendStopMessage();
+    void sendSessionStopMessage();
+    void sendSessionStartMessage();
 
+    // handlers
+    void handleStartAck(cMessage *msg);
+    void handleStartNack(cMessage *msg);
 
-        // handlers
-        void handleStartAck(cMessage* msg);
-        void handleStartNack(cMessage* msg);
+    void handleStopAck(cMessage *msg);
+    void handleStopNack(cMessage *msg);
 
-        void handleStopAck(cMessage* msg);
-        void handleStopNack(cMessage* msg);
+    void handleStartSessionAck(cMessage *msg);
+    void handleStartSessionNack(cMessage *msg);
 
-        void handleStartSessionAck(cMessage* msg);
-        void handleStartSessionNack(cMessage* msg);
+    void handleStopSessionAck(cMessage *msg);
+    void handleStopSessionNack(cMessage *msg);
 
-        void handleStopSessionAck(cMessage* msg);
-        void handleStopSessionNack(cMessage* msg);
+    void handleAckStartMECApp(cMessage *msg);
+    void handleInfoMECApp(cMessage *msg);
+    void handleAckStopMECApp(cMessage *msg);
 
-        void handleAckStartMECApp(cMessage* msg);
-        void handleInfoMECApp(cMessage* msg);
-        void handleAckStopMECApp(cMessage* msg);
-
-        void openFileStream();
-        void initializeVideoStream();
+    void openFileStream();
+    void initializeVideoStream();
 };
 
 } //namespace
 
 #endif /* APPS_MEC_RTVIDEOSTREAMINGSENDER_H_ */
+

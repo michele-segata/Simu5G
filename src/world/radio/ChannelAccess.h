@@ -23,31 +23,32 @@
 
 namespace simu5g {
 
+using namespace omnetpp;
+
 // Forward declarations
 class AirFrame;
 
 //
 // Base class for the PHY layer
 //
-class ChannelAccess : public omnetpp::cSimpleModule, public omnetpp::cListener
+class ChannelAccess : public cSimpleModule, public cListener
 {
   protected:
-    IChannelControl* cc;  // Pointer to the ChannelControl module
-    IChannelControl::RadioRef myRadioRef;  // Identifies this radio in the ChannelControl module
-    cModule *hostModule;    // the host that contains this radio model
+    opp_component_ptr<IChannelControl> cc = nullptr;  // Pointer to the ChannelControl module
+    IChannelControl::RadioRef myRadioRef = nullptr;  // Identifies this radio in the ChannelControl module
+    opp_component_ptr<cModule> hostModule;    // the host that contains this radio model
     inet::Coord radioPos;  // the physical position of the radio (derived from display string or from mobility models)
     bool positionUpdateArrived;
 
   public:
-    ChannelAccess() : cc(nullptr), myRadioRef(nullptr), hostModule(nullptr) {}
-    virtual ~ChannelAccess();
+    ~ChannelAccess() override;
 
     /**
-     * @brief Called by the signalling mechanism to inform of changes.
+     * @brief Called by the signaling mechanism to inform of changes.
      *
      * ChannelAccess is subscribed to position changes.
      */
-    virtual void receiveSignal(omnetpp::cComponent *source, omnetpp::simsignal_t signalID, omnetpp::cObject *obj, omnetpp::cObject *) override;
+    void receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj, cObject *) override;
 
     /** Finds the channelControl module in the network */
     IChannelControl *getChannelControl();
@@ -55,7 +56,7 @@ class ChannelAccess : public omnetpp::cSimpleModule, public omnetpp::cListener
     /**
      * @brief Called when a mobilityStateChanged signal is received.
      *
-     * Make the PHY layer emit statistics related to the serving cell
+     * Makes the PHY layer emit statistics related to the serving cell
      */
     virtual void emitMobilityStats() {}
 
@@ -63,15 +64,16 @@ class ChannelAccess : public omnetpp::cSimpleModule, public omnetpp::cListener
     /** Sends a message to all radios in range */
     virtual void sendToChannel(AirFrame *msg);
 
-    virtual omnetpp::cPar& getChannelControlPar(const char *parName) { return dynamic_cast<omnetpp::cModule *>(cc)->par(parName); }
+    virtual cPar& getChannelControlPar(const char *parName) { return check_and_cast<cModule *>(cc.get())->par(parName); }
     const inet::Coord& getRadioPosition() const { return radioPos; }
-    omnetpp::cModule *getHostModule() const { return hostModule; }
+    cModule *getHostModule() const { return hostModule; }
 
     /** Register with ChannelControl and subscribe to hostPos*/
-    virtual void initialize(int stage) override;
-    virtual int numInitStages() const override { return inet::INITSTAGE_PHYSICAL_LAYER + 1; }
+    void initialize(int stage) override;
+    int numInitStages() const override { return inet::INITSTAGE_PHYSICAL_LAYER + 1; }
 };
 
 } //namespace
 
 #endif
+

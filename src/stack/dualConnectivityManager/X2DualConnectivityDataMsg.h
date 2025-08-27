@@ -22,7 +22,7 @@ namespace simu5g {
  * @class X2DualConnectivityDataMsg
  *
  * Class derived from LteX2Message
- * It defines the message that encapsulates PDCP PDUs to be exchanged between Dual Connectivity managers
+ * It defines the message that encapsulates PDCP PDUs to be exchanged between Dual Connectivity managers.
  */
 class X2DualConnectivityDataMsg : public LteX2Message
 {
@@ -34,9 +34,8 @@ class X2DualConnectivityDataMsg : public LteX2Message
 
     X2DualConnectivityDataMsg& operator=(const X2DualConnectivityDataMsg& other);
 
-    virtual X2DualConnectivityDataMsg* dup() const;
+    X2DualConnectivityDataMsg *dup() const override;
 
-    virtual ~X2DualConnectivityDataMsg();
 };
 
 //Register_Class(X2DualConnectivityDataMsg);

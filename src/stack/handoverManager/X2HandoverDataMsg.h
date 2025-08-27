@@ -21,7 +21,7 @@ namespace simu5g {
  * @class X2HandoverDataMsg
  *
  * Class derived from LteX2Message
- * It defines the message that encapsulates datagram to be exchanged between Handover managers
+ * It defines the message that encapsulates the datagram to be exchanged between Handover managers
  */
 class X2HandoverDataMsg : public LteX2Message
 {
@@ -44,9 +44,8 @@ class X2HandoverDataMsg : public LteX2Message
         return *this;
     }
 
-    virtual X2HandoverDataMsg* dup() const { return new X2HandoverDataMsg(*this); }
+    X2HandoverDataMsg *dup() const override { return new X2HandoverDataMsg(*this); }
 
-    virtual ~X2HandoverDataMsg() { }
 };
 
 } //namespace

@@ -20,14 +20,8 @@ using namespace omnetpp;
  * \memberof ConflictGraph
  * \brief class constructor;
  */
-ConflictGraph::ConflictGraph(LteMacEnbD2D* macEnb, bool reuseD2D, bool reuseD2DMulti)
+ConflictGraph::ConflictGraph(Binder *binder, LteMacEnbD2D *macEnb, bool reuseD2D, bool reuseD2DMulti) : binder_(binder), macEnb_(macEnb), cellInfo_(macEnb_->getCellInfo()), reuseD2D_(reuseD2D), reuseD2DMulti_(reuseD2DMulti)
 {
-    conflictGraph_.clear();
-    macEnb_ = macEnb;
-    cellInfo_ = macEnb_->getCellInfo();
-
-    reuseD2D_ = reuseD2D;
-    reuseD2DMulti_ = reuseD2DMulti;
 }
 
 /*!
@@ -35,10 +29,6 @@ ConflictGraph::ConflictGraph(LteMacEnbD2D* macEnb, bool reuseD2D, bool reuseD2DM
  * \memberof ConflictGraph
  * \brief class destructor
  */
-ConflictGraph::~ConflictGraph()
-{
-    clearConflictGraph();
-}
 
 // reset Conflict Graph
 void ConflictGraph::clearConflictGraph()
@@ -48,7 +38,7 @@ void ConflictGraph::clearConflictGraph()
 
 void ConflictGraph::computeConflictGraph()
 {
-    EV << " ConflictGraph::computeConflictGraph - START "<<endl;
+    EV << " ConflictGraph::computeConflictGraph - START " << endl;
 
     // --- remove the old one --- //
     clearConflictGraph();
@@ -61,48 +51,38 @@ void ConflictGraph::computeConflictGraph()
     // --- for each CGVertex, find the interfering vertices --- //
     findEdges(vertices);
 
-    EV << " ConflictGraph::computeConflictGraph - END "<<endl;
-
+    EV << " ConflictGraph::computeConflictGraph - END " << endl;
 }
 
 void ConflictGraph::printConflictGraph()
 {
-    EV << " ConflictGraph::printConflictGraph "<<endl;
+    EV << " ConflictGraph::printConflictGraph " << endl;
 
-    if (conflictGraph_.empty())
-    {
-        EV << " ConflictGraph::printConflictGraph - No reuse enabled "<<endl;
+    if (conflictGraph_.empty()) {
+        EV << " ConflictGraph::printConflictGraph - No reuse enabled " << endl;
         return;
     }
 
     EV << "              ";
-    CGMatrix::iterator it = conflictGraph_.begin(), et = conflictGraph_.end();
-    for (; it != et; ++it)
-    {
-        if (it->first.isMulticast())
-            EV << "| (" << it->first.srcId << ", *  ) ";
+    for (const auto& [key, value] : conflictGraph_) {
+        if (key.isMulticast())
+            EV << "| (" << key.srcId << ", *  ) ";
         else
-            EV << "| (" << it->first.srcId << "," << it->first.dstId <<") ";
+            EV << "| (" << key.srcId << "," << key.dstId << ") ";
     }
     EV << endl;
 
-    it = conflictGraph_.begin();
-    for (; it != et; ++it)
-    {
-        if (it->first.isMulticast())
-            EV << "| (" << it->first.srcId << ", *  ) ";
+    for (const auto& [key, value] : conflictGraph_) {
+        if (key.isMulticast())
+            EV << "| (" << key.srcId << ", *  ) ";
         else
-            EV << "| (" << it->first.srcId << "," << it->first.dstId <<") ";
-        std::map<CGVertex, bool>::iterator jt = it->second.begin();
-        for (; jt != it->second.end(); ++jt)
-        {
-            if (it->first == jt->first)
-            {
+            EV << "| (" << key.srcId << "," << key.dstId << ") ";
+        for (const auto& [innerKey, innerValue] : value) {
+            if (key == innerKey) {
                 EV << "|      -      ";
             }
-            else
-            {
-                EV << "|      " << jt->second << "      ";
+            else {
+                EV << "|      " << innerValue << "      ";
             }
         }
         EV << endl;

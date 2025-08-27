@@ -16,7 +16,7 @@
 #ifndef __INET_VOIPPACKETSERIALIZER_H
 #define __INET_VOIPPACKETSERIALIZER_H
 
-#include "inet/common/packet/serializer/FieldsChunkSerializer.h"
+#include <inet/common/packet/serializer/FieldsChunkSerializer.h>
 
 namespace simu5g {
 
@@ -26,13 +26,11 @@ namespace simu5g {
 class VoipPacketSerializer : public inet::FieldsChunkSerializer
 {
   protected:
-    virtual void serialize(inet::MemoryOutputStream& stream, const inet::Ptr<const inet::Chunk>& chunk) const override;
-    virtual const inet::Ptr<inet::Chunk> deserialize(inet::MemoryInputStream& stream) const override;
-
-  public:
-    VoipPacketSerializer() : FieldsChunkSerializer() {}
+    void serialize(inet::MemoryOutputStream& stream, const inet::Ptr<const inet::Chunk>& chunk) const override;
+    const inet::Ptr<inet::Chunk> deserialize(inet::MemoryInputStream& stream) const override;
 };
 
 } //namespace
 
 #endif // ifndef __INET_VOIPPACKETSERIALIZER_H
+

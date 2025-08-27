@@ -18,17 +18,17 @@ import simu5g.corenetwork.gtp.GtpUser;
 import simu5g.corenetwork.trafficFlowFilter.TrafficFlowFilter;
 
 //
-// Implements a simple model of the 5GC UPF
+// Implements a 5G Core User Plane Function (UPF) module.
 //
-// The core network can contain multiple UPFs: see example in "simulations/NR/standalone"
-// UPF not connected to an external Data Network are intermediate UPFs. In the current version, intermediate UPFs just act
-// like IP routers.
-// UPFs connected to an external Data Network take care of (de)tunneling packets according to GTP
+// The UPF is responsible for packet routing and forwarding, packet inspection, and (de)tunneling according to GTP.
+// The core network can contain multiple UPFs. Intermediate UPFs, which are not connected to an external Data Network,
+// act like IP routers in the current version.
+// This module allows the connection of mobile terminals to external data networks or other 5G network elements through GTP tunneling.
 //
 module Upf extends NetworkLayerNodeBase
 {
     parameters:
-        @display("bgb=1348.9225,1103.51;i=abstract/switch");
+        @display("bgb=1348,1103;i=abstract/switch");
         @figure[applicationLayer](type=rectangle; pos=250,6; size=1000,130; lineColor=#808080; cornerRadius=5; fillColor=#ffff00; fillOpacity=0.1);
         @figure[applicationLayer.title](type=text; pos=1245,11; anchor=ne; text="application layer");
         @figure[transportLayer](type=rectangle; pos=250,156; size=1000,130; fillColor=#ff0000; lineColor=#808080; cornerRadius=5; fillOpacity=0.1);
@@ -36,6 +36,7 @@ module Upf extends NetworkLayerNodeBase
         @figure[submodules];
 
         string nodeType = default("UPF");   // do NOT change!
+        string gateway = default("");
         forwarding = default(true);
         multicastForwarding = default(false);
 
@@ -47,24 +48,25 @@ module Upf extends NetworkLayerNodeBase
     submodules:
         pppIf: PppInterface {
             parameters:
-                @display("p=1150,525");
+                @display("p=1150,1000");
         }
         udp: Udp {
             parameters:
-                @display("p=374.0425,201.4075");
+                @display("p=375,200");
         }
         trafficFlowFilter: TrafficFlowFilter {
             parameters:
-                @display("p=881.7925,79.5475");
+                @display("p=1250,80");
                 ownerType = parent.nodeType;
         }
         gtp_user: GtpUser {
             parameters:
-                @display("p=525,80");
+                @display("p=935,80");
+                gateway = parent.gateway;
         }
         tn: MessageDispatcher {
             parameters:
-                @display("p=750,296;b=1000,5,,,,1");
+                @display("p=750,300;b=1000,5,,,,1");
         }
         at: MessageDispatcher {
             parameters:

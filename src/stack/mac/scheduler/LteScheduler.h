@@ -13,9 +13,11 @@
 #define _LTE_LTESCHEDULER_H_
 
 #include "common/LteCommon.h"
-#include "stack/mac/layer/LteMacEnb.h"
+#include "stack/mac/LteMacEnb.h"
 
 namespace simu5g {
+
+using namespace omnetpp;
 
 /// forward declarations
 class LteSchedulerEnb;
@@ -37,20 +39,19 @@ struct SortedDesc
         if (score_ < y.score_)
             return true;
         if (score_ == y.score_)
-            return uniform(omnetpp::getEnvir()->getRNG(0),0,1) < 0.5;
+            return uniform(getEnvir()->getRNG(0), 0, 1) < 0.5;
         return false;
     }
 
   public:
     SortedDesc()
     {
+    }
 
-    }
-    SortedDesc(const T x, const S score)
+    SortedDesc(const T x, const S score) : x_(x), score_(score)
     {
-        x_ = x;
-        score_ = score;
     }
+
 };
 
 /**
@@ -61,21 +62,21 @@ class LteScheduler
   protected:
 
     /// MAC module, used to get parameters from NED
-    LteMacEnb *mac_;
+    opp_component_ptr<LteMacEnb> mac_;
 
     /// Reference to the LTE binder
-    Binder *binder_;
+    opp_component_ptr<Binder> binder_;
 
     /// Associated LteSchedulerEnb (it is the one who creates the LteScheduler)
-    LteSchedulerEnb* eNbScheduler_;
+    LteSchedulerEnb *eNbScheduler_ = nullptr;
 
     /// Link Direction (DL/UL)
     Direction direction_;
 
     //! Set of active connections.
-    ActiveSet* activeConnectionSet_;
+    ActiveSet *activeConnectionSet_ = nullptr;
 
-    //! General Active set. Temporary variable used in the two phase scheduling operations
+    //! General Active set. Temporary variable used in the two-phase scheduling operations
     ActiveSet activeConnectionTempSet_;
 
     //! Per-carrier Active set. Temporary variable used for storing the set of connections allowed in this carrier
@@ -85,7 +86,7 @@ class LteScheduler
     double carrierFrequency_;
 
     //! Set of bands available for this carrier
-    BandLimitVector* bandLimit_;
+    BandLimitVector *bandLimit_ = nullptr;
 
     //! Set of bands available for this carrier for retransmissions (reset on every slot)
     BandLimitVector slotRacBandLimit_;
@@ -99,10 +100,10 @@ class LteScheduler
     /// Cid List
     typedef std::list<MacCid> CidList;
 
-    //! numerology index of the component carrier it has to schedule
+    //! Numerology index of the component carrier it has to schedule
     unsigned int numerologyIndex_;
 
-    //! timers for handling scheduling period of this scheduler
+    //! Timers for handling scheduling period of this scheduler
     unsigned int maxSchedulingPeriodCounter_;
     unsigned int currentSchedulingPeriodCounter_;
 
@@ -111,23 +112,22 @@ class LteScheduler
     /**
      * Default constructor.
      */
-    LteScheduler()
+    LteScheduler(Binder *binder) : binder_(binder)
     {
-        //    WATCH(activeSet_);
-        activeConnectionSet_ = nullptr;
-        binder_ = nullptr;
     }
+
     /**
      * Destructor.
      */
     virtual ~LteScheduler()
     {
     }
+
     /**
      * Initializes the LteScheduler.
      * @param eNbScheduler eNb scheduler
      */
-    virtual void setEnbScheduler(LteSchedulerEnb* eNbScheduler);
+    virtual void setEnbScheduler(LteSchedulerEnb *eNbScheduler);
 
     /**
      * Initializes the carrier frequency for this LteScheduler.
@@ -163,7 +163,7 @@ class LteScheduler
     // Scheduling functions ********************************************************************
 
     /**
-     * The schedule function is splitted in two phases
+     * The schedule function is split into two phases
      *  - in the first phase, carried out by the prepareSchedule(),
      *    the computation of the algorithm on temporary structures is performed
      *  - in the second phase, carried out by the storeSchedule(),
@@ -172,7 +172,7 @@ class LteScheduler
      * In this way, if in the environment there's a special module which wants to execute
      * more schedulers, compare them and pick a single one, the execSchedule() of each
      * scheduler is executed, but only the storeSchedule() of the picked one will be executed.
-     * The schedule() simply call the sequence of execSchedule() and storeSchedule().
+     * The schedule() simply calls the sequence of execSchedule() and storeSchedule().
      */
 
     virtual void schedule();
@@ -180,27 +180,29 @@ class LteScheduler
     virtual void prepareSchedule()
     {
     }
+
     virtual void commitSchedule()
     {
     }
 
     // *****************************************************************************************
 
-    /// performs request of grant to the eNbScheduler
-    virtual unsigned int requestGrant(MacCid cid, unsigned int bytes, bool& terminate, bool& active, bool& eligible , std::vector<BandLimit>* bandLim = nullptr);
+    /// Performs request of grant to the eNbScheduler
+    virtual unsigned int requestGrant(MacCid cid, unsigned int bytes, bool& terminate, bool& active, bool& eligible, std::vector<BandLimit> *bandLim = nullptr);
 
-    /// performs request of background grant to the eNbScheduler
-    virtual unsigned int requestGrantBackground(MacCid bgCid, unsigned int bytes, bool& terminate, bool& active, bool& eligible , std::vector<BandLimit>* bandLim = nullptr);
+    /// Performs request of background grant to the eNbScheduler
+    virtual unsigned int requestGrantBackground(MacCid bgCid, unsigned int bytes, bool& terminate, bool& active, bool& eligible, std::vector<BandLimit> *bandLim = nullptr);
 
-    /// calls eNbScheduler::rtxschedule()
+    /// Calls eNbScheduler::rtxschedule()
     virtual bool scheduleRetransmissions();
 
-    /// calls LteSchedulerEnbUl::racschedule()
+    /// Calls LteSchedulerEnbUl::racschedule()
     virtual bool scheduleRacRequests();
 
     virtual void notifyActiveConnection(MacCid activeCid)
     {
     }
+
     virtual void updateSchedulingInfo()
     {
     }
@@ -208,8 +210,8 @@ class LteScheduler
   protected:
 
     /*
-     * prepare the set of active connections on this carrier
-     * used by scheduling modules
+     * Prepare the set of active connections on this carrier
+     * Used by scheduling modules
      */
     void buildCarrierActiveConnectionSet();
 
@@ -218,3 +220,4 @@ class LteScheduler
 } //namespace
 
 #endif // _LTE_LTESCHEDULER_H_
+

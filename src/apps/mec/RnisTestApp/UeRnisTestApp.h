@@ -12,14 +12,13 @@
 #ifndef __UERNISTESTAPP_H_
 #define __UERNISTESTAPP_H_
 
-#include "inet/transportlayer/contract/udp/UdpSocket.h"
-#include "inet/networklayer/common/L3Address.h"
-#include "inet/networklayer/common/L3AddressResolver.h"
+#include <inet/networklayer/common/L3Address.h>
+#include <inet/networklayer/common/L3AddressResolver.h>
+#include <inet/transportlayer/contract/udp/UdpSocket.h>
 
 #include "common/binder/Binder.h"
-
-#include "nodes/mec/MECPlatform/MEAppPacket_Types.h"
 #include "apps/mec/RnisTestApp/packets/RnisTestAppPacket_m.h"
+#include "nodes/mec/MECPlatform/MEAppPacket_Types.h"
 
 namespace simu5g {
 
@@ -29,59 +28,61 @@ using namespace omnetpp;
 // This UE app asks the Device App to instantiate a MecRnisTestApp.
 // After the MEC app has been initialized, the UE app requests the MEC app to
 // periodically query the RNI Service.
-// When the UE app received the requested info from the MEC app, it just outputs
+// When the UE app receives the requested info from the MEC app, it simply outputs
 // that in the Qtenv log (set the logger parameter to dump the output to a file).
 // If the period is set to 0, then only one query is requested.
 //
-class UeRnisTestApp: public cSimpleModule
+class UeRnisTestApp : public cSimpleModule
 {
 
-    //communication to device app and mec app
+    // Communication to device app and MEC app
     inet::UdpSocket socket;
 
     simtime_t period_;
-    int localPort_;
     int deviceAppPort_;
     inet::L3Address deviceAppAddress_;
 
-    char* sourceSimbolicAddress;            //Ue[x]
-    char* deviceSimbolicAppAddress_;              //meHost.virtualisationInfrastructure
-
-    // MEC application endPoint (returned by the device app)
+    // MEC application end point (returned by the device app)
     inet::L3Address mecAppAddress_;
     int mecAppPort_;
 
     std::string mecAppName;
 
-    //scheduling
-    cMessage *selfStart_;
-    cMessage *selfStop_;
+    // Scheduling
+    enum MsgKind {
+        KIND_SELF_START = 1000,
+        KIND_SELF_STOP,
+        KIND_SELF_MEC_APP_START,
+    };
 
-    cMessage *selfMecAppStart_;
+    cMessage *selfStart_ = nullptr;
+    cMessage *selfStop_ = nullptr;
 
-    // uses to write in a log a file
+    cMessage *selfMecAppStart_ = nullptr;
+
+    // Used to write in a log file
     bool log;
 
-    public:
-        ~UeRnisTestApp();
-        UeRnisTestApp();
+  public:
+    ~UeRnisTestApp() override;
 
-    protected:
+  protected:
 
-        virtual int numInitStages() const { return inet::NUM_INIT_STAGES; }
-        void initialize(int stage);
-        virtual void handleMessage(cMessage *msg);
-        virtual void finish();
+    int numInitStages() const override { return inet::NUM_INIT_STAGES; }
+    void initialize(int stage) override;
+    void handleMessage(cMessage *msg) override;
+    void finish() override;
 
-        void sendStartMecApp();
-        void sendMessageToMecApp();
-        void sendStopMecApp();
+    void sendStartMecApp();
+    void sendMessageToMecApp();
+    void sendStopMecApp();
 
-        void handleAckStartMecApp(cMessage* msg);
-        void handleInfoMecApp(cMessage* msg);
-        void handleAckStopMecApp(cMessage* msg);
+    void handleAckStartMecApp(cMessage *msg);
+    void handleInfoMecApp(cMessage *msg);
+    void handleAckStopMecApp(cMessage *msg);
 };
 
 } //namespace
 
 #endif
+

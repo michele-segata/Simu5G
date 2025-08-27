@@ -14,33 +14,31 @@ package simu5g.stack;
 
 import inet.networklayer.common.NetworkInterface;
 import simu5g.stack.ip2nic.INetworkLayer2CellularNic;
-import simu5g.stack.mac.LteMac;
-import simu5g.stack.packetFlowManager.PacketFlowManager;
-import simu5g.stack.pdcp_rrc.LtePdcpRrc;
-import simu5g.stack.phy.ChannelModel.LteChannelModelInterface;
-import simu5g.stack.phy.LtePhy;
+import simu5g.stack.mac.ILteMac;
+import simu5g.stack.packetFlowManager.IPacketFlowManager;
+import simu5g.stack.pdcp_rrc.ILtePdcpRrc;
+import simu5g.stack.phy.ChannelModel.ILteChannelModel;
+import simu5g.stack.phy.ILtePhy;
 import simu5g.stack.rlc.LteRlc;
 
-
 //
-// Base module for the LTE Stack.
+// The LteNicBase module serves as the foundational building block for LTE networking
+// in Simu5G. It integrates protocols for LTE communication, including PDCP, RLC, MAC,
+// and PHY layers. This base module allows higher-level modules, such as User Equipment (UE)
+// and eNodeB (evolved Node B), to configure and utilize these layers according to their
+// specific requirements.
 //
 module LteNicBase extends NetworkInterface like ICellularNic
 {
     parameters:
-
         @class(::inet::NetworkInterface);
         @display("i=block/ifcard;bgb=704,443;bgl=3");
         bool isWireless = true;
         string interfaceTableModule;
         string routingTableModule;
-        string LtePdcpRrcType;      // One of: "LtePdcpRrcUe", "LtePdcpRrcEnb", "LtePdcpRrcUeD2D", "LtePdcpRrcEnbD2D"
-        string LteMacType;          // One of: "LteMacUe", "LteMacEnb", "LteMacUeD2D", "LteMacEnbD2D"
 
-        string PacketFlowManagerType; // One of: "PacketFlowManagerUe", "PacketFlowManagerUe"
         bool hasRNISupport = default(false);
 
-        string LtePhyType;
         string nodeType;
         double processingDelayIn @unit(s) = default(0s);   // additional processing delay for incoming ip packets
         double processingDelayOut @unit(s) = default(0s);   // additional processing delay for outgoing ip packets
@@ -53,6 +51,8 @@ module LteNicBase extends NetworkInterface like ICellularNic
         int numCarriers = default(1);
 
         string address @mutable = default("auto");
+        *.interfaceTableModule = default(absPath(this.interfaceTableModule));
+        *.routingTableModule = default(absPath(this.routingTableModule));
 
     gates:
         //#
@@ -70,39 +70,38 @@ module LteNicBase extends NetworkInterface like ICellularNic
         // bridge between radio nic and network layer
         ip2nic: <default("IP2Nic")> like INetworkLayer2CellularNic {
             nodeType = parent.nodeType;
-            interfaceTableModule = parent.interfaceTableModule;
-            routingTableModule = parent.routingTableModule;
-            @display("p=362,67");
+            @display("p=412,67");
         }
         // PDCP-RRC Layer
-        pdcpRrc: <LtePdcpRrcType> like LtePdcpRrc {
+        pdcpRrc: <> like ILtePdcpRrc {
             @display("p=362,141");
         }
         // RLC Layer
         rlc: LteRlc {
             @display("p=362,226");
             d2dCapable = parent.d2dCapable;
+            *.macModule = "^.^.mac";
+            *.packetFlowManagerModule = parent.hasRNISupport ? "^.^.packetFlowManager" : "";
+            um.nodeType = parent.nodeType;
         }
         // MAC Layer
-        mac: <LteMacType> like LteMac {
-            interfaceTableModule = parent.interfaceTableModule;
+        mac: <> like ILteMac {
             @display("p=363,314");
         }
         // LtePhy submodule
-        phy: <LtePhyType> like LtePhy {
+        phy: <> like ILtePhy {
             @display("p=363,389");
-            @class(LtePhyType);
         }
 
-        channelModel[numCarriers]: <LteChannelModelType> like LteChannelModelInterface {
+        channelModel[numCarriers]: <LteChannelModelType> like ILteChannelModel {
             @display("p=100,389");
         }
 
          		//#
         //# Modules used to take trace of PDCP pkt flow
         //#
-        packetFlowManager: <PacketFlowManagerType> like PacketFlowManager if hasRNISupport {
-            @display("p=69,299");
+        packetFlowManager: <default("")> like IPacketFlowManager if hasRNISupport {
+            @display("p=70,300");
         }
 
     connections allowunconnected:

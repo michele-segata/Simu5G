@@ -12,102 +12,110 @@
 #ifndef _LTE_AMRXBUFFER_H_
 #define _LTE_AMRXBUFFER_H_
 
-#include "stack/rlc/LteRlcDefs.h"
+#include <inet/common/ModuleRefByPar.h>
+#include <inet/common/packet/Packet.h>
+
 #include "common/timer/TTimer.h"
+#include "stack/pdcp_rrc/packet/LtePdcpPdu_m.h"
+#include "stack/rlc/LteRlcDefs.h"
 #include "stack/rlc/am/LteRlcAm.h"
 #include "stack/rlc/am/packet/LteRlcAmPdu.h"
 #include "stack/rlc/am/packet/LteRlcAmSdu_m.h"
-#include "stack/pdcp_rrc/packet/LtePdcpPdu_m.h"
-#include "inet/common/packet/Packet.h"
 
 namespace simu5g {
 
-class AmRxQueue : public omnetpp::cSimpleModule
+using namespace omnetpp;
+
+class AmRxQueue : public cSimpleModule
 {
   protected:
 
     // parent RLC AM module
-    LteRlcAm* lteRlc_;
+    inet::ModuleRefByPar<LteRlcAm> lteRlc_;
+
+    // Binder module
+    inet::ModuleRefByPar<Binder> binder_;
 
     //! Receiver window descriptor
     RlcWindowDesc rxWindowDesc_;
 
-    //! Minimum time between two consecutive ack messages
-    omnetpp::simtime_t ackReportInterval_;
+    //! Minimum time between two consecutive ACK messages
+    simtime_t ackReportInterval_;
 
-    //! The time when the last ack message was sent.
-    omnetpp::simtime_t lastSentAck_;
+    //! The time when the last ACK message was sent.
+    simtime_t lastSentAck_;
 
-    //! Buffer status report Interval
-    omnetpp::simtime_t statusReportInterval_;
+    //! Buffer status report interval
+    simtime_t statusReportInterval_;
 
-    //! SDU reconstructed at the beginning of the Receiver buffer
-    int firstSdu_;
+    //! SDU reconstructed at the beginning of the receiver buffer
+    int firstSdu_ = 0;
 
     //! Timer to manage the buffer status report
     TTimer timer_;
 
     //! AM PDU buffer
-    omnetpp::cArray pduBuffer_;
+    cArray pduBuffer_;
 
     //! AM PDU fragment buffer
     //  (stores PDUs of the next SDU if they are shifted out of the PDU buffer before the SDU is completely
     //   received and can be passed to the upper layer)
-    std::deque<inet::Packet *>pendingPduBuffer_;
+    std::deque<inet::Packet *> pendingPduBuffer_;
 
-    //! AM PDU Received vector
+    //! AM PDU received vector
     /** For each AM PDU a received status variable is kept.
      */
     std::vector<bool> received_;
 
-    //! AM PDU Discarded Vector
+    //! AM PDU discarded vector
     /** For each AM PDU a discarded status variable is kept.
      */
     std::vector<bool> discarded_;
 
     /*
-     * FlowControlInfo matrix : used for CTRL messages generation
+     * FlowControlInfo matrix: used for CTRL messages generation
      */
-    FlowControlInfo* flowControlInfo_;
+    FlowControlInfo *flowControlInfo_ = nullptr;
 
     //Statistics
     static unsigned int totalCellRcvdBytes_;
     unsigned int totalRcvdBytes_;
-    omnetpp::simsignal_t rlcCellPacketLoss_;
-    omnetpp::simsignal_t rlcPacketLoss_;
-    omnetpp::simsignal_t rlcPduPacketLoss_;
-    omnetpp::simsignal_t rlcDelay_;
-    omnetpp::simsignal_t rlcPduDelay_;
-    omnetpp::simsignal_t rlcCellThroughput_;
-    omnetpp::simsignal_t rlcThroughput_;
-    omnetpp::simsignal_t rlcPduThroughput_;
+    Direction dir_ = UNKNOWN_DIRECTION;
+    static simsignal_t rlcCellPacketLossSignal_[2];
+    static simsignal_t rlcPacketLossSignal_[2];
+    static simsignal_t rlcPduPacketLossSignal_[2];
+    static simsignal_t rlcDelaySignal_[2];
+    static simsignal_t rlcPduDelaySignal_[2];
+    static simsignal_t rlcCellThroughputSignal_[2];
+    static simsignal_t rlcThroughputSignal_[2];
+    static simsignal_t rlcPduThroughputSignal_[2];
 
   public:
 
     AmRxQueue();
 
-    virtual ~AmRxQueue();
+    ~AmRxQueue() override;
 
     //! Receive an RLC PDU from the lower layer
-    void enque(inet::Packet* pdu);
+    void enque(inet::Packet *pdu);
 
     //! Send a buffer status report to the ACK manager
-    virtual void handleMessage(omnetpp::cMessage* msg);
+    void handleMessage(cMessage *msg) override;
 
     //initialize
-    void initialize();
+    void initialize() override;
 
   protected:
 
     //! Send the RLC SDU stored in the buffer to the upper layer
-    /** Note that, the buffer contains a set of RLC PDU. At most,
+    /** Note that, the buffer contains a set of RLC PDUs. At most,
      *  one RLC SDU can be in the buffer!
      */
     void deque();
 
     //! Pass an SDU to the upper layer (RLC receiver)
     /** @param <index> index The index of the first PDU related to
-     *  the target SDU (i.e.) the SDU that has been completely received
+     *  the target SDU (i.e. the SDU that has been completely received)
      */
     void passUp(const int index);
 
@@ -115,15 +123,15 @@ class AmRxQueue : public omnetpp::cSimpleModule
     //! completely received
     void checkCompleteSdu(const int index);
 
-    //! send buffer status report to the ACK manager
+    //! Send buffer status report to the ACK manager
     void sendStatusReport();
 
-    //! Compute the shift of the rx window
+    //! Compute the shift of the RX window
     int computeWindowShift() const;
 
-    //! Move the rx window
-    /** Shift the rx window. The number of position to shift is
-     *  given by  seqNum - current rx first seqnum.
+    //! Move the RX window
+    /** Shift the RX window. The number of positions to shift is
+     *  given by seqNum - current RX first seqnum.
      */
     void moveRxWindow(const int seqNum);
 
@@ -131,9 +139,10 @@ class AmRxQueue : public omnetpp::cSimpleModule
     void discard(const int sn);
 
     //! Defragment received frame
-    inet::Packet *defragmentFrames(std::deque<inet::Packet *> &fragmentFrames);
+    inet::Packet *defragmentFrames(std::deque<inet::Packet *>& fragmentFrames);
 };
 
 } //namespace
 
 #endif
+

@@ -1,20 +1,22 @@
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+//                  Simu5G
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Lesser General Public License for more details.
+// Authors: Giovanni Nardini, Giovanni Stea, Antonio Virdis (University of Pisa)
 //
-// You should have received a copy of the GNU Lesser General Public License
-// along with this program.  If not, see http://www.gnu.org/licenses/.
+// This file is part of a software released under the license included in file
+// "license.pdf". Please read LICENSE and README files before using it.
+// The above files and the present reference are part of the software itself,
+// and cannot be removed from it.
 //
 
 package simu5g.nodes.mec.VirtualisationInfrastructureManager;
 
+//
+// This module can be used to simulate a background application running on the
+// MEC host without simulating all message exchanges and finite-state machines.
+// It can be useful for simulating background tasks that utilize CPU, RAM, and disk
+// resources.
+//
 module BackgroundApp
 {
     double ram @unit("B") = default(10MB);

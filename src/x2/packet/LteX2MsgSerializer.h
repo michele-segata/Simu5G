@@ -12,21 +12,21 @@
 #ifndef X2_PACKET_LTEX2MSGSERIALIZER_H_
 #define X2_PACKET_LTEX2MSGSERIALIZER_H_
 
+#include <inet/common/packet/serializer/FieldsChunkSerializer.h>
+
 #include "stack/compManager/compManagerProportional/X2CompProportionalReplyIE.h"
-#include "inet/common/packet/serializer/FieldsChunkSerializer.h"
 
 namespace simu5g {
 
-class LteX2MsgSerializer : public inet::FieldsChunkSerializer {
-private:
+class LteX2MsgSerializer : public inet::FieldsChunkSerializer
+{
+  private:
     void serializeStatusMap(inet::MemoryOutputStream& stream, std::vector<CompRbStatus> map) const;
     std::vector<CompRbStatus> deserializeStatusMap(inet::MemoryInputStream& stream) const;
-protected:
-  virtual void serialize(inet::MemoryOutputStream& stream, const inet::Ptr<const inet::Chunk>& chunk) const override;
-  virtual const inet::Ptr<inet::Chunk> deserialize(inet::MemoryInputStream& stream) const override;
 
-public:
-  LteX2MsgSerializer() : FieldsChunkSerializer() {}
+  protected:
+    void serialize(inet::MemoryOutputStream& stream, const inet::Ptr<const inet::Chunk>& chunk) const override;
+    const inet::Ptr<inet::Chunk> deserialize(inet::MemoryInputStream& stream) const override;
 };
 
 } //namespace

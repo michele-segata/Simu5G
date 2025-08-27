@@ -18,23 +18,24 @@
 
 namespace simu5g {
 
+using namespace omnetpp;
+
 /**
  * Implements the X2AppServer simple module. See the NED file for more info.
  */
 class X2AppServer : public inet::SctpServer
 {
-        // reference to the gate
-    omnetpp::cGate* x2ManagerIn_;
+    // reference to the gate
+    cGate *x2ManagerIn_ = nullptr;
 
-    protected:
-        virtual void initialize(int stage) override;
-        virtual void handleMessage(omnetpp::cMessage *msg) override;
-        void handleTimer(omnetpp::cMessage *msg);
-        void generateAndSend(inet::Packet* pkt);
+  protected:
+    void initialize(int stage) override;
+    void handleMessage(cMessage *msg) override;
+    void handleTimer(cMessage *msg);
+    void generateAndSend(inet::Packet *pkt);
 };
 
 } //namespace
 
 #endif
-
 

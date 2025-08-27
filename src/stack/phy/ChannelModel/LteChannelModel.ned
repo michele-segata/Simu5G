@@ -11,14 +11,22 @@
 
 package simu5g.stack.phy.ChannelModel;
 
-
-simple LteChannelModel like LteChannelModelInterface
+//
+// This is the base module for developing more realistic models of the radio channel.
+// It primarily provides the initialization of parameters such as the reference to the
+// Component Carrier (CC) and its associated parameters related to the channel
+// model itself.
+//
+simple LteChannelModel like ILteChannelModel
 {
     parameters:
         @display("i=block/classifier2");
         @class("LteChannelModel");
 
+        string binderModule = default("binder");
+        string cellInfoModule = default("^.^.cellInfo");  // optional
+
         // component carrier for this channel model
-        int componentCarrierIndex = default(0);
+        string componentCarrierModule = default("carrierAggregation.componentCarrier[0]");
 }
 

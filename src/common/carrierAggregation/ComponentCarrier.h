@@ -13,20 +13,24 @@
 #define COMPONENTCARRIER_H_
 
 #include <omnetpp.h>
+#include <inet/common/ModuleRefByPar.h>
+
 #include "common/LteCommon.h"
 
 namespace simu5g {
+
+using namespace omnetpp;
 
 class Binder;
 
 /*
  * This module acts as a descriptor for one Component Carrier
  */
-class ComponentCarrier : public omnetpp::cSimpleModule
+class ComponentCarrier : public cSimpleModule
 {
   protected:
     // Reference to Binder module
-    Binder* binder_;
+    inet::ModuleRefByPar<Binder> binder_;
 
     // Carrier Frequency
     double carrierFrequency_;
@@ -46,7 +50,7 @@ class ComponentCarrier : public omnetpp::cSimpleModule
 
   public:
 
-    virtual void initialize();
+    void initialize() override;
 
     /*
      * Returns the carrier frequency
@@ -63,11 +67,6 @@ class ComponentCarrier : public omnetpp::cSimpleModule
      */
     unsigned int getNumerologyIndex() { return numerologyIndex_; }
 
-//    /*
-//     * Returns the TDD slot format index
-//     */
-//    int getTddSlotFormatIndex() { return tddSlotFormatIndex_; }
-
     bool isTddEnabled() { return useTdd_; }
     unsigned int getTddNumSymbolsDl() { return tddNumSymbolsDl_; }
     unsigned int getTddNumSymbolsUl() { return tddNumSymbolsUl_; }
@@ -77,3 +76,4 @@ class ComponentCarrier : public omnetpp::cSimpleModule
 } //namespace
 
 #endif
+

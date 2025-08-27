@@ -13,13 +13,14 @@
 package simu5g.stack.rlc;
 
 //
-// Muxer for the RLC layer of LTE Stack.
-// Mux/Demux of data to/from MAC layer
+// This module functions as a (de)multiplexer between the submodules of the ~LteRlc module
+// (representing the available RLC modes) and the underlying Medium Access Control (MAC)
+// module
 //
 simple LteRlcMux
 {
     parameters:
-        @display("i=block/classifier");                        // Display preferences
+        @display("i=block/classifier");
 
     gates:
         //#

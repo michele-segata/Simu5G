@@ -1,4 +1,4 @@
-#! /bin/sh
+#!/usr/bin/env -S sh -c "echo >&2 \"Error: You are running this script instead of sourcing it. Make sure to use it as 'source setenv' or '. setenv', otherwise its settings won't take effect.\"; exit 1"
 
 case "$-" in
 *i*) ;;
@@ -14,6 +14,7 @@ if [ ! -f bin/simu5g ]; then
 else
     export SIMU5G_ROOT=`pwd`
     echo "$SIMU5G_ROOT added to PATH"
-    export PATH=$SIMU5G_ROOT/bin:$PATH
+    export PATH="$SIMU5G_ROOT/bin:$PATH"
+    export OMNETPP_IMAGE_PATH="$OMNETPP_IMAGE_PATH:$SIMU5G_ROOT/images"
 fi
 

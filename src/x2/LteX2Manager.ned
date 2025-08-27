@@ -12,18 +12,18 @@
 package simu5g.x2;
 
 //
-// LteX2Manager
-//
-// The task of this module is to allow communications between eNodeBs via the X2 interface.
-// It acts as a bridge between the X2 user modules and the X2Apps that are responsible
-// for communication with the X2Apps on the peering eNodeBs.
-// If you want to implement a new module that needs to exploit the X2 interface, you must
-// connect the module to the dataPort gate of the LteX2Manager.
+// This module serves as a pluggable interface for submodules of the e/gNodeB's LTE/NR protocol
+// stack that implement functionalities requiring the use of the X2 interface for communication
+// with peer e/gNodeBs, such as handover, dual connectivity, and Coordinated MultiPoint (CoMP).
+// This module simplifies the interaction for such submodules by abstracting the details of X2Apps,
+// which are the modules responsible for the actual communication through the X2 interface.
 //
 simple LteX2Manager
 {
     parameters:
         @display("i=block/cogwheel");
+        string interfaceTableModule;
+        string binderModule = default("binder");
 
     gates:
         inout dataPort[]; // connection to X2 user modules

@@ -10,8 +10,8 @@
 //
 
 #include "stack/mac/buffer/harq/LteHarqProcessRx.h"
-#include "stack/mac/layer/LteMacBase.h"
-#include "stack/mac/layer/LteMacEnb.h"
+#include "stack/mac/LteMacBase.h"
+#include "stack/mac/LteMacEnb.h"
 #include "common/LteControlInfo.h"
 #include "common/binder/Binder.h"
 #include "stack/mac/packet/LteHarqFeedback_m.h"
@@ -21,18 +21,12 @@ namespace simu5g {
 
 using namespace omnetpp;
 
-LteHarqProcessRx::LteHarqProcessRx(unsigned char acid, LteMacBase *owner)
+LteHarqProcessRx::LteHarqProcessRx(unsigned char acid, LteMacBase *owner, Binder *binder) : acid_(acid), macOwner_(owner), binder_(binder),  maxHarqRtx_(owner->par("maxHarqRtx")), harqFbEvaluationTimer_(owner->par("harqFbEvaluationTimer"))
 {
     pdu_.resize(MAX_CODEWORDS, nullptr);
     status_.resize(MAX_CODEWORDS, RXHARQ_PDU_EMPTY);
     rxTime_.resize(MAX_CODEWORDS, 0);
     result_.resize(MAX_CODEWORDS, false);
-    acid_ = acid;
-    macOwner_ = owner;
-    transmissions_ = 0;
-    maxHarqRtx_ = owner->par("maxHarqRtx");
-    harqFbEvaluationTimer_ = owner->par("harqFbEvaluationTimer");
-    binder_ = getBinder();
 }
 
 void LteHarqProcessRx::insertPdu(Codeword cw, Packet *pkt)
@@ -45,20 +39,20 @@ void LteHarqProcessRx::insertPdu(Codeword cw, Packet *pkt)
 
     EV << "LteHarqProcessRx::insertPdu - ndi is " << ndi << endl;
     if (ndi && !(status_.at(cw) == RXHARQ_PDU_EMPTY))
-        throw cRuntimeError("New data arriving in busy harq process -- this should not happen");
+        throw cRuntimeError("New data arriving in busy HARQ process -- this should not happen");
 
     if (!ndi && !(status_.at(cw) == RXHARQ_PDU_EMPTY) && !(status_.at(cw) == RXHARQ_PDU_CORRUPTED))
         throw cRuntimeError(
-            "Trying to insert macPdu in non-empty rx harq process: Node %d acid %d, codeword %d, ndi %d, status %d",
-            macOwner_->getMacNodeId(), acid_, cw, ndi, status_.at(cw));
+                "Trying to insert macPdu in non-empty RX HARQ process: node %hu acid %d, codeword %d, ndi %d, status %d",
+                num(macOwner_->getMacNodeId()), acid_, cw, ndi, status_.at(cw));
 
-    // deallocate corrupted pdu received in previous transmissions
-    if (pdu_.at(cw) != nullptr){
-            macOwner_->dropObj(pdu_.at(cw));
-            delete pdu_.at(cw);
+    // deallocate corrupted PDU received in previous transmissions
+    if (pdu_.at(cw) != nullptr) {
+        macOwner_->dropObj(pdu_.at(cw));
+        delete pdu_.at(cw);
     }
 
-    // store new received pdu
+    // store new received PDU
     pdu_.at(cw) = pkt;
     result_.at(cw) = lteInfo->getDeciderResult();
     status_.at(cw) = RXHARQ_PDU_EVALUATING;
@@ -69,8 +63,7 @@ void LteHarqProcessRx::insertPdu(Codeword cw, Packet *pkt)
 
 bool LteHarqProcessRx::isEvaluated(Codeword cw)
 {
-    if (status_.at(cw) == RXHARQ_PDU_EVALUATING)
-    {
+    if (status_.at(cw) == RXHARQ_PDU_EVALUATING) {
         // get carrier frequency from the control info included in pdu_
         auto lteInfo = pdu_[cw]->getTag<UserControlInfo>();
         double carrierFreq = lteInfo->getCarrierFrequency();
@@ -79,7 +72,7 @@ bool LteHarqProcessRx::isEvaluated(Codeword cw)
         NumerologyIndex numerologyIndex = binder_->getNumerologyIndexFromCarrierFreq(carrierFreq);
         double slotDuration = binder_->getSlotDurationFromNumerologyIndex(numerologyIndex);
 
-        if ( (NOW - rxTime_.at(cw)) >= slotDuration * (harqFbEvaluationTimer_-1))
+        if ((NOW - rxTime_.at(cw)) >= slotDuration * (harqFbEvaluationTimer_ - 1))
             return true;
     }
     return false;
@@ -89,12 +82,12 @@ bool LteHarqProcessRx::isEvaluated(Codeword cw)
 Packet *LteHarqProcessRx::createFeedback(Codeword cw)
 {
     if (!isEvaluated(cw))
-        throw cRuntimeError("Cannot send feedback for a pdu not in EVALUATING state");
+        throw cRuntimeError("Cannot send feedback for a PDU not in EVALUATING state");
 
     auto pduInfo = pdu_.at(cw)->getTag<UserControlInfo>();
     auto pdu = pdu_.at(cw)->peekAtFront<LteMacPdu>();
 
-    // TODO : Change to Tag (allows length 0)
+    // TODO: Change to Tag (allows length 0)
     auto fb = makeShared<LteHarqFeedback>();
     fb->setAcid(acid_);
     fb->setCw(cw);
@@ -111,15 +104,12 @@ Packet *LteHarqProcessRx::createFeedback(Codeword cw)
     pkt->addTagIfAbsent<UserControlInfo>()->setDirection(pduInfo->getDirection());
     pkt->addTagIfAbsent<UserControlInfo>()->setCarrierFrequency(pduInfo->getCarrierFrequency());
 
-
-    if (!result_.at(cw))
-    {
+    if (!result_.at(cw)) {
         // NACK will be sent
         status_.at(cw) = RXHARQ_PDU_CORRUPTED;
 
         EV << "LteHarqProcessRx::createFeedback - tx number " << (unsigned int)transmissions_ << endl;
-        if (transmissions_ == (maxHarqRtx_ + 1))
-        {
+        if (transmissions_ == (maxHarqRtx_ + 1)) {
             EV << NOW << " LteHarqProcessRx::createFeedback - max number of tx reached for cw " << cw << ". Resetting cw" << endl;
 
             // purge PDU
@@ -127,15 +117,13 @@ Packet *LteHarqProcessRx::createFeedback(Codeword cw)
             resetCodeword(cw);
         }
         else {
-            if (macOwner_->getNodeType() == ENODEB || macOwner_->getNodeType() == GNODEB)
-            {
+            if (macOwner_->getNodeType() == ENODEB || macOwner_->getNodeType() == GNODEB) {
                 // signal the MAC the need for retransmission
-                check_and_cast<LteMacEnb*>(macOwner_)->signalProcessForRtx(pduInfo->getSourceId(), pduInfo->getCarrierFrequency(), (Direction)pduInfo->getDirection());
+                check_and_cast<LteMacEnb *>(macOwner_.get())->signalProcessForRtx(pduInfo->getSourceId(), pduInfo->getCarrierFrequency(), (Direction)pduInfo->getDirection());
             }
         }
     }
-    else
-    {
+    else {
         status_.at(cw) = RXHARQ_PDU_CORRECT;
     }
 
@@ -144,15 +132,15 @@ Packet *LteHarqProcessRx::createFeedback(Codeword cw)
 
 bool LteHarqProcessRx::isCorrect(Codeword cw)
 {
-    return (status_.at(cw) == RXHARQ_PDU_CORRECT);
+    return status_.at(cw) == RXHARQ_PDU_CORRECT;
 }
 
-Packet* LteHarqProcessRx::extractPdu(Codeword cw)
+Packet *LteHarqProcessRx::extractPdu(Codeword cw)
 {
     if (!isCorrect(cw))
-        throw cRuntimeError("Cannot extract pdu if the state is not CORRECT");
+        throw cRuntimeError("Cannot extract PDU if the state is not CORRECT");
 
-    // temporary copy of pdu pointer because reset NULLs it, and I need to return it
+    // temporary copy of PDU pointer because reset NULLs it, and I need to return it
     auto pkt = pdu_.at(cw);
     auto pdu = pkt->peekAtFront<LteMacPdu>();
     pdu_.at(cw) = nullptr;
@@ -163,8 +151,7 @@ Packet* LteHarqProcessRx::extractPdu(Codeword cw)
 
 int64_t LteHarqProcessRx::getByteLength(Codeword cw)
 {
-    if (pdu_.at(cw) != nullptr)
-    {
+    if (pdu_.at(cw) != nullptr) {
         return pdu_.at(cw)->getByteLength();
     }
     else
@@ -184,7 +171,7 @@ void LteHarqProcessRx::purgeCorruptedPdu(Codeword cw)
 void LteHarqProcessRx::resetCodeword(Codeword cw)
 {
     // drop ownership
-    if (pdu_.at(cw) != nullptr){
+    if (pdu_.at(cw) != nullptr) {
         macOwner_->dropObj(pdu_.at(cw));
         delete pdu_.at(cw);
     }
@@ -199,13 +186,10 @@ void LteHarqProcessRx::resetCodeword(Codeword cw)
 
 LteHarqProcessRx::~LteHarqProcessRx()
 {
-    for (unsigned char i = 0; i < MAX_CODEWORDS; ++i)
-    {
-        if (pdu_.at(i) != nullptr)
-        {
+    for (unsigned char i = 0; i < MAX_CODEWORDS; ++i) {
+        if (pdu_.at(i) != nullptr) {
             cObject *mac = macOwner_;
-            if (pdu_.at(i)->getOwner() == mac)
-            {
+            if (pdu_.at(i)->getOwner() == mac) {
                 delete pdu_.at(i);
             }
             pdu_.at(i) = nullptr;
@@ -213,13 +197,11 @@ LteHarqProcessRx::~LteHarqProcessRx()
     }
 }
 
-std::vector<RxUnitStatus>
-LteHarqProcessRx::getProcessStatus()
+std::vector<RxUnitStatus> LteHarqProcessRx::getProcessStatus()
 {
     std::vector<RxUnitStatus> ret(MAX_CODEWORDS);
 
-    for (unsigned int j = 0; j < MAX_CODEWORDS; j++)
-    {
+    for (unsigned int j = 0; j < MAX_CODEWORDS; j++) {
         ret[j].first = j;
         ret[j].second = getUnitStatus(j);
     }
@@ -228,10 +210,8 @@ LteHarqProcessRx::getProcessStatus()
 
 bool LteHarqProcessRx::isEmpty()
 {
-    for (Codeword i = 0; i < MAX_CODEWORDS; i++)
-    {
-        if (getUnitStatus(i) != RXHARQ_PDU_EMPTY)
-        {
+    for (Codeword i = 0; i < MAX_CODEWORDS; i++) {
+        if (getUnitStatus(i) != RXHARQ_PDU_EMPTY) {
             return false;
         }
     }
@@ -241,26 +221,22 @@ bool LteHarqProcessRx::isEmpty()
 CwList LteHarqProcessRx::emptyUnitsIds()
 {
     CwList ul;
-    for (Codeword i = 0; i < MAX_CODEWORDS; i++)
-    {
-        if (getUnitStatus(i) == RXHARQ_PDU_EMPTY)
-        {
+    for (Codeword i = 0; i < MAX_CODEWORDS; i++) {
+        if (getUnitStatus(i) == RXHARQ_PDU_EMPTY) {
             ul.push_back(i);
         }
     }
     return ul;
 }
 
-// @author Alessandro noferi
+// @author Alessandro Noferi
 bool LteHarqProcessRx::isHarqProcessActive()
 {
-    std::vector<RxUnitStatus> ues= getProcessStatus();
-    std::vector<RxUnitStatus>::const_iterator it = ues.begin();
-    std::vector<RxUnitStatus>::const_iterator end = ues.end();
+    std::vector<RxUnitStatus> ues = getProcessStatus();
 
-    // when a process is active? (ask professor)
-    for(; it != end; ++it){
-        if ((*it).second != RXHARQ_PDU_EMPTY)
+    // When a process is active? (ask professor)
+    for (const auto& status : ues) {
+        if (status.second != RXHARQ_PDU_EMPTY)
             return true;
     }
     return false;

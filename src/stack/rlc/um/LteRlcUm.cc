@@ -9,6 +9,7 @@
 // and cannot be removed from it.
 //
 
+#include <inet/common/ModuleAccess.h>
 #include <inet/common/ProtocolTag_m.h>
 
 #include "stack/rlc/um/LteRlcUm.h"
@@ -20,17 +21,22 @@ Define_Module(LteRlcUm);
 
 using namespace omnetpp;
 
-UmTxEntity* LteRlcUm::getTxBuffer(inet::Ptr<FlowControlInfo> lteInfo)
+// statistics
+simsignal_t LteRlcUm::receivedPacketFromUpperLayerSignal_ = registerSignal("receivedPacketFromUpperLayer");
+simsignal_t LteRlcUm::receivedPacketFromLowerLayerSignal_ = registerSignal("receivedPacketFromLowerLayer");
+simsignal_t LteRlcUm::sentPacketToUpperLayerSignal_ = registerSignal("sentPacketToUpperLayer");
+simsignal_t LteRlcUm::sentPacketToLowerLayerSignal_ = registerSignal("sentPacketToLowerLayer");
+
+UmTxEntity *LteRlcUm::getTxBuffer(inet::Ptr<FlowControlInfo> lteInfo)
 {
-    MacNodeId nodeId = 0;
+    MacNodeId nodeId = NODEID_NONE;
     LogicalCid lcid = 0;
-    if (lteInfo != NULL)
-    {
+    if (lteInfo != nullptr) {
         nodeId = ctrlInfoToUeId(lteInfo);
 
         /**
          * Note: Simu5G currently determines the LCID based
-         * on the src/dst ip addresses and TOS field and uses separate
+         * on the src/dst IP addresses and TOS field and uses separate
          * RLC entities for each of them. In order to evaluate the effect of using
          * only a single UM LCID and a single bearer, this parameter allows to
          * use only a single UM TxEntity, as it would be with a single bearer.
@@ -46,39 +52,35 @@ UmTxEntity* LteRlcUm::getTxBuffer(inet::Ptr<FlowControlInfo> lteInfo)
     // Find TXBuffer for this CID
     MacCid cid = idToMacCid(nodeId, lcid);
     UmTxEntities::iterator it = txEntities_.find(cid);
-    if (it == txEntities_.end())
-    {
+    if (it == txEntities_.end()) {
         // Not found: create
         std::stringstream buf;
 
         buf << "UmTxEntity Lcid: " << lcid;
-        cModuleType* moduleType = cModuleType::get("simu5g.stack.rlc.UmTxEntity");
-        UmTxEntity* txEnt = check_and_cast<UmTxEntity *>(moduleType->createScheduleInit(buf.str().c_str(), getParentModule()));
+        cModuleType *moduleType = cModuleType::get("simu5g.stack.rlc.um.UmTxEntity");
+        UmTxEntity *txEnt = check_and_cast<UmTxEntity *>(moduleType->createScheduleInit(buf.str().c_str(), getParentModule()));
         txEntities_[cid] = txEnt;    // Add to tx_entities map
 
-        if (lteInfo != nullptr)
-        {
+        if (lteInfo != nullptr) {
             // store control info for this flow
-            txEnt->setFlowControlInfo(lteInfo->dup());
+            txEnt->setFlowControlInfo(lteInfo.get());
         }
 
         EV << "LteRlcUm : Added new UmTxEntity: " << txEnt->getId() <<
-        " for node: " << nodeId << " for Lcid: " << lcid << "\n";
+            " for node: " << nodeId << " for Lcid: " << lcid << "\n";
 
         return txEnt;
     }
-    else
-    {
+    else {
         // Found
         EV << "LteRlcUm : Using old UmTxBuffer: " << it->second->getId() <<
-        " for node: " << nodeId << " for Lcid: " << lcid << "\n";
+            " for node: " << nodeId << " for Lcid: " << lcid << "\n";
 
         return it->second;
     }
 }
 
-
-UmRxEntity* LteRlcUm::getRxBuffer(inet::Ptr<FlowControlInfo> lteInfo)
+UmRxEntity *LteRlcUm::getRxBuffer(inet::Ptr<FlowControlInfo> lteInfo)
 {
     MacNodeId nodeId;
     if (lteInfo->getDirection() == DL)
@@ -91,29 +93,27 @@ UmRxEntity* LteRlcUm::getRxBuffer(inet::Ptr<FlowControlInfo> lteInfo)
     MacCid cid = idToMacCid(nodeId, lcid);
 
     UmRxEntities::iterator it = rxEntities_.find(cid);
-    if (it == rxEntities_.end())
-    {
+    if (it == rxEntities_.end()) {
         // Not found: create
         std::stringstream buf;
         buf << "UmRxEntity Lcid: " << lcid << " cid: " << cid;
-        cModuleType* moduleType = cModuleType::get("simu5g.stack.rlc.UmRxEntity");
-        UmRxEntity* rxEnt = check_and_cast<UmRxEntity *>(
-            moduleType->createScheduleInit(buf.str().c_str(), getParentModule()));
+        cModuleType *moduleType = cModuleType::get("simu5g.stack.rlc.um.UmRxEntity");
+        UmRxEntity *rxEnt = check_and_cast<UmRxEntity *>(
+                moduleType->createScheduleInit(buf.str().c_str(), getParentModule()));
         rxEntities_[cid] = rxEnt;    // Add to rx_entities map
 
         // store control info for this flow
-        rxEnt->setFlowControlInfo(lteInfo->dup());
+        rxEnt->setFlowControlInfo(lteInfo.get());
 
         EV << "LteRlcUm : Added new UmRxEntity: " << rxEnt->getId() <<
-        " for node: " << nodeId << " for Lcid: " << lcid << "\n";
+            " for node: " << nodeId << " for Lcid: " << lcid << "\n";
 
         return rxEnt;
     }
-    else
-    {
+    else {
         // Found
         EV << "LteRlcUm : Using old UmRxEntity: " << it->second->getId() <<
-        " for node: " << nodeId << " for Lcid: " << lcid << "\n";
+            " for node: " << nodeId << " for Lcid: " << lcid << "\n";
 
         return it->second;
     }
@@ -125,20 +125,20 @@ void LteRlcUm::sendDefragmented(cPacket *pkt)
     take(pkt);                                                    // Take ownership
 
     EV << "LteRlcUm : Sending packet " << pkt->getName() << " to port UM_Sap_up$o\n";
-    send(pkt, up_[OUT_GATE]);
+    send(pkt, upOutGate_);
 
-    emit(sentPacketToUpperLayer, pkt);
+    emit(sentPacketToUpperLayerSignal_, pkt);
 }
 
 void LteRlcUm::sendToLowerLayer(cPacket *pktAux)
 {
     Enter_Method_Silent("sendToLowerLayer()");                    // Direct Method Call
     take(pktAux);                                                    // Take ownership
-    auto pkt = check_and_cast<inet::Packet *> (pktAux);
+    auto pkt = check_and_cast<inet::Packet *>(pktAux);
     pkt->addTagIfAbsent<inet::PacketProtocolTag>()->setProtocol(&LteProtocol::rlc);
     EV << "LteRlcUm : Sending packet " << pktAux->getName() << " to port UM_Sap_down$o\n";
-    send(pktAux, down_[OUT_GATE]);
-    emit(sentPacketToLowerLayer, pkt);
+    send(pktAux, downOutGate_);
+    emit(sentPacketToLowerLayerSignal_, pkt);
 }
 
 void LteRlcUm::dropBufferOverflow(cPacket *pktAux)
@@ -152,15 +152,15 @@ void LteRlcUm::dropBufferOverflow(cPacket *pktAux)
 
 void LteRlcUm::handleUpperMessage(cPacket *pktAux)
 {
-    emit(receivedPacketFromUpperLayer, pktAux);
+    emit(receivedPacketFromUpperLayerSignal_, pktAux);
 
-    auto pkt = check_and_cast<inet::Packet *> (pktAux);
+    auto pkt = check_and_cast<inet::Packet *>(pktAux);
     auto lteInfo = pkt->getTagForUpdate<FlowControlInfo>();
 
     auto chunk = pkt->peekAtFront<inet::Chunk>();
     EV << "LteRlcUm::handleUpperMessage - Received packet " << chunk->getClassName() << " from upper layer, size " << pktAux->getByteLength() << "\n";
 
-    UmTxEntity* txbuf = getTxBuffer(lteInfo);
+    UmTxEntity *txbuf = getTxBuffer(lteInfo);
 
     // Create a new RLC packet
     auto rlcPkt = inet::makeShared<LteRlcSdu>();
@@ -170,18 +170,16 @@ void LteRlcUm::handleUpperMessage(cPacket *pktAux)
 
     drop(pkt);
 
-    if (txbuf->isHoldingDownstreamInPackets())
-    {
+    if (txbuf->isHoldingDownstreamInPackets()) {
         // do not store in the TX buffer and do not signal the MAC layer
-        EV << "LteRlcUm::handleUpperMessage - Enque packet " << rlcPkt->getClassName() << " into the Holding Buffer\n";
+        EV << "LteRlcUm::handleUpperMessage - Enqueue packet " << rlcPkt->getClassName() << " into the Holding Buffer\n";
         txbuf->enqueHoldingPackets(pkt);
     }
-    else
-    {
-        if(txbuf->enque(pkt)){
-            EV << "LteRlcUm::handleUpperMessage - Enque packet " << rlcPkt->getClassName() << " into the Tx Buffer\n";
+    else {
+        if (txbuf->enque(pkt)) {
+            EV << "LteRlcUm::handleUpperMessage - Enqueue packet " << rlcPkt->getClassName() << " into the Tx Buffer\n";
 
-            // create a message so as to notify the MAC layer that the queue contains new data
+            // create a message to notify the MAC layer that the queue contains new data
             auto newDataPkt = inet::makeShared<LteRlcPduNewData>();
             // make a copy of the RLC SDU
             auto pktDup = pkt->dup();
@@ -189,8 +187,9 @@ void LteRlcUm::handleUpperMessage(cPacket *pktAux)
             // the MAC will only be interested in the size of this packet
 
             EV << "LteRlcUm::handleUpperMessage - Sending message " << newDataPkt->getClassName() << " to port UM_Sap_down$o\n";
-            send(pktDup, down_[OUT_GATE]);
-        } else {
+            send(pktDup, downOutGate_);
+        }
+        else {
             // Queue is full - drop SDU
             dropBufferOverflow(pkt);
         }
@@ -204,10 +203,9 @@ void LteRlcUm::handleLowerMessage(cPacket *pktAux)
     auto lteInfo = pkt->getTagForUpdate<FlowControlInfo>();
     auto chunk = pkt->peekAtFront<inet::Chunk>();
 
-    if (inet::dynamicPtrCast<const LteMacSduRequest>(chunk) != nullptr)
-    {
+    if (inet::dynamicPtrCast<const LteMacSduRequest>(chunk) != nullptr) {
         // get the corresponding Tx buffer
-        UmTxEntity* txbuf = getTxBuffer(lteInfo);
+        UmTxEntity *txbuf = getTxBuffer(lteInfo);
 
         auto macSduRequest = pkt->peekAtFront<LteMacSduRequest>();
         unsigned int size = macSduRequest->getSduSize();
@@ -219,16 +217,15 @@ void LteRlcUm::handleLowerMessage(cPacket *pktAux)
 
         delete pkt;
     }
-    else
-    {
-        emit(receivedPacketFromLowerLayer, pkt);
+    else {
+        emit(receivedPacketFromLowerLayerSignal_, pkt);
 
-        // Extract informations from fragment
-        UmRxEntity* rxbuf = getRxBuffer(lteInfo);
+        // Extract information from fragment
+        UmRxEntity *rxbuf = getRxBuffer(lteInfo);
         drop(pkt);
 
         // Bufferize PDU
-        EV << "LteRlcUm::handleLowerMessage - Enque packet " << pkt->getName() << " into the Rx Buffer\n";
+        EV << "LteRlcUm::handleLowerMessage - Enqueue packet " << pkt->getName() << " into the Rx Buffer\n";
         rxbuf->enque(pkt);
     }
 }
@@ -237,41 +234,23 @@ void LteRlcUm::deleteQueues(MacNodeId nodeId)
 {
     Enter_Method_Silent();
 
-    UmTxEntities::iterator tit;
-    UmRxEntities::iterator rit;
-
-    RanNodeType nodeType;
-    std::string nodeTypePar = getAncestorPar("nodeType").stdstringValue();
-    if (strcmp(nodeTypePar.c_str(), "ENODEB") == 0)
-        nodeType = ENODEB;
-    else if (strcmp(nodeTypePar.c_str(), "GNODEB") == 0)
-        nodeType = GNODEB;
-    else
-        nodeType = UE;
-
     // at the UE, delete all connections
     // at the eNB, delete connections related to the given UE
-    for (tit = txEntities_.begin(); tit != txEntities_.end(); )
-    {
-        if (nodeType == UE || ((nodeType == ENODEB || nodeType == GNODEB) && MacCidToNodeId(tit->first) == nodeId))
-        {
+    for (auto tit = txEntities_.begin(); tit != txEntities_.end();) {
+        if (nodeType == UE || ((nodeType == ENODEB || nodeType == GNODEB) && MacCidToNodeId(tit->first) == nodeId)) {
             tit->second->deleteModule(); // Delete Entity
-            txEntities_.erase(tit++);    // Delete Elem
+            tit = txEntities_.erase(tit);    // Delete Element
         }
-        else
-        {
+        else {
             ++tit;
         }
     }
-    for (rit = rxEntities_.begin(); rit != rxEntities_.end(); )
-    {
-        if (nodeType == UE || ((nodeType == ENODEB || nodeType == GNODEB) && MacCidToNodeId(rit->first) == nodeId))
-        {
+    for (auto rit = rxEntities_.begin(); rit != rxEntities_.end();) {
+        if (nodeType == UE || ((nodeType == ENODEB || nodeType == GNODEB) && MacCidToNodeId(rit->first) == nodeId)) {
             rit->second->deleteModule(); // Delete Entity
-            rxEntities_.erase(rit++);    // Delete Elem
+            rit = rxEntities_.erase(rit);    // Delete Element
         }
-        else
-        {
+        else {
             ++rit;
         }
     }
@@ -283,95 +262,75 @@ void LteRlcUm::deleteQueues(MacNodeId nodeId)
 
 void LteRlcUm::initialize(int stage)
 {
-    if (stage == inet::INITSTAGE_LOCAL)
-    {
-        up_[IN_GATE] = gate("UM_Sap_up$i");
-        up_[OUT_GATE] = gate("UM_Sap_up$o");
-        down_[IN_GATE] = gate("UM_Sap_down$i");
-        down_[OUT_GATE] = gate("UM_Sap_down$o");
+    if (stage == inet::INITSTAGE_LOCAL) {
+        upInGate_ = gate("UM_Sap_up$i");
+        upOutGate_ = gate("UM_Sap_up$o");
+        downInGate_ = gate("UM_Sap_down$i");
+        downOutGate_ = gate("UM_Sap_down$o");
 
         // parameters
         mapAllLcidsToSingleBearer_ = par("mapAllLcidsToSingleBearer");
-
-        // statistics
-        receivedPacketFromUpperLayer = registerSignal("receivedPacketFromUpperLayer");
-        receivedPacketFromLowerLayer = registerSignal("receivedPacketFromLowerLayer");
-        sentPacketToUpperLayer = registerSignal("sentPacketToUpperLayer");
-        sentPacketToLowerLayer = registerSignal("sentPacketToLowerLayer");
+        std::string nodeTypePar = par("nodeType").stdstringValue();
+        nodeType = static_cast<RanNodeType>(cEnum::get("simu5g::RanNodeType")->lookup(nodeTypePar.c_str()));
 
         WATCH_MAP(txEntities_);
         WATCH_MAP(rxEntities_);
     }
 }
 
-void LteRlcUm::handleMessage(cMessage* msg)
+void LteRlcUm::handleMessage(cMessage *msg)
 {
-    cPacket* pkt = check_and_cast<cPacket *>(msg);
+    cPacket *pkt = check_and_cast<cPacket *>(msg);
     EV << "LteRlcUm : Received packet " << pkt->getName() << " from port " << pkt->getArrivalGate()->getName() << endl;
 
-    cGate* incoming = pkt->getArrivalGate();
-    if (incoming == up_[IN_GATE])
-    {
+    cGate *incoming = pkt->getArrivalGate();
+    if (incoming == upInGate_) {
         handleUpperMessage(pkt);
     }
-    else if (incoming == down_[IN_GATE])
-    {
+    else if (incoming == downInGate_) {
         handleLowerMessage(pkt);
     }
-    return;
 }
 
-void LteRlcUm::activeUeUL(std::set<MacNodeId>* ueSet)
+void LteRlcUm::activeUeUL(std::set<MacNodeId> *ueSet)
 {
-    UmRxEntities::const_iterator it = rxEntities_.begin();
-    UmRxEntities::const_iterator end = rxEntities_.end();
-    for(; it != end; ++it)
-    {
-        MacNodeId nodeId = MacCidToNodeId(it->first);
-        if((ueSet->find(nodeId) == ueSet->end()) && !it->second->isEmpty())
+    for (const auto& [macCid, entity] : rxEntities_) {
+        MacNodeId nodeId = MacCidToNodeId(macCid);
+        if ((ueSet->find(nodeId) == ueSet->end()) && !entity->isEmpty())
             ueSet->insert(nodeId);
     }
 }
 
-
-
-void LteRlcUm::addUeThroughput(MacNodeId nodeId, Throughput throughtput)
+void LteRlcUm::addUeThroughput(MacNodeId nodeId, Throughput throughput)
 {
     ULThroughputPerUE::iterator it = ulThroughput_.find(nodeId);
-    if(it == ulThroughput_.end())
-    {
-        ulThroughput_[nodeId] = throughtput;
-
+    if (it == ulThroughput_.end()) {
+        ulThroughput_[nodeId] = throughput;
     }
-    else
-    {
-        it->second.pktSizeCount += throughtput.pktSizeCount;
-        it->second.time += throughtput.time;
+    else {
+        it->second.pktSizeCount += throughput.pktSizeCount;
+        it->second.time += throughput.time;
     }
 }
 
 double LteRlcUm::getUeThroughput(MacNodeId nodeId)
 {
     ULThroughputPerUE::iterator it = ulThroughput_.find(nodeId);
-    if(it == ulThroughput_.end())
-    {
+    if (it == ulThroughput_.end()) {
         return 0;
     }
-    else
-    {
-        return (it->second.pktSizeCount / (it->second.time).dbl());
+    else {
+        return it->second.pktSizeCount / (it->second.time).dbl();
     }
 }
 
 void LteRlcUm::resetThroughputStats(MacNodeId nodeId)
 {
     ULThroughputPerUE::iterator it = ulThroughput_.find(nodeId);
-    if(it == ulThroughput_.end())
-    {
+    if (it == ulThroughput_.end()) {
         return;
     }
-    else
-    {
+    else {
         it->second.pktSizeCount = 0;
         it->second.time = 0;
     }

@@ -20,12 +20,22 @@ using namespace inet;
 
 Define_Module(VoDUDPClient);
 
+simsignal_t VoDUDPClient::tptLayer0Signal_ = registerSignal("VoDTptLayer0");
+simsignal_t VoDUDPClient::tptLayer1Signal_ = registerSignal("VoDTptLayer1");
+simsignal_t VoDUDPClient::tptLayer2Signal_ = registerSignal("VoDTptLayer2");
+simsignal_t VoDUDPClient::tptLayer3Signal_ = registerSignal("VoDTptLayer3");
+
+simsignal_t VoDUDPClient::delayLayer0Signal_ = registerSignal("VoDDelayLayer0");
+simsignal_t VoDUDPClient::delayLayer1Signal_ = registerSignal("VoDDelayLayer1");
+simsignal_t VoDUDPClient::delayLayer2Signal_ = registerSignal("VoDDelayLayer2");
+simsignal_t VoDUDPClient::delayLayer3Signal_ = registerSignal("VoDDelayLayer3");
+
 void VoDUDPClient::initialize(int stage)
 {
     if (stage != inet::INITSTAGE_APPLICATION_LAYER)
         return;
-    /* Get parameters from INI file */
-    EV << "VoD Client initialize: stage " << stage << endl;
+    // Get parameters from INI file
+    EV << "VoD Client initialized: stage " << stage << endl;
 
     stringstream ss;
     ss << getId();
@@ -36,7 +46,7 @@ void VoDUDPClient::initialize(int stage)
     _mkdir(dir.c_str());
     _mkdir(trace.c_str());
 #else
-    mode_t dir_permissions = S_IRUSR|S_IWUSR|S_IXUSR|S_IRGRP|S_IWGRP|S_IXGRP|S_IROTH|S_IXOTH;
+    mode_t dir_permissions = S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP | S_IROTH | S_IXOTH;
     mkdir(dir.c_str(), dir_permissions);
     mkdir(trace.c_str(), dir_permissions);
 #endif
@@ -44,31 +54,21 @@ void VoDUDPClient::initialize(int stage)
     string nsOutput = "./Framework/clients/client" + ss.str() + "/nsout.txt";
     outfile.open(nsOutput.c_str(), ios::out);
 
-    if (outfile.bad()) /* File is bad */
+    if (outfile.bad()) // File is bad
         throw cRuntimeError("Error while opening output file (File not found or incorrect type)");
 
     totalRcvdBytes_ = 0;
 
-    cMessage* timer = new cMessage("Timer");
+    cMessage *timer = new cMessage("Timer");
     scheduleAt(simTime(), timer);
-
-    tptLayer0_ = registerSignal("VoDTptLayer0");
-    tptLayer1_ = registerSignal("VoDTptLayer1");
-    tptLayer2_ = registerSignal("VoDTptLayer2");
-    tptLayer3_ = registerSignal("VoDTptLayer3");
-
-    delayLayer0_ = registerSignal("VoDDelayLayer0");
-    delayLayer1_ = registerSignal("VoDDelayLayer1");
-    delayLayer2_ = registerSignal("VoDDelayLayer2");
-    delayLayer3_ = registerSignal("VoDDelayLayer3");
 }
 
 void VoDUDPClient::finish()
 {
     outfile.close();
-    string startMetrics = par("startMetrics").stringValue();
+    bool startMetrics = par("startMetrics");
 
-    /* Parameters to be sended to ana.sh */
+    // Parameters to be sent to ana.sh
 
     string inputFileName = par("vod_trace_file").stringValue();
     string bsePath = par("bsePath").stringValue();
@@ -81,8 +81,7 @@ void VoDUDPClient::finish()
     int numPktPerFrame = par("numPktPerFrame");
     int numFrame = par("numFrame");
 
-    if ((!strcmp(startMetrics.c_str(), "on")))
-    {
+    if (startMetrics) {
         stringstream ss, nf, pb, npktf;
         ss << getId();
         pb << playbackSize;
@@ -95,10 +94,10 @@ void VoDUDPClient::finish()
             + " " + origVideoSvc + " " + decPath + " " + pb.str()
             + " " + avipluginPath + " " + ss.str() + " " + nf.str();
 
-        // Bin FPS NumPkt frame configurabili
-        string plot = "./Framework/plot.py 25 ./Framework/clients/client" + ss.str() +
-            "/output/nsoutput.txt-plos ./Framework/clients/client" + ss.str() +
-            "/output/nsoutput.txt-psnr 25 " + nf.str() + " " + npktf.str() + " " + ss.str();
+        // Bin FPS Configurable NumPkt frame
+        string plot = "./Framework/plot.py 25 ./Framework/clients/client" + ss.str()
+            + "/output/nsoutput.txt-plos ./Framework/clients/client" + ss.str()
+            + "/output/nsoutput.txt-psnr 25 " + nf.str() + " " + npktf.str() + " " + ss.str();
 
         fstream f;
         string apri = "client" + ss.str() + ".sh";
@@ -110,21 +109,18 @@ void VoDUDPClient::finish()
         //system(anaPar.c_str());
         //system(plot.c_str());
     }
-    else
-    {
-        if (traceType == "ns2")
-        {
+    else {
+        if (traceType == "ns2") {
             stringstream ss, pb, np;
             ss << getId();
             pb << playbackSize;
             double startStreamTime = par("startStreamTime");
-            int npkt = (int) startStreamTime;
+            int npkt = (int)startStreamTime;
             np << npkt;
 
             string args = inputFileName + " " + pb.str() + " " + ss.str() + " " + np.str();
-            FILE* fp = popen("./Framework/createns2output.py","w");
-            if (fp != NULL)
-            {
+            FILE *fp = popen("./Framework/createns2output.py", "w");
+            if (fp != nullptr) {
                 fprintf(fp, "%s", args.c_str());
                 fclose(fp);
             }
@@ -132,10 +128,9 @@ void VoDUDPClient::finish()
     }
 }
 
-void VoDUDPClient::handleMessage(cMessage* msg)
+void VoDUDPClient::handleMessage(cMessage *msg)
 {
-    if (msg->isSelfMessage())
-    {
+    if (msg->isSelfMessage()) {
         int localPort = par("localPort");
         socket.setOutputGate(gate("socketOut"));
         socket.bind(localPort);
@@ -144,13 +139,15 @@ void VoDUDPClient::handleMessage(cMessage* msg)
             socket.setTos(tos);
         delete msg;
     }
-    else if (!strcmp(msg->getName(), "VoDPacket"))
-        receiveStream((VoDPacket*) (msg));   //FIXME: must decapsulate - see https://inet.omnetpp.org/docs/developers-guide/ch-packets.html
+    else if (!strcmp(msg->getName(), "VoDPacket")) {
+        receiveStream(check_and_cast<inet::Packet *>(msg)->peekAtFront<VoDPacket>().get());
+        delete msg;
+    }
     else
         delete msg;
 }
 
-void VoDUDPClient::receiveStream(VoDPacket *msg)
+void VoDUDPClient::receiveStream(const VoDPacket *msg)
 {
     // int seqNum = msg->getFrameSeqNum();
     simtime_t sendingTime = msg->getPayloadTimestamp();
@@ -160,29 +157,22 @@ void VoDUDPClient::receiveStream(VoDPacket *msg)
 
     totalRcvdBytes_ += msg->getFrameLength();
     double tputSample = (double)totalRcvdBytes_ / (simTime() - getSimulation()->getWarmupPeriod());
-    if (layer == 0)
-    {
-        emit(tptLayer0_, tputSample);
-        emit(delayLayer0_, delay.dbl());
+    if (layer == 0) {
+        emit(tptLayer0Signal_, tputSample);
+        emit(delayLayer0Signal_, delay.dbl());
     }
-    else if (layer == 1)
-    {
-        emit(tptLayer1_, tputSample);
-        emit(delayLayer1_, delay.dbl());
+    else if (layer == 1) {
+        emit(tptLayer1Signal_, tputSample);
+        emit(delayLayer1Signal_, delay.dbl());
     }
-    else if (layer == 2)
-    {
-        emit(tptLayer2_, tputSample);
-        emit(delayLayer2_, delay.dbl());
+    else if (layer == 2) {
+        emit(tptLayer2Signal_, tputSample);
+        emit(delayLayer2Signal_, delay.dbl());
     }
-    else if (layer == 3)
-    {
-        emit(tptLayer3_, tputSample);
-        emit(delayLayer3_, delay.dbl());
+    else if (layer == 3) {
+        emit(tptLayer3Signal_, tputSample);
+        emit(delayLayer3Signal_, delay.dbl());
     }
-    //    outfile << seqNum << "\t" << frameLength << "\t" << delay << endl;
-
-    delete msg;
 }
 
 } //namespace

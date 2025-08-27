@@ -32,7 +32,7 @@ class NRAmc : public LteAmc
     unsigned int getResourceElements(unsigned int blocks, unsigned int symbolsPerSlot);
     unsigned int computeTbsFromNinfo(double nInfo, double coderate);
 
-    unsigned int computeCodewordTbs(UserTxParams* info, Codeword cw, Direction dir, unsigned int numRe);
+    unsigned int computeCodewordTbs(UserTxParams *info, Codeword cw, Direction dir, unsigned int numRe);
 
   public:
 
@@ -41,19 +41,16 @@ class NRAmc : public LteAmc
     NRMcsTable d2dNrMcsTable_;
 
     NRAmc(LteMacEnb *mac, Binder *binder, CellInfo *cellInfo, int numAntennas);
-    virtual ~NRAmc();
 
     NRMCSelem getMcsElemPerCqi(Cqi cqi, const Direction dir);
 
-    virtual unsigned int computeBitsOnNRbs(MacNodeId id, Band b, unsigned int blocks, const Direction dir, double carrierFrequency);
-    virtual unsigned int computeBitsOnNRbs(MacNodeId id, Band b, Codeword cw, unsigned int blocks, const Direction dir, double carrierFrequency);
-    virtual unsigned int computeBitsPerRbBackground(Cqi cqi, const Direction dir, double carrierFrequency);
+    unsigned int computeBitsOnNRbs(MacNodeId id, Band b, unsigned int blocks, const Direction dir, double carrierFrequency) override;
+    unsigned int computeBitsOnNRbs(MacNodeId id, Band b, Codeword cw, unsigned int blocks, const Direction dir, double carrierFrequency) override;
+    unsigned int computeBitsPerRbBackground(Cqi cqi, const Direction dir, double carrierFrequency) override;
 
-//    // multiband version of the above function. It returns the number of bytes that can fit in the given "blocks" of the given "band"
-//    virtual unsigned int computeBytesOnNRbs_MB(MacNodeId id, Band b, unsigned int blocks, const Direction dir, double carrierFrequency);
-//    virtual unsigned int computeBitsOnNRbs_MB(MacNodeId id, Band b, unsigned int blocks, const Direction dir, double carrierFrequency);
 };
 
 } //namespace
 
 #endif
+

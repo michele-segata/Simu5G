@@ -13,61 +13,61 @@
 #define _LOCATIONSERVICE_H
 
 #include "nodes/mec/MECPlatform/MECServices/LocationService/resources/LocationResource.h"
-#include "nodes/mec/MECPlatform/MECServices/MECServiceBase/MecServiceBase.h"
+#include "nodes/mec/MECPlatform/MECServices/MECServiceBase/MecServiceBase2.h"
 
 namespace simu5g {
+
+using namespace omnetpp;
 
 /**
  * Location Service
  * This class inherits the MECServiceBase module interface for the implementation
  * of the Location Service defined in ETSI GS MEC 013 Location API.
- * In particular, the current available functionalities are:
+ * In particular, the currently available functionalities are:
  *  - get the current location of a UE (or a group of UEs)
  *  - get the current location of a Base Station (or a group of Base Stations)
  *  - circle notification subscription
  */
 
-
 //class Location;
 class AperiodicSubscriptionTimer;
 
-class LocationService: public MecServiceBase
+class LocationService : public MecServiceBase2
 {
   private:
 
     LocationResource LocationResource_;
 
     double LocationSubscriptionPeriod_;
-    omnetpp::cMessage *LocationSubscriptionEvent_;
+    cMessage *LocationSubscriptionEvent_ = nullptr;
 
     /*
-    * This timer is used to check aperiodic subscriptions, i.e. every period subscription
-    * states are checked. For example, in the circle notification subscriptions, the timer is used
-    * to check if the UE enters/leaves the circle area    *
-    */
-    AperiodicSubscriptionTimer *subscriptionTimer_;
+     * This timer is used to check aperiodic subscriptions, i.e. every period subscription
+     * states are checked. For example, in the circle notification subscriptions, the timer is used
+     * to check if the UE enters/leaves the circle area.
+     */
+    AperiodicSubscriptionTimer *subscriptionTimer_ = nullptr;
 
   public:
     LocationService();
 
   protected:
 
-    virtual void initialize(int stage) override;
-    virtual void finish() override;
-    virtual void handleMessage(cMessage *msg) override;
+    void initialize(int stage) override;
+    void finish() override;
+    void handleMessage(cMessage *msg) override;
 
-    virtual void handleGETRequest(const HttpRequestMessage *currentRequestMessageServed, inet::TcpSocket* socket) override;
-    virtual void handlePOSTRequest(const HttpRequestMessage *currentRequestMessageServed, inet::TcpSocket* socket)   override;
-    virtual void handlePUTRequest(const HttpRequestMessage *currentRequestMessageServed, inet::TcpSocket* socket)    override;
-    virtual void handleDELETERequest(const HttpRequestMessage *currentRequestMessageServed, inet::TcpSocket* socket) override;
+    void handleGETRequest(const HttpRequestMessage *currentRequestMessageServed, inet::TcpSocket *socket) override;
+    void handlePOSTRequest(const HttpRequestMessage *currentRequestMessageServed, inet::TcpSocket *socket)   override;
+    void handlePUTRequest(const HttpRequestMessage *currentRequestMessageServed, inet::TcpSocket *socket)    override;
+    void handleDELETERequest(const HttpRequestMessage *currentRequestMessageServed, inet::TcpSocket *socket) override;
 
     /*
      * This method is called for every element in the subscriptions_ queue.
      */
-    virtual bool manageSubscription() override;
+    bool manageSubscription() override;
 
-    virtual ~LocationService();
-
+    ~LocationService() override;
 
 };
 

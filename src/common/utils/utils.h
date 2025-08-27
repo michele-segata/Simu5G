@@ -4,15 +4,10 @@
 #ifndef __UTILS_H
 #define __UTILS_H
 
-#include <vector>
-#include <string>
-#include <string.h>
 #include <stdlib.h>
 #include <string>
-
-#include "inet/transportlayer/contract/udp/UdpSocket.h"
-#include "inet/networklayer/common/L3Address.h"
-
+#include <string.h>
+#include <vector>
 
 #ifdef _WIN32
 # include <io.h>
@@ -21,7 +16,12 @@
 # include <unistd.h>
 #endif // ifdef _WIN32
 
-namespace simu5g{
+#include <inet/networklayer/common/L3Address.h>
+#include <inet/transportlayer/contract/udp/UdpSocket.h>
+
+namespace simu5g {
+
+using namespace omnetpp;
 
 namespace utils {
 
@@ -30,12 +30,12 @@ std::vector<std::string> splitString(const std::string& str, std::string delim);
 class cModule_LessId
 {
   public:
-    bool operator()(const omnetpp::cModule *left, const omnetpp::cModule *right) const;
+    bool operator()(const cModule *left, const cModule *right) const;
 };
-
 
 } // namespace utils
 
 } // namespace simu5g
 
-#endif // ifndef __INET_HTTPUTILS_H
+#endif // ifndef __UTILS_H
+

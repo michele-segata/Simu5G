@@ -12,10 +12,11 @@
 #ifndef __RESPONSEAPP_H_
 #define __RESPONSEAPP_H_
 
+#include <inet/networklayer/common/L3Address.h>
+#include <inet/networklayer/common/L3AddressResolver.h>
+#include <inet/transportlayer/contract/udp/UdpSocket.h>
+
 #include "apps/mecRequestResponseApp/packets/MecRequestResponsePacket_m.h"
-#include "inet/transportlayer/contract/udp/UdpSocket.h"
-#include "inet/networklayer/common/L3Address.h"
-#include "inet/networklayer/common/L3AddressResolver.h"
 
 namespace simu5g {
 
@@ -26,19 +27,20 @@ class MecResponseApp : public cSimpleModule
     inet::UdpSocket socket;
     double coreNetworkDelay_;
 
-    static simsignal_t recvRequestSno_;
+    static simsignal_t recvRequestSnoSignal_;
 
-    protected:
+  protected:
 
-        virtual int numInitStages() const { return inet::NUM_INIT_STAGES; }
-        void initialize(int stage);
-        virtual void handleMessage(cMessage *msg);
+    int numInitStages() const override { return inet::NUM_INIT_STAGES; }
+    void initialize(int stage) override;
+    void handleMessage(cMessage *msg) override;
 
-        void handleRequest(cMessage* msg);
-        void sendResponse(cMessage* msg);
+    void handleRequest(cMessage *msg);
+    void sendResponse(cMessage *msg);
 
 };
 
 } //namespace
 
 #endif
+

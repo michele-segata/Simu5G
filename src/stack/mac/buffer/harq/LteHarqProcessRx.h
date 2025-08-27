@@ -18,8 +18,10 @@
 
 namespace simu5g {
 
+using namespace omnetpp;
+
 typedef std::pair<unsigned char, RxHarqPduStatus> RxUnitStatus;
-typedef std::vector<std::vector<RxUnitStatus> > RxBufferStatus;
+typedef std::vector<std::vector<RxUnitStatus>> RxBufferStatus;
 
 class LteMacBase;
 class LteMacPdu;
@@ -27,20 +29,20 @@ class LteHarqFeedback;
 class Binder;
 
 /**
- * H-ARQ RX processes contain pdus received from phy layer for which
+ * H-ARQ RX processes contain PDUs received from the PHY layer for which
  * H-ARQ feedback must be sent.
- * These pdus must be evaluated using H-ARQ correction functions.
- * H-ARQ RX process state machine has three states:
+ * These PDUs must be evaluated using H-ARQ correction functions.
+ * The H-ARQ RX process state machine has three states:
  * RXHARQ_PDU_EMPTY
  * RXHARQ_PDU_EVALUATING
  * RXHARQ_PDU_CORRECT
  */
-// TODO: controllare numero di processi UL/DL, UE, ENB
-// TODO: statistiche per i drop (aggiungere membro?)
+// TODO: check the number of UL/DL processes, UE, ENB
+// TODO: statistics for drops (add member?)
 class LteHarqProcessRx
 {
   protected:
-    /// contained pdus
+    /// contained PDUs
     //std::vector<LteMacPdu *> pdu_;
     std::vector<inet::Packet *> pdu_;
 
@@ -50,20 +52,20 @@ class LteHarqProcessRx
     /// reception time timestamp
     std::vector<inet::simtime_t> rxTime_;
 
-    // reception status of buffered pdus
+    // reception status of buffered PDUs
     std::vector<bool> result_;
 
     /// H-ARQ process identifier
     unsigned char acid_;
 
-    /// mac module to manage errors (endSimulation)
-    LteMacBase *macOwner_;
+    /// MAC module to manage errors (endSimulation)
+    opp_component_ptr<LteMacBase> macOwner_;
 
     /// reference to the binder
-    Binder* binder_;
+    opp_component_ptr<Binder> binder_;
 
-    /// Number of (re)transmissions for current pdu (N.B.: values are 1,2,3,4)
-    unsigned char transmissions_;
+    /// Number of (re)transmissions for current PDU (N.B.: values are 1,2,3,4)
+    unsigned char transmissions_ = 0;
 
     unsigned char maxHarqRtx_;
 
@@ -78,27 +80,27 @@ class LteHarqProcessRx
      * @param acid process identifier
      * @param
      */
-    LteHarqProcessRx(unsigned char acid, LteMacBase *owner);
+    LteHarqProcessRx(unsigned char acid, LteMacBase *owner, Binder *binder);
 
     /**
-     * Inserts a pdu into the process and evaluates it (corrupted or correct).
+     * Inserts a PDU into the process and evaluates it (corrupted or correct).
      *
-     * @param pdu pdu to be inserted
+     * @param pdu PDU to be inserted
      */
     virtual void insertPdu(Codeword cw, inet::Packet *);
 
     /**
-     * Tells if contained pdus have been evaluated and feedback responses can be
+     * Tells if contained PDUs have been evaluated and feedback responses can be
      * sent.
      *
-     * A pdu is evaluated if 4ms has been elapsed since when it was put into the process.
+     * A PDU is evaluated if 4ms has elapsed since it was put into the process.
      *
-     * @return true if the pdu can be acked/nacked, false if the evaluation is still in process.
+     * @return true if the PDU can be acknowledged/nacked, false if the evaluation is still in process.
      */
     virtual bool isEvaluated(Codeword cw);
 
     /**
-     * Creates a feedback message based on the evaluation result for this pdu.
+     * Creates a feedback message based on the evaluation result for this PDU.
      *
      * @return feedback message to be sent.
      */
@@ -106,9 +108,9 @@ class LteHarqProcessRx
     virtual inet::Packet *createFeedback(Codeword cw);
 
     /**
-     * Tells if a pdu is in correct state (not corrupted, exctractable).
+     * Tells if a PDU is in correct state (not corrupted, extractable).
      *
-     * @return true if correct, no otherwise
+     * @return true if correct, false otherwise
      */
     virtual bool isCorrect(Codeword cw);
 
@@ -133,9 +135,9 @@ class LteHarqProcessRx
 
     virtual std::vector<RxUnitStatus> getProcessStatus();
     /**
-     * Extracts a pdu that can be passed to mac layer and reset process status.
+     * Extracts a PDU that can be passed to the MAC layer and reset process status.
      *
-     * @return pdu ready for upper layer
+     * @return PDU ready for upper layer
      */
     virtual inet::Packet *extractPdu(Codeword cw);
 
@@ -172,20 +174,19 @@ class LteHarqProcessRx
     CwList emptyUnitsIds();
 
     /**
-     * @author Alessandro noferi
+     * @author Alessandro Noferi
      *
      * Check if the process is active
      *
-     * @return true if at least on unit status is not RXHARQ_PDU_EMPTY
+     * @return true if at least one unit status is not RXHARQ_PDU_EMPTY
      */
 
     bool isHarqProcessActive();
 
     virtual ~LteHarqProcessRx();
-
-  protected:
 };
 
 } //namespace
 
 #endif
+

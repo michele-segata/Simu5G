@@ -9,17 +9,13 @@
 // and cannot be removed from it.
 //
 
-#include "../../RNIService/resources/Plmn.h"
+#include "nodes/mec/MECPlatform/MECServices/RNIService/resources/Plmn.h"
 
 namespace simu5g {
 
-Plmn::Plmn()
+Plmn::Plmn() : mcc_("001"), mnc_("01") // test mcc and mnc
 {
-    // test mcc and mnc
-    mcc_ = "001";
-    mnc_ = "01";
 }
-
 
 Plmn::Plmn(const std::string& mcc, const std::string& mnc)
 {
@@ -27,7 +23,6 @@ Plmn::Plmn(const std::string& mcc, const std::string& mnc)
     setMnc(mnc);
 }
 
-Plmn::~Plmn(){}
 
 void Plmn::setMcc(const std::string& mcc)
 {
@@ -43,6 +38,7 @@ std::string Plmn::getMcc() const
 {
     return mcc_;
 }
+
 std::string Plmn::getMnc() const
 {
     return mnc_;
@@ -55,7 +51,6 @@ nlohmann::ordered_json Plmn::toJson() const
     val["mnc"] = getMnc();
 
     return val;
-
 }
 
 } //namespace

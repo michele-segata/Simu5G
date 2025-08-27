@@ -19,7 +19,7 @@ namespace simu5g {
 
 class LteFeedbackPkt : public LteFeedbackPkt_Base
 {
-private:
+  private:
     void copy(const LteFeedbackPkt& other) {
         lteFeedbackDoubleVectorDl_ = other.lteFeedbackDoubleVectorDl_;
         lteFeedbackDoubleVectorUl_ = other.lteFeedbackDoubleVectorUl_;
@@ -29,25 +29,29 @@ private:
         lteFeedbackDoubleVectorUl_ = other.lteFeedbackDoubleVectorUl_;
         sourceNodeId_ = other.sourceNodeId_;
     }
+
   protected:
-    // vector of vector with RU and TxMode as indexes
+    // vector of vectors with RU and TxMode as indexes
     LteFeedbackDoubleVector lteFeedbackDoubleVectorDl_;
-    // vector of vector with RU and TxMode as indexes
+    // vector of vectors with RU and TxMode as indexes
     LteFeedbackDoubleVector lteFeedbackDoubleVectorUl_;
-    // map of vector of vector with peering UE, RU and TxMode as indexes
+    // map of vectors of vectors with peering UEs, RUs, and TxModes as indexes
     std::map<MacNodeId, LteFeedbackDoubleVector> lteFeedbackMapDoubleVectorD2D_;
-    //MacNodeId of the source
+    // MacNodeId of the source
     MacNodeId sourceNodeId_;
-    public:
+
+  public:
     LteFeedbackPkt() :
         LteFeedbackPkt_Base()
     {
     }
+
     LteFeedbackPkt(const LteFeedbackPkt& other) :
         LteFeedbackPkt_Base(other)
     {
         copy(other);
     }
+
     LteFeedbackPkt& operator=(const LteFeedbackPkt& other)
     {
         if (this == &other) return *this;
@@ -55,10 +59,12 @@ private:
         copy(other);
         return *this;
     }
-    virtual LteFeedbackPkt *dup() const
+
+    LteFeedbackPkt *dup() const override
     {
         return new LteFeedbackPkt(*this);
     }
+
     LteFeedbackDoubleVector getLteFeedbackDoubleVectorDl() const;
     void setLteFeedbackDoubleVectorDl(LteFeedbackDoubleVector lteFeedbackDoubleVector_);
     LteFeedbackDoubleVector getLteFeedbackDoubleVectorUl() const;
@@ -72,3 +78,4 @@ private:
 } //namespace
 
 #endif
+

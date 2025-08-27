@@ -12,6 +12,7 @@
 #ifndef LTE_LTEX2MANAGER_H_
 #define LTE_LTEX2MANAGER_H_
 
+#include <inet/common/ModuleRefByPar.h>
 #include <inet/networklayer/common/L3AddressResolver.h>
 
 #include "common/LteCommon.h"
@@ -22,14 +23,20 @@
 
 namespace simu5g {
 
-class LteX2Manager : public omnetpp::cSimpleModule {
+using namespace omnetpp;
+
+class LteX2Manager : public cSimpleModule
+{
 
     // X2 identifier
     X2NodeId nodeId_;
 
+    // reference to the LTE Binder module
+    inet::ModuleRefByPar<Binder> binder_;
+
     // "interface table" for data gates
     // for each X2 message type, this map stores the index of the gate vector data
-    // where the destination of that msg is connected to
+    // where the destination of that message is connected to
     std::map<LteX2MessageType, int> dataInterfaceTable_;
 
     // "interface table" for x2 gates
@@ -37,17 +44,18 @@ class LteX2Manager : public omnetpp::cSimpleModule {
     // where the X2AP for that destination is connected to
     std::map<X2NodeId, int> x2InterfaceTable_;
 
-protected:
+  protected:
 
     void initialize(int stage) override;
-    virtual int numInitStages() const override { return inet::NUM_INIT_STAGES; }
-    void handleMessage(omnetpp::cMessage *msg) override;
+    int numInitStages() const override { return inet::NUM_INIT_STAGES; }
+    void handleMessage(cMessage *msg) override;
 
-    virtual void fromStack(inet::Packet* pkt);
-    virtual void fromX2(inet::Packet* pkt);
+    virtual void fromStack(inet::Packet *pkt);
+    virtual void fromX2(inet::Packet *pkt);
 
 };
 
 } //namespace
 
 #endif /* LTE_LTEX2MANAGER_H_ */
+

@@ -20,11 +20,14 @@
 
 namespace simu5g {
 
+using namespace omnetpp;
+
 class LteAirFrame : public LteAirFrame_Base
 {
   protected:
     RemoteUnitPhyDataVector remoteUnitPhyDataVector;
-    public:
+
+  public:
     LteAirFrame(const char *name = nullptr, int kind = 0) :
         LteAirFrame_Base(name, kind)
     {
@@ -42,16 +45,15 @@ class LteAirFrame : public LteAirFrame_Base
         this->remoteUnitPhyDataVector = other.remoteUnitPhyDataVector;
 
         // copy the attached control info, if any
-        if (other.getControlInfo() != nullptr)
-        {
-            UserControlInfo* info = omnetpp::check_and_cast<UserControlInfo*>(other.getControlInfo());
-            UserControlInfo* info_dup = info->dup();
+        if (other.getControlInfo() != nullptr) {
+            UserControlInfo *info = check_and_cast<UserControlInfo *>(other.getControlInfo());
+            UserControlInfo *info_dup = info->dup();
             this->setControlInfo(info_dup);
         }
         return *this;
     }
 
-    virtual LteAirFrame *dup() const
+    LteAirFrame *dup() const override
     {
         return new LteAirFrame(*this);
     }
@@ -65,3 +67,4 @@ Register_Class(LteAirFrame);
 } //namespace
 
 #endif
+

@@ -9,19 +9,19 @@
 // and cannot be removed from it.
 //
 
-
 package simu5g.apps.mec.RnisTestApp;
 
 import inet.applications.contract.IApp;
 
-
 //
-// This UE app asks the Device App to instantiate a MecRnisTestApp.
-// After the MEC app has been initialized, the UE app requests the MEC app to
-// periodically query the RNI Service.
-// When the UE app received the requested info from the MEC app, it just outputs
-// that in the Qtenv log (set the logger parameter to dump the output to a file).
-// If the period is set to 0, then only one query is requested.
+// This application is to be instantiated on the UE side. It requires that a ~DeviceApp is
+// also instantiated on the UE. This module requests the ~DeviceApp to instantiate a
+// ~MecRnisTestApp in the MEC system. The application is used to test and showcase the
+// functionalities of the ~RNIService API.
+// Once the peer MEC application is up and running, this module sends a message to the MEC
+// application, requesting it to start querying the RNIS API periodically. When the
+// response from the  ~MecRnisTestApp is received, the result of the query to the RNIS API
+// is printed to the QtEnv log
 //
 simple UeRnisTestApp like IApp
 {
@@ -30,8 +30,8 @@ simple UeRnisTestApp like IApp
 
         //connection infos
         int localPort = default(4000);
-        int deviceAppPort = default(4000); // ipAddress of the DeviceApp
-        string deviceAppAddress;           // port of the DeviceApp
+        int deviceAppPort = default(4000); // port of the DeviceApp
+        string deviceAppAddress;           // ipAddress of the DeviceApp
 
         double queryingPeriod @unit("s") = default(1s);   // RNIS querying period
 
@@ -45,7 +45,6 @@ simple UeRnisTestApp like IApp
         string mecAppName = default("MecRnisTestApp");
 
         bool logger = default(false);
-        string interfaceTableModule;
 
     gates:
         output socketOut;

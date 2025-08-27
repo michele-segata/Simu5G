@@ -13,12 +13,17 @@
 #define _CELLINFO_H_
 
 #include <omnetpp.h>
+
+#include <inet/common/ModuleRefByPar.h>
 #include <inet/networklayer/contract/ipv4/Ipv4Address.h>
+
 #include "stack/phy/das/RemoteAntennaSet.h"
 #include "common/binder/Binder.h"
 #include "common/LteCommon.h"
 
 namespace simu5g {
+
+using namespace omnetpp;
 
 class DasFilter;
 
@@ -26,13 +31,14 @@ class DasFilter;
  * @class CellInfo
  * @brief There is one CellInfo module for each eNB (thus one for each cell). Keeps cross-layer information about the cell
  */
-class CellInfo : public omnetpp::cSimpleModule
+class CellInfo : public cSimpleModule
 {
   private:
     /// reference to the global module binder
-    Binder *binder_;
+    inet::ModuleRefByPar<Binder> binder_;
+
     /// Remote Antennas for eNB
-    RemoteAntennaSet *ruSet_;
+    RemoteAntennaSet *ruSet_ = new RemoteAntennaSet();
 
     /// Cell Id
     MacCellId cellId_;
@@ -50,14 +56,12 @@ class CellInfo : public omnetpp::cSimpleModule
     double pgnMaxY_;
 
     /// x eNB position
-    double nodeX_;
+    double nodeX_ = 0;
     /// y eNB position
-    double nodeY_;
-    /// z eNB position
-    double nodeZ_;
+    double nodeY_ = 0;
 
     /// Number of DAS RU
-    int numRus_;
+    int numRus_ = 0;
     /// Remote and its CW
     std::map<Remote, int> antennaCws_;
 
@@ -85,38 +89,39 @@ class CellInfo : public omnetpp::cSimpleModule
     /// number of signaling symbols for RB, UL
     int signalUl_;
     /// MCS scale UL
-    double mcsScaleUl_;
+    double mcsScaleUl_ = 0;
     /// MCS scale DL
-    double mcsScaleDl_;
+    double mcsScaleDl_ = 0;
 
     /*
      * Carrier Aggregation support
      */
     // total number of logical bands *in this cell* (sum of bands used by carriers enabled in this cell)
-    unsigned int numBands_;
+    unsigned int numBands_ = 0;
     CarrierInfoMap carrierMap_;
 
     // store the carrier frequencies used by this cell
     std::vector<double> carriersVector_;
 
     // max numerology index used in this cell
-    NumerologyIndex maxNumerologyIndex_;
+    NumerologyIndex maxNumerologyIndex_ = 0;
     /************************************/
 
     // Position of each UE
     std::map<MacNodeId, inet::Coord> uePosition;
 
     std::map<MacNodeId, Lambda> lambdaMap_;
-    protected:
 
-    virtual void initialize(int stage);
-    virtual int numInitStages() const { return inet::INITSTAGE_LOCAL+2; }
+  protected:
+
+    void initialize(int stage) override;
+    int numInitStages() const override { return inet::INITSTAGE_LOCAL + 2; }
 
     /**
      * Deploys remote antennas.
      *
      * This is a virtual deployment: the cellInfo needs only to inform
-     * the eNB nic module about the position of the deployed antennas and
+     * the eNB NIC module about the position of the deployed antennas and
      * their TX power. These parameters are configured via the cellInfo, but
      * no NED module is created here.
      *
@@ -147,53 +152,61 @@ class CellInfo : public omnetpp::cSimpleModule
      * @param[out] xPos calculated x coordinate
      * @param[out] yPos calculated y coordinate
      */
-    // Used by remote Units only
+    // Used by remote units only
     void calculateNodePosition(double centerX, double centerY, int nTh,
-        int totalNodes, int range, double startingAngle, double *xPos,
-        double *yPos);
+            int totalNodes, int range, double startingAngle, double *xPos,
+            double *yPos);
 
     void createAntennaCwMap();
 
   public:
 
-    CellInfo();
 
     MacCellId getMacCellId()
     {
         return cellId_;
     }
+
     int getRbyDl()
     {
         return rbyDl_;
     }
+
     int getRbyUl()
     {
         return rbyUl_;
     }
+
     int getRbxDl()
     {
         return rbxDl_;
     }
+
     int getRbxUl()
     {
         return rbxUl_;
     }
+
     int getRbPilotDl()
     {
         return rbPilotDl_;
     }
+
     int getRbPilotUl()
     {
         return rbPilotUl_;
     }
+
     int getSignalDl()
     {
         return signalDl_;
     }
+
     int getSignalUl()
     {
         return signalUl_;
     }
+
     int getTotalBands()
     {
         return totalBands_;
@@ -209,14 +222,17 @@ class CellInfo : public omnetpp::cSimpleModule
     {
         return mcsScaleUl_;
     }
+
     double getMcsScaleDl()
     {
         return mcsScaleDl_;
     }
+
     int getNumRus()
     {
         return numRus_;
     }
+
     std::map<Remote, int> getAntennaCws()
     {
         return antennaCws_;
@@ -227,7 +243,7 @@ class CellInfo : public omnetpp::cSimpleModule
         return numPreferredBands_;
     }
 
-    RemoteAntennaSet* getRemoteAntennaSet()
+    RemoteAntennaSet *getRemoteAntennaSet()
     {
         return ruSet_;
     }
@@ -244,13 +260,13 @@ class CellInfo : public omnetpp::cSimpleModule
 
     inet::Coord getUePosition(MacNodeId id)
     {
-        if(uePosition.find(id) != uePosition.end())
+        if (uePosition.find(id) != uePosition.end())
             return uePosition[id];
         else
             return inet::Coord::ZERO;
     }
 
-    const std::map<MacNodeId, inet::Coord>* getUePositionList()
+    const std::map<MacNodeId, inet::Coord> *getUePositionList()
     {
         return &uePosition;
     }
@@ -267,36 +283,42 @@ class CellInfo : public omnetpp::cSimpleModule
         lambdaMap_[id].lambdaMin = binder_->phyPisaData.getLambda(index, 1);
         lambdaMap_[id].lambdaRatio = binder_->phyPisaData.getLambda(index, 2);
     }
+
     void lambdaIncrease(MacNodeId id, unsigned int i)
     {
         lambdaMap_[id].index = lambdaMap_[id].lambdaStart + i;
         lambdaUpdate(id, lambdaMap_[id].index);
     }
+
     void lambdaInit(MacNodeId id, unsigned int i)
     {
         lambdaMap_[id].lambdaStart = i;
         lambdaMap_[id].index = lambdaMap_[id].lambdaStart;
         lambdaUpdate(id, lambdaMap_[id].index);
     }
+
     void channelUpdate(MacNodeId id, unsigned int in)
     {
         unsigned int index = in % binder_->phyPisaData.maxChannel2();
         lambdaMap_[id].channelIndex = index;
     }
+
     void channelIncrease(MacNodeId id)
     {
         unsigned int i = getNumBands();
         channelUpdate(id, lambdaMap_[id].channelIndex + i);
     }
-    Lambda* getLambda(MacNodeId id)
+
+    Lambda *getLambda(MacNodeId id)
     {
         return &(lambdaMap_.at(id));
     }
 
-    std::map<MacNodeId, Lambda>* getLambda()
+    std::map<MacNodeId, Lambda> *getLambda()
     {
         return &lambdaMap_;
     }
+
     //---------------------------------------------------------------
 
     /*
@@ -304,15 +326,15 @@ class CellInfo : public omnetpp::cSimpleModule
      */
     // register a new carrier for this node with the given number of bands
     void registerCarrier(double carrierFrequency, unsigned int carrierNumBands, unsigned int numerologyIndex,
-            bool useTdd=false, unsigned int tddNumSymbolsDl=0, unsigned int tddNumSymbolsUl=0);
+            bool useTdd = false, unsigned int tddNumSymbolsDl = 0, unsigned int tddNumSymbolsUl = 0);
 
-    const std::vector<double>* getCarriers();
+    const std::vector<double> *getCarriers();
 
-    const CarrierInfoMap* getCarrierInfoMap();
+    const CarrierInfoMap *getCarrierInfoMap();
 
     NumerologyIndex getMaxNumerologyIndex() { return maxNumerologyIndex_; }
 
-    // convert a carrier-local band index to a cellwise band index
+    // convert a carrier-local band index to a cellwide band index
     unsigned int getCellwiseBand(double carrierFrequency, Band index);
 
     // returns the number of bands for the primary cell
@@ -323,7 +345,7 @@ class CellInfo : public omnetpp::cSimpleModule
 
     // returns the band limit vector for the given carrier
     // if arg is not specified, returns the info for the primary carrier
-    BandLimitVector* getCarrierBandLimit(double carrierFrequency);
+    BandLimitVector *getCarrierBandLimit(double carrierFrequency);
 
     unsigned int getCarrierStartingBand(double carrierFrequency);
     unsigned int getCarrierLastBand(double carrierFrequency);
@@ -332,9 +354,10 @@ class CellInfo : public omnetpp::cSimpleModule
     void detachUser(MacNodeId nodeId);
     void attachUser(MacNodeId nodeId);
 
-    ~CellInfo();
+    ~CellInfo() override;
 };
 
 } //namespace
 
 #endif
+

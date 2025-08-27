@@ -15,8 +15,11 @@ package simu5g.apps.mec.MecRequestResponseApp;
 import inet.applications.contract.IApp;
 
 //
-//  This is a UE app that asks to a Device App to obtain the endpoint of a MECResponseApp.
-//  After a successful response, it ... TBC
+// This application is to be instantiated on the UE side. It requires that a ~DeviceApp is
+// also instantiated at the UE. This module requests the ~DeviceApp to instantiate a
+// ~MECResponseApp in the MEC system.
+// Once the peer MEC application is up and running, this module sends periodic messages to
+// the MEC application and waits for a response. It collects metrics such as round-trip time.
 //
 simple UERequestApp like IApp
 {
@@ -25,8 +28,8 @@ simple UERequestApp like IApp
 
         //connection infos
         int localPort = default(4000);
-        int deviceAppPort = default(4000); // ipAddress of the DeviceApp
-        string deviceAppAddress; // port of the DeviceApp
+        int deviceAppPort = default(4000); // port of the DeviceApp
+        string deviceAppAddress; // ipAddress of the DeviceApp
 
         int requestPacketSize @unit(B) = default(10B);
 
@@ -38,8 +41,6 @@ simple UERequestApp like IApp
         double stopTime @unit("s") = default(120s);
 
         string mecAppName = default("MecResponseApp");
-
-        string interfaceTableModule;
 
         // stats
 

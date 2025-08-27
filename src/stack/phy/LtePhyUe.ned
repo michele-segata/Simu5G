@@ -13,18 +13,30 @@
 package simu5g.stack.phy;
 
 //
-// User Equipment LtePhy module of PHY Layer
+// This module extends the ~LtePhyBase module by providing specific PHY functions
+// on the User Equipment (UE) side. It ensures that frames received on the air interface
+// are sourced from the serving eNodeB (eNB) and provides functions to manage the handover procedure,
+// including periodic measurement of channel conditions to determine when a handover should
+// occur. If enabled, the selection of the serving eNB at initialization is done dynamically
+// based on radio conditions.
 //
 simple LtePhyUe extends LtePhyBase
 {
     parameters:
         @class("LtePhyUe");
 
+        string rlcUmModule = default("^.rlc.um"); // or "^.nrRlc.um"
+        string pdcpRrcModule = default("^.pdcpRrc");
+        string ip2nicModule = default("^.ip2nic");
+        string feedbackGeneratorModule = default("^.dlFbGen"); // TODO or "^.nrDlFbGen"
+
         // if true, get minRssi from PhyPisaData
         bool minRssiDefault = default(true);
 
         // configurable minimum threshold RSSI for attaching to an eNB (meaningful only if minRssiDefault==false)
         double minRssi @unit("dB") = default(-99.0dB);
+
+        bool hasCollector = default(false); // true when node has a collector module (ueCollector/NRueCollector) for this PHY module
 
         @signal[distance];
         @statistic[distance](title="distance between UE and serving base station"; unit="meters"; source="distance"; record=mean,vector);

@@ -15,9 +15,11 @@ package simu5g.nodes.mec.MECPlatform.MECServices.RNIService;
 import simu5g.nodes.mec.MECPlatform.MECServices.MECServiceBase.IMECService;
 import inet.applications.contract.IApp;
 
-//# RNI service module
-
-
+//
+// This module implements a subset of the Radio Network Information Service API defined by the ETSI
+// GS MEC 012 specification. It exposes a REST API that allows MEC applications to retrieve
+// layer-2 measurements related to a User Equipment (UE) or base station.
+//
 simple RNIService like IMECService, IApp
 {
     parameters:
@@ -25,7 +27,6 @@ simple RNIService like IMECService, IApp
         int subscriptionQueueSize = default(0);
         string localAddress = default(""); // local address; may be left empty ("")
         int localPort = default(1000);     // localPort number to listen on
-        string dataTransferMode @enum("bytecount","object","bytestream") = default("bytestream"); // bytestream for emulation
 
         double requestServiceTime @unit(s) = default(0.5us);
         double subscriptionServiceTime @unit(s) = default(0.5us);
@@ -53,6 +54,8 @@ simple RNIService like IMECService, IApp
 
         string scopeOfLocality = default("MEC_HOST");
         bool consumedLocalOnly = default(true);
+
+        string binderModule = default("binder");
 
         @display("i=block/app");
         @signal[requestQueueSize];

@@ -10,18 +10,22 @@
 //
 
 package simu5g.corenetwork.statsCollector;
-//
-// This is the statistic collector of an eNodeB. It stores all the attributes of the RNI
-// service Layer2Meaurements resource. The RNI service will call its methods in order to
-// responds to requests
 
 //
-
-module UeStatsCollector like StatsCollector
+// This module collects the radio network information of a LTE User Equipment (UE), which can
+// be accessed by the ~RNIService module of a ~MECHost. For example, this module
+// provides information such as packet delay and discard rate.
+//
+//
+module UeStatsCollector like IStatsCollector
 {
     parameters:
         string collectorType = default("ueStatsCollector");
+        string binderModule = default("binder");
         string interfaceTableModule;
+        string macModule = default("^.cellularNic.mac");
+        // string pdcpRrcModule = default("^.cellularNic.pdcpRrc");
+        string packetFlowManagerModule = default("^.cellularNic.packetFlowManager");
         bool movingAverage = default(true);
 
         // time periods for measurements

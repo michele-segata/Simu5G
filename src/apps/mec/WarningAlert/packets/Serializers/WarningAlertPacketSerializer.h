@@ -9,11 +9,10 @@
 // and cannot be removed from it.
 //
 
-
 #ifndef _WARNINGALERTPACKETSERIALIZER_H_
 #define _WARNINGALERTPACKETSERIALIZER_H_
 
-#include "inet/common/packet/serializer/FieldsChunkSerializer.h"
+#include <inet/common/packet/serializer/FieldsChunkSerializer.h>
 
 namespace simu5g {
 
@@ -23,7 +22,7 @@ using namespace inet;
  * Converts between ApplicationPacket and binary (network byte order) application packet.
  *
  * This serializer works for all the WarningAppPacket packets.
- * The structure of a WarningAppPacket packets is the following:
+ * The structure of a WarningAppPacket packet is the following:
  * - packet type code
  * - length of the subsequent package size
  * - data
@@ -40,11 +39,8 @@ using namespace inet;
 class WarningAlertPacketSerializer : public FieldsChunkSerializer
 {
   protected:
-    virtual void serialize(MemoryOutputStream& stream, const Ptr<const Chunk>& chunk) const override;
-    virtual const Ptr<Chunk> deserialize(MemoryInputStream& stream) const override;
-
-  public:
-    WarningAlertPacketSerializer() : FieldsChunkSerializer() {}
+    void serialize(MemoryOutputStream& stream, const Ptr<const Chunk>& chunk) const override;
+    const Ptr<Chunk> deserialize(MemoryInputStream& stream) const override;
 };
 
 } //namespace

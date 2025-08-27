@@ -13,7 +13,7 @@
 #define LTE_LTECOMPMANAGERBASE_H_
 
 #include "common/LteCommon.h"
-#include "stack/mac/layer/LteMacEnb.h"
+#include "stack/mac/LteMacEnb.h"
 #include "stack/mac/buffer/LteMacBuffer.h"
 #include "x2/packet/X2ControlInfo_m.h"
 #include "stack/compManager/X2CompMsg.h"
@@ -22,30 +22,31 @@
 
 namespace simu5g {
 
-typedef enum {
+using namespace omnetpp;
+
+enum CompNodeType {
     COMP_CLIENT,
     COMP_CLIENT_COORDINATOR,
     COMP_COORDINATOR
-} CompNodeType;
+};
 
 //
 // LteCompManagerBase
 // Base class for CoMP manager modules.
 // To add a new CoMP algorithm, extend this class and redefine pure virtual methods
 //
-class LteCompManagerBase : public omnetpp::cSimpleModule
+class LteCompManagerBase : public cSimpleModule
 {
-
-protected:
-
+  protected:
     // X2 identifier
     X2NodeId nodeId_;
 
     // reference to the gates
-    omnetpp::cGate* x2Manager_[2];
+    cGate *x2ManagerInGate_ = nullptr;
+    cGate *x2ManagerOutGate_ = nullptr;
 
     // reference to the MAC layer
-    LteMacEnb* mac_;
+    opp_component_ptr<LteMacEnb> mac_;
 
     // number of available bands
     int numBands_;
@@ -54,15 +55,14 @@ protected:
     double coordinationPeriod_;
 
     /// Self messages
-    omnetpp::cMessage* compClientTick_;
-    omnetpp::cMessage* compCoordinatorTick_;
+    cMessage *compClientTick_ = nullptr;
+    cMessage *compCoordinatorTick_ = nullptr;
 
     // Comp Node Type specification (client, client and coordinator, coordinator only)
     CompNodeType nodeType_;
 
     // Last received usable bands
     UsableBands usableBands_;
-
 
     // ID of the coordinator
     X2NodeId coordinatorId_;
@@ -71,30 +71,31 @@ protected:
     std::vector<X2NodeId> clientList_;
 
     // statistics
-    omnetpp::simsignal_t compReservedBlocks_;
+    static simsignal_t compReservedBlocksSignal_;
 
     void runClientOperations();
     void runCoordinatorOperations();
-    void handleX2Message(inet::Packet* pkt);
-    void sendClientRequest(X2CompRequestIE* requestIe);
-    void sendCoordinatorReply(X2NodeId clientId, X2CompReplyIE* replyIe);
+    void handleX2Message(inet::Packet *pkt);
+    void sendClientRequest(X2CompRequestIE *requestIe);
+    void sendCoordinatorReply(X2NodeId clientId, X2CompReplyIE *replyIe);
 
     virtual void provisionalSchedule() = 0;  // run the provisional scheduling algorithm (client side)
     virtual void doCoordination() = 0;       // run the coordination algorithm (coordinator side)
 
-    virtual X2CompRequestIE* buildClientRequest() = 0;
+    virtual X2CompRequestIE *buildClientRequest() = 0;
     virtual void handleClientRequest(inet::IntrusivePtr<X2CompMsg> compMsg) = 0;
 
-    virtual X2CompReplyIE* buildCoordinatorReply(X2NodeId clientId) = 0;
+    virtual X2CompReplyIE *buildCoordinatorReply(X2NodeId clientId) = 0;
     virtual void handleCoordinatorReply(inet::IntrusivePtr<X2CompMsg> compMsg) = 0;
 
     void setUsableBands(UsableBands& usableBands);
 
-public:
-    virtual void initialize() override;
-    virtual void handleMessage(omnetpp::cMessage *msg) override;
+  public:
+    void initialize() override;
+    void handleMessage(cMessage *msg) override;
 };
 
 } //namespace
 
 #endif /* LTE_LTECOMPMANAGERBASE_H_ */
+

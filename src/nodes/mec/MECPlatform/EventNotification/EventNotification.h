@@ -15,11 +15,12 @@
 
 namespace simu5g {
 
-class EventNotification {
-public:
+class EventNotification
+{
+  public:
     EventNotification();
-    virtual ~EventNotification();
-    EventNotification(const std::string& type, const int& subId);
+    EventNotification(const std::string& type, int subId);
+    virtual ~EventNotification() {}
 
     // setters
     virtual int getSubId() const;
@@ -28,11 +29,13 @@ public:
     // getters
     virtual void setSubId(int subId);
     virtual void setType(const std::string& type);
-protected:
-    std::string type_; // type of the subscription to cast to the correct notification Event
-    int subId_; // subscription Id
+
+  protected:
+    std::string type_; // type of the subscription to cast to the correct notification event
+    int subId_; // subscription id
 };
 
 } //namespace
 
 #endif /* NODES_MEC_MEPLATFORM_EVENTNOTIFICATION_EVENTNOTIFICATION_H_ */
+

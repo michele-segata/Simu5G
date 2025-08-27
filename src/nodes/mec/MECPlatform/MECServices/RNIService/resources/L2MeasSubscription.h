@@ -26,25 +26,25 @@ class L2MeasSubscription : public SubscriptionBase
 {
 
     struct FilterCriteriaL2Meas {
-        std::string appIstanceId;
+        std::string appInstanceId; // Fixed spelling from appIstanceId to appInstanceId
         AssociateId associteId_;
         Ecgi ecgi;
     };
 
-    public:
-        L2MeasSubscription();
-        L2MeasSubscription(unsigned int subId, inet::TcpSocket *socket, const std::string& baseResLocation, std::set<cModule*, simu5g::utils::cModule_LessId>& eNodeBs);
-        virtual ~L2MeasSubscription();
-        virtual bool fromJson(const nlohmann::ordered_json& json) override;
-        virtual void sendSubscriptionResponse() override;
-        virtual void sendNotification(EventNotification *event) override;
-        virtual EventNotification* handleSubscription() override {return nullptr;}
+  public:
+    L2MeasSubscription();
+    L2MeasSubscription(unsigned int subId, inet::TcpSocket *socket, const std::string& baseResLocation, std::set<cModule *, simu5g::utils::cModule_LessId>& eNodeBs);
+    bool fromJson(const nlohmann::ordered_json& json) override;
+    void sendSubscriptionResponse() override;
+    void sendNotification(EventNotification *event) override;
+    EventNotification *handleSubscription() override { return nullptr; }
 
-    protected:
-        FilterCriteriaL2Meas filterCriteria_;
+  protected:
+    FilterCriteriaL2Meas filterCriteria_;
 
 };
 
 } //namespace
 
 #endif /* APPS_MEC_MESERVICES_RNISERVICE_RESOURCES_L2MEASSUBSCRIPTION_H_ */
+

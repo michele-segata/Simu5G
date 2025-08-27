@@ -12,6 +12,13 @@
 
 package simu5g.common.cellInfo;
 
+//
+// This module includes data structures and functions used to support local operations
+// at the e/gNodeB, such as the cell ID, the set of Component Carriers (CCs) supported
+// by the e/gNodeB, and more.
+//
+// TODO: Remove obsolete parameters
+//
 simple CellInfo
 {
     parameters:
@@ -21,70 +28,74 @@ simple CellInfo
         //#
         //# General properties
         //#
+        
+        // The minimum X-coordinate of the area constraint, unconstrained by default
+        double constraintAreaMinX @unit(m) = default(-1m/0); 
 
-        double constraintAreaMinX @unit(m) = default(-1m/0); // min x position of the constraint area, unconstrained by
-        double constraintAreaMinY @unit(m) = default(-1m/0); // min y position of the constraint area, unconstrained by
-        double constraintAreaMaxX @unit(m) = default(1m/0); // max x position of the constraint area, unconstrained by d
-        double constraintAreaMaxY @unit(m) = default(1m/0); // max y position of the constraint area, unconstrained by d
+        // The minimum Y-coordinate of the area constraint, unconstrained by default
+        double constraintAreaMinY @unit(m) = default(-1m/0); 
 
-        // speed for CircleMobility and ConstSpeedSpeedMobility
-        double speed @unit(mps) = default(0mps);
+        // The maximum X-coordinate of the area constraint, unconstrained by default
+        double constraintAreaMaxX @unit(m) = default(1m/0); 
 
-        // position update interval for CircleMobility and ConstSpeedMobility
-        double positionUpdateInterval @unit(s) = default(0.001s);
+        // The maximum Y-coordinate of the area constraint, unconstrained by default
+        double constraintAreaMaxY @unit(m) = default(1m/0); 
 
-        // broadcast messages interval (used for handover or das)
+        // Interval for sending broadcast messages (used for handover or DAS)
         double broadcastMessageInterval @unit(s) = default(1s);
 
-        // eNodeB type (MICRO / MACRO) - valid only for eNodeBs
+        // Type of eNodeB (MICRO / MACRO) - valid only for eNodeBs
         bool microCell = default(false);
 
         //#
         //# Remote Units (DAS)
         //#
-        // number of remote Units
+        
+        // Number of Remote Units
         int numRus = default(0);
 
-        // distance range of remote units
+        // Range of Remote Units
         int ruRange = default(0);
 
-        // ru starting angle (only graphical meaning since rus are virtuals)
+        // Initial angle for remote units (used for graphical representation)
         double ruStartingAngle @unit(deg) = default(0deg);
 
-        // CSV string supplying TX power for i-th ru (integer values)
+        // CSV string specifying the TX power for each remote unit (integer values)
         string ruTxPower = default("0;");
 
-        // cws for each antenna, note that first position refers to the MACRO
+        // Codewords for each antenna, first position refers to the MACRO
         string antennaCws = default("1;");
 
         //#
         //# Physical layer properties
         //#
 
-        // number of sub-carriers per RB, DL
+        // Number of sub-carriers per RB in DL
         int rbyDl = default(12);
 
-        // number of sub-carriers per RB, UL
+        // Number of sub-carriers per RB in UL
         int rbyUl = default(12);
 
-        // number of OFDM symbols per slot, DL
+        // Number of OFDM symbols per slot in DL
         int rbxDl = default(7);
 
-        // number of OFDM symbols per slot, UL
+        // Number of OFDM symbols per slot in UL
         int rbxUl = default(7);
 
-        // number of pilot REs per RB, DL
+        // Number of pilot Resource Elements per RB in DL
         int rbPilotDl = default(3);
 
-        // number of pilot REs per RB, UL
+        // Number of pilot Resource Elements per RB in UL
         int rbPilotUl = default(0);
 
-        // number of signaling symbols for RB, DL
+        // Number of signaling symbols for each Resource Block in DL
         int signalDl = default(1);
 
-        // number of signaling symbols for RB, UL
+        // Number of signaling symbols for each Resource Block in UL
         int signalUl = default(1);
 
-        // number of preferred bands to use (meaningful only in PREFERRED mode)
+        // Number of preferred bands to use (relevant only in PREFERRED mode)
         int numPreferredBands = default(1);
+
+        string binderModule = default("binder");
 }

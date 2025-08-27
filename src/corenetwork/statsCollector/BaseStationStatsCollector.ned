@@ -10,17 +10,22 @@
 //
 
 package simu5g.corenetwork.statsCollector;
-//
-// This is the statistic collector of an eNodeB. It stores all the attributes of the RNI
-// service Layer2Meaurements resource. The RNI service will call its methods in order to
-// responds to requests
 
 //
-
-module BaseStationStatsCollector like StatsCollector
+// This module collects the radio network information of an eNodeB, which can
+// be accessed by the ~RNIService module of a ~MECHost. For example, this module
+// provides information such as the utilization of Resource Blocks.
+//
+module BaseStationStatsCollector like IStatsCollector
 {
     parameters:
         string collectorType = default("eNBStatsCollector");
+
+        string macModule = default("^.cellularNic.mac");
+        string pdcpRrcModule = default("^.cellularNic.pdcpRrc");
+        string cellInfoModule = default("^.cellinfo");
+        string rlcUmModule = default("^.cellularNic.rlc.um");
+        string packetFlowManagerModule = default("^.cellularNic.packetFlowManager");
 
         bool movingAverage = default(false);
 

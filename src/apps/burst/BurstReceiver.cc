@@ -15,27 +15,24 @@ namespace simu5g {
 
 Define_Module(BurstReceiver);
 
+simsignal_t BurstReceiver::burstRcvdPktSignal_ = registerSignal("burstRcvdPkt");
+simsignal_t BurstReceiver::burstPktDelaySignal_ = registerSignal("burstPktDelay");
+
 void BurstReceiver::initialize(int stage)
 {
     cSimpleModule::initialize(stage);
 
-    if (stage == INITSTAGE_LOCAL)
-    {
+    if (stage == INITSTAGE_LOCAL) {
         mInit_ = true;
 
         numReceived_ = 0;
 
         recvBytes_ = 0;
-
-        burstRcvdPkt_ = registerSignal("burstRcvdPkt");
-        burstPktDelay_ = registerSignal("burstPktDelay");
     }
-    else if (stage == INITSTAGE_APPLICATION_LAYER)
-    {
+    else if (stage == INITSTAGE_APPLICATION_LAYER) {
         int port = par("localPort");
         EV << "BurstReceiver::initialize - binding to port: local:" << port << endl;
-        if (port != -1)
-        {
+        if (port != -1) {
             socket.setOutputGate(gate("socketOut"));
             socket.bind(port);
         }
@@ -47,19 +44,16 @@ void BurstReceiver::handleMessage(cMessage *msg)
     if (msg->isSelfMessage())
         return;
 
-    Packet* pPacket = check_and_cast<Packet*>(msg);
-    if (pPacket == nullptr)
-            throw cRuntimeError("BurstReceiver::handleMessage - FATAL! Error when casting to inet::Packet");
-
+    Packet *pPacket = check_and_cast<Packet *>(msg);
     auto burstHeader = pPacket->popAtFront<BurstPacket>();
 
     numReceived_++;
 
-    simtime_t delay = simTime()-burstHeader->getPayloadTimestamp();
-    EV << "BurstReceiver::handleMessage - Packet received: FRAME[" << burstHeader->getMsgId() << "] with delay["<< delay << "]" << endl;
+    simtime_t delay = simTime() - burstHeader->getPayloadTimestamp();
+    EV << "BurstReceiver::handleMessage - Packet received: FRAME[" << burstHeader->getMsgId() << "] with delay[" << delay << "]" << endl;
 
-    emit(burstPktDelay_, delay);
-    emit(burstRcvdPkt_, (long)burstHeader->getMsgId());
+    emit(burstPktDelaySignal_, delay);
+    emit(burstRcvdPktSignal_, (long)burstHeader->getMsgId());
 
     delete msg;
 }

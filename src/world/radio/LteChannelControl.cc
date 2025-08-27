@@ -21,11 +21,8 @@ Define_Module(LteChannelControl);
 
 using namespace omnetpp;
 
-#define coreEV EV << "LteChannelControl: "
+#define coreEV    EV << "LteChannelControl: "
 
-LteChannelControl::~LteChannelControl()
-{
-}
 
 /**
  * Calculates maxInterferenceDistance.
@@ -41,7 +38,7 @@ void LteChannelControl::initialize()
 /**
  * Calculation of the interference distance based on the transmitter
  * power, wavelength, pathloss coefficient and a threshold for the
- * minimal receive Power
+ * minimal receive power
  *
  * You may want to overwrite this function in order to do your own
  * interference calculation
@@ -52,17 +49,17 @@ double LteChannelControl::calcInterfDist()
 {
     double interfDistance;
 
-    //the carrier frequency used
+    // The carrier frequency used
     double carrierFrequency = par("carrierFrequency");
-    //maximum transmission power possible
+    // Maximum transmission power possible
     double pMax = par("pMax");
-    //signal attenuation threshold
+    // Signal attenuation threshold
     double sat = par("sat");
-    //path loss coefficient
+    // Path loss coefficient
     double alpha = par("alpha");
 
     double waveLength = (SPEED_OF_LIGHT / carrierFrequency);
-    //minimum power level to be able to physically receive a signal
+    // Minimum power level to be able to physically receive a signal
     double minReceivePower = pow(10.0, sat / 10.0);
 
     interfDistance = pow(waveLength * waveLength * pMax / (16.0 * M_PI * M_PI * minReceivePower), 1.0 / alpha);
@@ -76,17 +73,15 @@ void LteChannelControl::sendToChannel(RadioRef srcRadio, AirFrame *airFrame)
 {
     // NOTE: no Enter_Method()! We pretend this method is part of ChannelAccess
 
-    // loop through all radios in range
+    // Loop through all radios in range
     const RadioRefVector& neighbors = getNeighbors(srcRadio);
-    for (unsigned int i=0; i<neighbors.size(); i++)
-    {
-        RadioRef r = neighbors[i];
+    for (auto r : neighbors) {
         coreEV << "sending message to radio\n";
         simtime_t delay = 0.0;
-        check_and_cast<cSimpleModule*>(srcRadio->radioModule)->sendDirect(airFrame->dup(), delay, airFrame->getDuration(), r->radioInGate);
+        check_and_cast<cSimpleModule *>(srcRadio->radioModule.get())->sendDirect(airFrame->dup(), delay, airFrame->getDuration(), r->radioInGate);
     }
 
-    // the original frame can be deleted
+    // The original frame can be deleted
     delete airFrame;
 }
 

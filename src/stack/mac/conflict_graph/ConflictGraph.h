@@ -10,22 +10,23 @@
 //
 
 #ifndef CONFLICTGRAPH_H
-#define	CONFLICTGRAPH_H
+#define CONFLICTGRAPH_H
 
-#include "stack/mac/layer/LteMacEnbD2D.h"
+#include "stack/mac/LteMacEnbD2D.h"
 #include "common/cellInfo/CellInfo.h"
 
 namespace simu5g {
 
-typedef enum
+using namespace omnetpp;
+
+enum CGType
 {
     CG_DISTANCE,
     CG_UNKNOWN
-} CGType;
-
+};
 
 /*
- * Define the structure for graph's vertices
+ * Define the structure for graph vertices
  */
 struct CGVertex
 {
@@ -46,19 +47,19 @@ struct CGVertex
         return (srcId == v1.srcId) && (dstId == v1.dstId);
     }
 
-public:
-    CGVertex(MacNodeId src = 0, MacNodeId dst = 0)
+  public:
+    CGVertex(MacNodeId src = NODEID_NONE, MacNodeId dst = NODEID_NONE) : srcId(src), dstId(dst)
     {
-        srcId = src;
-        dstId = dst;
     }
+
     bool isMulticast() const
     {
-        return (dstId == 0);
+        return dstId == NODEID_NONE;
     }
+
 };
 
-typedef std::map<CGVertex, std::map<CGVertex, bool> > CGMatrix;
+typedef std::map<CGVertex, std::map<CGVertex, bool>> CGMatrix;
 class CellInfo;
 class LteMacEnbD2D;
 
@@ -66,7 +67,7 @@ class LteMacEnbD2D;
  *  \brief Define the manager of the conflict graph (CG) for resource allocation purposes.
  *
  *  This module maintains all the information about the building of the conflict graph among UEs
- *  for enabling frequency reuse during resource allocation of D2D-capable UEs (i.e. conflicting
+ *  to enable frequency reuse during resource allocation of D2D-capable UEs (i.e. conflicting
  *  UEs should not be allocated on the same resource block).
  *  This module builds a directed CG where vertices are UEs and there is an edge between UE a and
  *  UE b when the power perceived by b from a is above a certain threshold.
@@ -74,13 +75,14 @@ class LteMacEnbD2D;
 class ConflictGraph
 {
 
-protected:
+  protected:
+    opp_component_ptr<Binder> binder_;
 
-    // reference to the MAC layer
-    LteMacEnbD2D *macEnb_;
+    // Reference to the MAC layer
+    opp_component_ptr<LteMacEnbD2D> macEnb_;
 
     // Reference to the CellInfo
-    CellInfo *cellInfo_;
+    opp_component_ptr<CellInfo> cellInfo_;
 
     // Conflict Graph
     CGMatrix conflictGraph_;
@@ -95,10 +97,9 @@ protected:
     virtual void findVertices(std::vector<CGVertex>& vertices) = 0;
     virtual void findEdges(const std::vector<CGVertex>& vertices) = 0;
 
-public:
+  public:
 
-    ConflictGraph(LteMacEnbD2D* macEnb, bool reuseD2D, bool reuseD2DMulti);
-    virtual ~ConflictGraph();
+    ConflictGraph(Binder *binder, LteMacEnbD2D *macEnb, bool reuseD2D, bool reuseD2DMulti);
 
     // compute Conflict Graph
     void computeConflictGraph();
@@ -106,10 +107,10 @@ public:
     // print Conflict Graph - for debug
     void printConflictGraph();
 
-    const CGMatrix* getConflictGraph() { return &conflictGraph_; }
+    const CGMatrix *getConflictMatrix() const { return &conflictGraph_; }
 };
 
 } //namespace
 
-#endif	/* CONFLICTGRAPH_H */
+#endif /* CONFLICTGRAPH_H */
 

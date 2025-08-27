@@ -13,7 +13,10 @@
 package simu5g.nodes.mec.MECPlatform;
 
 //
-// Template for ME Services.
+// This module interface defines the structure that every
+// MEC Service must implement (see, e.g., ~LocationService)
+//
+// TODO: obsolete, to be removed (see ~IMECService instead)
 //
 moduleinterface IMEService
 {
@@ -22,7 +25,6 @@ moduleinterface IMEService
         string serviceName;
 
     gates:
-
         input meAppIn[];
         output meAppOut[];
 }

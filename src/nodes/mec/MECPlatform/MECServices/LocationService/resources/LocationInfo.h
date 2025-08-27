@@ -9,28 +9,29 @@
 // and cannot be removed from it.
 //
 
-#ifndef CORENETWORK_NODES_MEC_MECPLATFORM_MESERVICES_LOCATIONSERVICE_RESOURCES_LOCATIONINFO_H_
-#define CORENETWORK_NODES_MEC_MECPLATFORM_MESERVICES_LOCATIONSERVICE_RESOURCES_LOCATIONINFO_H_
+#ifndef CORENETWORK_NODES_MEC_MECPLATFORM_MEC_SERVICES_LOCATIONSERVICE_RESOURCES_LOCATIONINFO_H_
+#define CORENETWORK_NODES_MEC_MECPLATFORM_MEC_SERVICES_LOCATIONSERVICE_RESOURCES_LOCATIONINFO_H_
+
+#include <inet/common/geometry/common/Coord.h>
 
 #include "nodes/mec/MECPlatform/MECServices/Resources/AttributeBase.h"
-#include "inet/common/geometry/common/Coord.h"
 
 namespace simu5g {
 
 class LocationInfo : public AttributeBase
 {
-    public:
-        LocationInfo();
-        LocationInfo(const inet::Coord& coordinates, const inet::Coord& speed);
-        LocationInfo(const inet::Coord& coordinates);
-        virtual ~LocationInfo();
-        nlohmann::ordered_json toJson() const override;
+  public:
+    LocationInfo();
+    LocationInfo(const inet::Coord& coordinates, const inet::Coord& speed);
+    LocationInfo(const inet::Coord& coordinates);
+    nlohmann::ordered_json toJson() const override;
 
-    private:
-        inet::Coord coordinates_;
-        inet::Coord speed_;
+  private:
+    inet::Coord coordinates_;
+    inet::Coord speed_;
 };
 
 } //namespace
 
-#endif /* CORENETWORK_NODES_MEC_MECPLATFORM_MESERVICES_LOCATIONSERVICE_RESOURCES_LOCATIONINFO_H_ */
+#endif /* CORENETWORK_NODES_MEC_MECPLATFORM_MEC_SERVICES_LOCATIONSERVICE_RESOURCES_LOCATIONINFO_H_ */
+

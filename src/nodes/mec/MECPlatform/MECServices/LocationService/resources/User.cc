@@ -13,25 +13,21 @@
 
 namespace simu5g {
 
-User::User():timestamp_(){}
-User::User(const inet::Ipv4Address& address, const MacCellId accessPointId, const std::string& resourceUrl, int zoneId):timestamp_()
+using namespace omnetpp;
+
+User::User():timestamp_() {}
+User::User(const inet::Ipv4Address& address, const MacCellId accessPointId, const std::string& resourceUrl, int zoneId):timestamp_(), address_(address), zoneId_(zoneId), accessPointId_(accessPointId), resourceUrl_(resourceUrl)
 {
-    address_ = address;
-    accessPointId_ = accessPointId;
-    resourceUrl_ = resourceUrl;
-    zoneId_ = zoneId;
 }
-
-
 
 nlohmann::ordered_json User::toJson() const
 {
     nlohmann::ordered_json val;
-    val["address"] = "acr:"+address_.str();
+    val["address"] = "acr:" + address_.str();
     val["accessPointId"] = accessPointId_;
     val["zoneId"] = zoneId_;
     val["resourceURL"] = resourceUrl_;
-    val["timeStamp"] = omnetpp::simTime().dbl();
+    val["timeStamp"] = simTime().dbl();
 
     return val;
 }

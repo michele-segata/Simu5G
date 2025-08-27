@@ -31,11 +31,9 @@ void LteCompManagerProportional::provisionalSchedule()
     provisionedBlocks_ = 0;
 
     Direction dir = DL;
-    LteMacBufferMap* vbuf = mac_->getMacBuffers();
-    ActiveSet* activeSet = mac_->getActiveSet(dir);
-    ActiveSet::iterator ait = activeSet->begin();
-    for (; ait != activeSet->end(); ++ait) {
-        MacCid cid = *ait;
+    LteMacBufferMap *vbuf = mac_->getMacBuffers();
+    ActiveSet *activeSet = mac_->getActiveSet(dir);
+    for (MacCid cid : *activeSet) {
         MacNodeId ueId = MacCidToNodeId(cid);
 
         unsigned int queueLength = vbuf->at(cid)->getQueueOccupancy();
@@ -47,7 +45,7 @@ void LteCompManagerProportional::provisionalSchedule()
         Band band = 0;
         bytesPerBlock = mac_->getAmc()->computeBytesOnNRbs(ueId, band, cw,
                 blocks, dir, primaryCarrierFrequency); // The index of the band is useless
-        EV << NOW << " LteCompManagerProportional::provisionalSchedule - Per il nodo: " << ueId << " sono disponibili: " << bytesPerBlock << " bytes in un blocco" << endl;
+        EV << NOW << " LteCompManagerProportional::provisionalSchedule - For the node: " << ueId << " available: " << bytesPerBlock << " bytes in one block" << endl;
 
         // Compute the number of blocks required to satisfy the UE's buffer
         unsigned int reqBlocks;
@@ -55,7 +53,7 @@ void LteCompManagerProportional::provisionalSchedule()
             reqBlocks = 0;
         else
             reqBlocks = (queueLength + bytesPerBlock - 1) / bytesPerBlock;
-        EV << NOW << " LteCompManagerProportional::provisionalSchedule - Per il nodo: " << ueId << " sono necessari: " << reqBlocks << " blocchi" << endl;
+        EV << NOW << " LteCompManagerProportional::provisionalSchedule - For the node: " << ueId << " required: " << reqBlocks << " blocks" << endl;
 
         provisionedBlocks_ += reqBlocks;
     }
@@ -71,27 +69,22 @@ void LteCompManagerProportional::doCoordination()
     offset_.clear();
 
     unsigned int requestsSum = 0;
-    std::map<X2NodeId, unsigned int>::iterator it = reqBlocksMap_.begin();
-    for (; it != reqBlocksMap_.end(); ++it)
-        requestsSum += it->second;
+    for (const auto& [nodeId, reqCount] : reqBlocksMap_)
+        requestsSum += reqCount;
 
     // assign a number of blocks that is proportional to the requests received from each eNB
     unsigned int totalReservedBlocks = 0;
     std::vector<double> reservation;
-    reservation.clear();
-    for (it = reqBlocksMap_.begin(); it != reqBlocksMap_.end(); ++it)
-    {
-
+    for (const auto& [nodeId, req] : reqBlocksMap_) {
 
         // requests from the current node
-        unsigned int req = it->second;
 
         // compute the number of blocks to reserve
         double percentage;
         if (requestsSum == 0)
-            percentage = 1.0 / (clientList_.size() + 1);  // slaves + master
+            percentage = 1.0 / (clientList_.size() + 1);                                                            // slaves + master
         else
-            percentage = (double) req / requestsSum;
+            percentage = (double)req / requestsSum;
 
         double toReserve = numBands_ * percentage;
         totalReservedBlocks += toReserve;
@@ -103,33 +96,29 @@ void LteCompManagerProportional::doCoordination()
     partitioning_ = roundVector(reservation, totalReservedBlocks);
 
     offset_.push_back(0);
-    for (unsigned int i=0; i < partitioning_.size() - 1; i++)
-    {
+    for (unsigned int i = 0; i < partitioning_.size() - 1; i++) {
         offset_.push_back(partitioning_[i]);
     }
 
     EV << NOW << " LteCompManagerProportional::doCoordination - End " << endl;
 }
 
-X2CompProportionalRequestIE* LteCompManagerProportional::buildClientRequest()
+X2CompProportionalRequestIE *LteCompManagerProportional::buildClientRequest()
 {
     // build IE
-    X2CompProportionalRequestIE* requestIe = new X2CompProportionalRequestIE();
+    X2CompProportionalRequestIE *requestIe = new X2CompProportionalRequestIE();
     requestIe->setNumBlocks(provisionedBlocks_);
 
     return requestIe;
 }
 
-X2CompProportionalReplyIE* LteCompManagerProportional::buildCoordinatorReply(X2NodeId clientId)
+X2CompProportionalReplyIE *LteCompManagerProportional::buildCoordinatorReply(X2NodeId clientId)
 {
     // find the correct entry in the partitioning vector
     bool found = false;
     unsigned int index = 0;
-    std::map<X2NodeId, unsigned int>::iterator it = reqBlocksMap_.begin();
-    for (; it != reqBlocksMap_.end(); ++it)
-    {
-        if (it->first == clientId)
-        {
+    for (const auto& [key, value] : reqBlocksMap_) {
+        if (key == clientId) {
             found = true;
             break;
         }
@@ -138,11 +127,11 @@ X2CompProportionalReplyIE* LteCompManagerProportional::buildCoordinatorReply(X2N
 
     unsigned int numBlocks = 0;
     unsigned int band = 0;
-    if (found)
-    {
+    if (found) {
         numBlocks = partitioning_[index];
         band = offset_[index];
-    } else {
+    }
+    else {
         EV << "LteCompManagerProportional::buildCoordinatorReply: no information for " << clientId << " available (number of requested blocks unknown)" << std::endl;
     }
 
@@ -150,18 +139,16 @@ X2CompProportionalReplyIE* LteCompManagerProportional::buildCoordinatorReply(X2N
     std::vector<CompRbStatus> allowedBlocks;
 
     // set "numBlocks" contiguous blocks for this node
-    allowedBlocks.clear();
     allowedBlocks.resize(numBands_, NOT_AVAILABLE_RB);
     unsigned int lb = band;
     unsigned int ub = band + numBlocks;
-    for (unsigned int b = lb; b < ub; b++)
-    {
+    for (unsigned int b = lb; b < ub; b++) {
         allowedBlocks[b] = AVAILABLE_RB;
         band++;
     }
 
     // build IE
-    X2CompProportionalReplyIE* replyIe = new X2CompProportionalReplyIE();
+    X2CompProportionalReplyIE *replyIe = new X2CompProportionalReplyIE();
     replyIe->setAllowedBlocksMap(allowedBlocks);
 
     return replyIe;
@@ -170,20 +157,19 @@ X2CompProportionalReplyIE* LteCompManagerProportional::buildCoordinatorReply(X2N
 void LteCompManagerProportional::handleClientRequest(inet::Ptr<X2CompMsg> compMsg)
 {
     X2NodeId sourceId = compMsg->getSourceId();
-    while (compMsg->hasIe())
-    {
-        X2InformationElement* ie = compMsg->popIe();
+    while (compMsg->hasIe()) {
+        X2InformationElement *ie = compMsg->popIe();
         if (ie->getType() != COMP_PROP_REQUEST_IE)
             throw cRuntimeError("LteCompManagerProportional::handleClientRequest - Expected COMP_PROP_REQUEST_IE");
 
-        X2CompProportionalRequestIE* requestIe = check_and_cast<X2CompProportionalRequestIE*>(ie);
+        X2CompProportionalRequestIE *requestIe = check_and_cast<X2CompProportionalRequestIE *>(ie);
         unsigned int reqBlocks = requestIe->getNumBlocks();
 
-        EV << "LteCompManagerProportional::handleClientRequest: " << this->getFullPath() << "received request from " << sourceId << " for " << reqBlocks << " blocks." << std::endl;
+        EV << "LteCompManagerProportional::handleClientRequest: " << this->getFullPath() << " received request from " << sourceId << " for " << reqBlocks << " blocks." << std::endl;
 
         // update map entry for this node
         if (reqBlocksMap_.find(sourceId) == reqBlocksMap_.end())
-            reqBlocksMap_.insert(std::pair<X2NodeId, unsigned int>(sourceId, reqBlocks));
+            reqBlocksMap_.insert({sourceId, reqBlocks});
         else
             reqBlocksMap_[sourceId] = reqBlocks;
 
@@ -193,19 +179,18 @@ void LteCompManagerProportional::handleClientRequest(inet::Ptr<X2CompMsg> compMs
 
 void LteCompManagerProportional::handleCoordinatorReply(inet::Ptr<X2CompMsg> compMsg)
 {
-    while (compMsg->hasIe())
-    {
-        X2InformationElement* ie = compMsg->popIe();
+    while (compMsg->hasIe()) {
+        X2InformationElement *ie = compMsg->popIe();
         if (ie->getType() != COMP_PROP_REPLY_IE)
             throw cRuntimeError(
                     "LteCompManagerProportional::handleCoordinatorReply - Expected COMP_PROP_REPLY_IE");
 
         // parse reply message
-        X2CompProportionalReplyIE* replyIe = check_and_cast<X2CompProportionalReplyIE*>(ie);
+        X2CompProportionalReplyIE *replyIe = check_and_cast<X2CompProportionalReplyIE *>(ie);
         std::vector<CompRbStatus> allowedBlocksMap = replyIe->getAllowedBlocksMap();
         UsableBands usableBands = parseAllowedBlocksMap(allowedBlocksMap);
 
-        EV << "at" << this->getFullPath() << " LteCompManagerProportional::handleCoordinatorReply: " << usableBands.size() << " bands usable." << std::endl;
+        EV << "At " << this->getFullPath() << " LteCompManagerProportional::handleCoordinatorReply: " << usableBands.size() << " bands usable." << std::endl;
 
         setUsableBands(usableBands);
 
@@ -217,17 +202,15 @@ UsableBands LteCompManagerProportional::parseAllowedBlocksMap(std::vector<CompRb
 {
     unsigned int reservedBlocks = 0;
     UsableBands usableBands;
-    for (unsigned int b = 0; b < allowedBlocksMap.size(); b++)
-    {
-        if (allowedBlocksMap[b] == AVAILABLE_RB)
-        {
+    for (unsigned int b = 0; b < allowedBlocksMap.size(); b++) {
+        if (allowedBlocksMap[b] == AVAILABLE_RB) {
             // eNB is allowed to use this block
             usableBands.push_back(b);
             reservedBlocks++;
         }
     }
 
-    emit(compReservedBlocks_, reservedBlocks);
+    emit(compReservedBlocksSignal_, reservedBlocks);
 
     return usableBands;
 }
@@ -243,8 +226,7 @@ std::vector<unsigned int> LteCompManagerProportional::roundVector(std::vector<do
     std::vector<unsigned int> integerVec;
     integerVec.resize(len, 0);
 
-    if (len > 0)
-    {
+    if (len > 0) {
         // auxiliary vector
         std::vector<unsigned int> auxVec;
         auxVec.resize(len, 0);
@@ -253,13 +235,10 @@ std::vector<unsigned int> LteCompManagerProportional::roundVector(std::vector<do
 
         // sort vector in ascending order
         bool swap = true;
-        while (swap)
-        {
+        while (swap) {
             swap = false;
-            for (unsigned int i = 0; i < len - 1; i++)
-            {
-                if (vec[i] > vec[i + 1])
-                {
+            for (unsigned int i = 0; i < len - 1; i++) {
+                if (vec[i] > vec[i + 1]) {
                     double tmp = vec[i + 1];
                     vec[i + 1] = vec[i];
                     vec[i] = tmp;
@@ -276,18 +255,16 @@ std::vector<unsigned int> LteCompManagerProportional::roundVector(std::vector<do
         // round vector (the sum of the elements is preserved)
         int integerTot = 0;
         double doubleTot = 0;
-        for (unsigned int i = 0; i < len; i++)
-        {
+        for (unsigned int i = 0; i < len; i++) {
             doubleTot += vec[i];
-            vec[i] = (int) (doubleTot - integerTot);
+            vec[i] = (int)(doubleTot - integerTot);
             integerTot += vec[i];
         }
 
         // TODO -  check numerical errors
 
         // set the integer vector with the elements in their original positions
-        for (unsigned int i = 0; i < integerVec.size(); i++)
-        {
+        for (unsigned int i = 0; i < integerVec.size(); i++) {
             unsigned int index = auxVec[i];
             integerVec[index] = vec[i];
         }

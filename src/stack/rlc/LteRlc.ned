@@ -12,16 +12,25 @@
 
 package simu5g.stack.rlc;
 
+import simu5g.stack.rlc.am.LteRlcAm;
+import simu5g.stack.rlc.tm.LteRlcTm;
+import simu5g.stack.rlc.um.ILteRlcUm;
+
+
 //
-// Compound module for the RLC layer of LTE Stack.
+// The LteRlc module implements the functionalities of the Radio Link Control (RLC) layer.
+// It provides mechanisms for end-to-end connectivity over the radio interface. It
+// sends and receives RLC Service Data Units (SDUs) to and from the Packet Data Convergence
+// Protocol (PDCP) layer, and sends and receives RLC Protocol Data Units (PDUs) to and from the
+// Medium Access Control (MAC) layer. Depending on the mode, this layer can provide
+// segmentation, concatenation, in-sequence delivery, and retransmission of PDUs.
+// Currently, only the Unacknowledged Mode (UM) has been implemented.
 //
 module LteRlc
 {
     parameters:
         @display("i=block/transport");
-        string LteRlcUmType = default("LteRlcUm");                   // One of: "LteRlcUm", "LteRlcUmD2D"
         bool d2dCapable;                                             // inherit the value from the parent module
-        string umType = d2dCapable ? "LteRlcUmD2D" : LteRlcUmType;
 
     gates:
         //#
@@ -46,7 +55,7 @@ module LteRlc
         }
 
         // UM Module
-        um: <umType> like ILteRlcUm {
+        um: <(d2dCapable ? "LteRlcUmD2D" : "LteRlcUm")> like ILteRlcUm {
             @display("p=200,100;");
         }
 

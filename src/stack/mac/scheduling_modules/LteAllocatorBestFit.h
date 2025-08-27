@@ -25,7 +25,6 @@ struct Candidate {
     bool greater;
 };
 
-
 class LteAllocatorBestFit : public virtual LteScheduler
 {
   protected:
@@ -33,12 +32,12 @@ class LteAllocatorBestFit : public virtual LteScheduler
     typedef SortedDesc<MacCid, unsigned int> ScoreDesc;
     typedef std::priority_queue<ScoreDesc> ScoreList;
 
-    ConflictGraph* conflictGraph_;
+    ConflictGraph *conflictGraph_ = nullptr;
 
     /**
-     * e.g. allocatedRbsBand_ [ <plane> ] [ <antenna> ] [ <band> ] give the the amount of blocks allocated for each UE
+     * e.g. allocatedRbsBand_ [ <plane> ] [ <antenna> ] [ <band> ] gives the amount of blocks allocated for each UE
      */
-    std::vector<std::vector<AllocatedRbsPerBandMapA> > allocatedRbsPerBand_;
+    std::vector<std::vector<AllocatedRbsPerBandMapA>> allocatedRbsPerBand_;
 
     // For each UE, stores the amount of blocks allocated for each band
     AllocatedRbsPerUeMapA allocatedRbsUe_;
@@ -48,14 +47,14 @@ class LteAllocatorBestFit : public virtual LteScheduler
      *
      * e.g. allocatedRbsMatrix_[ <plane> ] [ <antenna> ]
      */
-    std::vector<std::vector<unsigned int> > allocatedRbsMatrix_;
+    std::vector<std::vector<unsigned int>> allocatedRbsMatrix_;
 
-    // Map that specify ,for each NodeId,wich bands are free and wich are not
-    std::map<MacNodeId,std::map<Band,bool> > perUEbandStatusMap_;
+    // Map that specifies, for each NodeId, which bands are free and which are not
+    std::map<MacNodeId, std::map<Band, bool>> perUEbandStatusMap_;
 
-    typedef std::pair<AllocationUeType,std::set<MacNodeId> > AllocationType_Set;
-    // Map that specify which bands can(non exclusive bands-D2D) or cannot(exlcusive bands-CELL) be shared
-    std::map<Band,AllocationType_Set> bandStatusMap_;
+    typedef std::pair<AllocationUeType, std::set<MacNodeId>> AllocationType_Set;
+    // Map that specifies which bands can (non-exclusive bands-D2D) or cannot (exclusive bands-CELL) be shared
+    std::map<Band, AllocationType_Set> bandStatusMap_;
 
     /**
      * Enumerator specified for the return of mutualExclusiveAllocation() function.
@@ -66,15 +65,15 @@ class LteAllocatorBestFit : public virtual LteScheduler
     void checkHole(Candidate& candidate, Band holeIndex, unsigned int holeLen, unsigned int req);
 
     // returns true if the two nodes cannot transmit on the same block
-    bool checkConflict(const CGMatrix* cgMatrix, MacNodeId nodeIdA, MacNodeId nodeIdB);
+    bool checkConflict(const CGMatrix *cgMatrix, MacNodeId nodeIdA, MacNodeId nodeIdB);
 
   public:
 
-    LteAllocatorBestFit();
+    LteAllocatorBestFit(Binder *binder);
 
-    virtual void prepareSchedule();
+    void prepareSchedule() override;
 
-    virtual void commitSchedule();
+    void commitSchedule() override;
 
     // *****************************************************************************************
 
@@ -82,9 +81,10 @@ class LteAllocatorBestFit : public virtual LteScheduler
     void initAndReset();
 
     // Set the specified bands to exclusive
-    void setAllocationType(std::vector<Band> bandVect, AllocationUeType type,MacNodeId nodeId);
+    void setAllocationType(std::vector<Band> bandVect, AllocationUeType type, MacNodeId nodeId);
 };
 
 } //namespace
 
 #endif // _LTE_LTEALLOCATORBESTFIT_H_
+

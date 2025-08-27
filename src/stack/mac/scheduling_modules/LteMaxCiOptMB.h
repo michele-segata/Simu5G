@@ -18,8 +18,8 @@
 
 namespace simu5g {
 
-typedef std::map< MacNodeId,std::vector<BandLimit> > SchedulingDecision;
-typedef std::map<MacNodeId,UsableBands> UsableBandList;
+typedef std::map<MacNodeId, std::vector<BandLimit>> SchedulingDecision;
+typedef std::map<MacNodeId, UsableBands> UsableBandList;
 
 class LteMaxCiOptMB : public virtual LteScheduler
 {
@@ -27,14 +27,13 @@ class LteMaxCiOptMB : public virtual LteScheduler
     std::string problemFile_;
     std::string solutionFile_;
 
-
     std::vector<MacNodeId> ueList_;
     std::vector<MacCid> cidList_;
     SchedulingDecision schedulingDecision_;
 
     UsableBandList usableBands_;
 
-    // read the CQIs and queue infos for each user and build an optimization problem
+    // read the CQIs and queue information for each user and build an optimization problem
     void generateProblem();
 
     // call the interactive solver
@@ -45,16 +44,17 @@ class LteMaxCiOptMB : public virtual LteScheduler
 
     // apply the scheduling decision in the allocator (occupies the Resource blocks)
     void applyScheduling();
-public:
-    LteMaxCiOptMB();
-    virtual ~LteMaxCiOptMB(){};
 
-    virtual void prepareSchedule();
+  public:
+    LteMaxCiOptMB(Binder *binder);
 
-    virtual void commitSchedule();
+    void prepareSchedule() override;
+
+    void commitSchedule() override;
 
 };
 
 } //namespace
 
 #endif /* LTEMAXCIOPTMB_H_ */
+

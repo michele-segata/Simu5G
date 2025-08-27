@@ -14,13 +14,13 @@
 
 #include <omnetpp.h>
 #include "common/LteCommon.h"
-#include "stack/mac/layer/LteMacEnb.h"
+#include "stack/mac/LteMacEnb.h"
 
 namespace simu5g {
 
 /*
- * LteHarqProcessMirrorD2D stores the status of one H-ARQ "mirror" process
- * It contains a vector that keeps the status of each unit (there is one unit per codeword)
+ * LteHarqProcessMirrorD2D stores the status of one H-ARQ "mirror" process.
+ * It contains a vector that keeps the status of each unit (there is one unit per codeword).
  */
 class LteHarqProcessMirrorD2D
 {
@@ -30,30 +30,27 @@ class LteHarqProcessMirrorD2D
     /// bytelength of contained pdus
     std::vector<int64_t> pduLength_;
 
-    /// Number of (re)transmissions per unit (N.B.: values are 1,2,3,4)
+    /// Number of (re)transmissions per unit (N.B.: values are 1, 2, 3, 4)
     std::vector<unsigned char> transmissions_;
-
-    // number of units
-    unsigned int numUnits_;
 
     // max number of transmissions
     unsigned char maxTransmissions_;
 
     // reference to the MAC module
-    LteMacEnb* macOwner_;
+    opp_component_ptr<LteMacEnb> macOwner_;
 
   public:
 
-    LteHarqProcessMirrorD2D(unsigned int numUnits, unsigned char numTransmissions, LteMacEnb* macOwner);
+    LteHarqProcessMirrorD2D(unsigned int numUnits, unsigned char numTransmissions, LteMacEnb *macOwner);
     void storeFeedback(HarqAcknowledgment harqAck, int64_t pduLength, MacNodeId d2dSenderId, double carrierFrequency, Codeword cw);
     std::vector<TxHarqPduStatus>& getProcessStatus() { return status_; }
     TxHarqPduStatus getUnitStatus(Codeword cw) { return status_[cw]; }
     void markSelected(Codeword cw) { status_[cw] = TXHARQ_PDU_SELECTED; }
     void markWaiting(Codeword cw) { status_[cw] = TXHARQ_PDU_WAITING; }
     int64_t getPduLength(Codeword cw) { return pduLength_[cw]; }
-    virtual ~LteHarqProcessMirrorD2D();
 };
 
 } //namespace
 
 #endif
+

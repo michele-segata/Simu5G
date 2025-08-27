@@ -13,6 +13,7 @@
 #define _LTE_LTEDLFBGENERATOR_H_
 
 #include <omnetpp.h>
+#include <inet/common/ModuleRefByPar.h>
 
 #include "common/cellInfo/CellInfo.h"
 #include "common/LteCommon.h"
@@ -21,16 +22,21 @@
 #include "common/timer/TTimer.h"
 #include "common/timer/TTimerMsg_m.h"
 #include "stack/phy/feedback/LteFeedbackComputation.h"
+#include "stack/phy/LtePhyUe.h"
 
 namespace simu5g {
 
+using namespace omnetpp;
+
 class DasFilter;
+class LtePhyUe;
+
 /**
  * @class LteDlFeedbackGenerator
  * @brief Lte Downlink Feedback Generator
  *
  */
-class LteDlFeedbackGenerator : public omnetpp::cSimpleModule
+class LteDlFeedbackGenerator : public cSimpleModule
 {
     enum FbTimerType
     {
@@ -49,24 +55,25 @@ class LteDlFeedbackGenerator : public omnetpp::cSimpleModule
      * for periodic feedback (when calling start() on busy
      * transmission timer we have no operation)
      */
-    omnetpp::simtime_t fbPeriod_;    /// period for Periodic feedback in TTI
-    omnetpp::simtime_t fbDelay_;     /// time interval between sensing and transmission in TTI
+    simtime_t fbPeriod_;    /// period for Periodic feedback in TTI
+    simtime_t fbDelay_;     /// time interval between sensing and transmission in TTI
 
     bool usePeriodic_;      /// true if we want to use also periodic feedback
     TxMode currentTxMode_;  /// transmission mode to use in feedback generation
 
-    DasFilter *dasFilter_;  /// reference to das filter
-    CellInfo *cellInfo_; /// reference to cellInfo
+    opp_component_ptr<CellInfo> cellInfo_; /// reference to cellInfo
+    inet::ModuleRefByPar<Binder> binder_;
+    inet::ModuleRefByPar<LtePhyUe> phy_;
 
     // cellInfo parameters
-    std::map<Remote, int> antennaCws_; /// number of antenna per remote
+    std::map<Remote, int> antennaCws_; /// number of antennas per remote
     int numPreferredBands_;           /// number of preferred bands to use (meaningful only in PREFERRED mode)
     int numBands_;                      /// number of cell bands
 
     // Timers
-    TTimer *tPeriodicSensing_;
-    TTimer *tPeriodicTx_;
-    TTimer *tAperiodicTx_;
+    TTimer *tPeriodicSensing_ = nullptr;
+    TTimer *tPeriodicTx_ = nullptr;
+    TTimer *tAperiodicTx_ = nullptr;
 
     // Feedback Maps
     //typedef std::map<Remote,LteFeedback> FeedbackMap_;
@@ -78,7 +85,8 @@ class LteDlFeedbackGenerator : public omnetpp::cSimpleModule
     MacNodeId nodeId_;
 
     bool feedbackComputationPisa_;
-    private:
+
+  private:
 
     // initialize cell information
     void initCellInfo();
@@ -88,40 +96,33 @@ class LteDlFeedbackGenerator : public omnetpp::cSimpleModule
      */
     void sendFeedback(LteFeedbackDoubleVector fb, FbPeriodicity per);
 
-
-    LteFeedbackComputation* getFeedbackComputationFromName(std::string name, ParameterMap& params);
-
+    LteFeedbackComputation *getFeedbackComputationFromName(std::string name, ParameterMap& params);
 
   protected:
 
     /**
      * Initialization function.
      */
-    virtual void initialize(int stage) override;
+    void initialize(int stage) override;
 
     /**
      * Manage self messages for sensing and transmission.
      * @param msg self message for sensing or transmission
      */
-    virtual void handleMessage(omnetpp::cMessage *msg) override;
+    void handleMessage(cMessage *msg) override;
 
     /**
      * Channel sensing
      */
     void sensing(FbPeriodicity per);
-    virtual int numInitStages() const override { return inet::INITSTAGE_LINK_LAYER + 1; }
+    int numInitStages() const override { return inet::INITSTAGE_LINK_LAYER + 1; }
 
   public:
 
     /**
-     * Constructor
-     */
-    LteDlFeedbackGenerator();
-
-    /**
      * Destructor
      */
-    ~LteDlFeedbackGenerator();
+    ~LteDlFeedbackGenerator() override;
 
     /**
      * Function used to register an aperiodic feedback request
@@ -147,3 +148,4 @@ class LteDlFeedbackGenerator : public omnetpp::cSimpleModule
 } //namespace
 
 #endif
+

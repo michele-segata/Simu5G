@@ -9,13 +9,12 @@
 // and cannot be removed from it.
 //
 
-
-
 #ifndef APPS_MEC_MEAPPS_MEBGAPP_H_
 #define APPS_MEC_MEAPPS_MEBGAPP_H_
 
+#include <inet/common/lifecycle/NodeStatus.h>
+
 #include "apps/mec/MecApps/MecAppBase.h"
-#include "inet/common/lifecycle/NodeStatus.h"
 
 namespace simu5g {
 
@@ -23,43 +22,40 @@ using namespace omnetpp;
 
 class MecRequestBackgroundGeneratorApp : public MecAppBase
 {
-protected:
+  protected:
 
-     inet::NodeStatus *nodeStatus = nullptr;
-     int numberOfApplications_;    // requests to send in this session
-     cMessage *burstTimer;
-     cMessage *burstPeriod;
-     bool      burstFlag;
-     cMessage *sendBurst;
+    int numberOfApplications_;    // requests to send in this session
+    cMessage *burstTimer = nullptr;
+    cMessage *burstPeriod = nullptr;
+    bool burstFlag;
+    cMessage *sendBurst = nullptr;
 
+    inet::TcpSocket *serviceSocket_ = nullptr;
+    inet::TcpSocket *mp1Socket_ = nullptr;
 
-     inet::TcpSocket* serviceSocket_;
-     inet::TcpSocket* mp1Socket_;
+    HttpBaseMessage *mp1HttpMessage = nullptr;
+    HttpBaseMessage *serviceHttpMessage = nullptr;
+    int numInitStages() const override { return inet::NUM_INIT_STAGES; }
+    void initialize(int stage) override;
 
-     HttpBaseMessage* mp1HttpMessage;
-     HttpBaseMessage* serviceHttpMessage;
-     virtual int numInitStages() const override { return inet::NUM_INIT_STAGES; }
-     virtual void initialize(int stage) override;
+    void handleSelfMessage(cMessage *msg) override;
+    void handleHttpMessage(int connId) override;
+    void handleServiceMessage(int connId) override;
+    void handleMp1Message(int connId) override;
 
-     virtual void handleSelfMessage(cMessage *msg) override;
-     virtual void handleHttpMessage(int connId) override;
-     virtual void handleServiceMessage(int connId) override;
-     virtual void handleMp1Message(int connId) override;
+    virtual void sendBulkRequest();
 
-     virtual void sendBulkRequest();
+    void handleUeMessage(cMessage *msg) override {};
 
+    void established(int connId) override;
 
-     virtual void handleUeMessage(omnetpp::cMessage *msg) override {};
+    void finish() override;
 
-     virtual void established(int connId) override;
-
-     virtual void finish() override;
-
-   public:
-     MecRequestBackgroundGeneratorApp();
-     virtual ~MecRequestBackgroundGeneratorApp();
+  public:
+    ~MecRequestBackgroundGeneratorApp() override;
 };
 
 } //namespace
 
 #endif /* APPS_MEC_MEAPPS_MEBGAPP_H_ */
+

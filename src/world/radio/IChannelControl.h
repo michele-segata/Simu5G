@@ -22,6 +22,8 @@
 
 namespace simu5g {
 
+using namespace omnetpp;
+
 // Forward declarations
 class AirFrame;
 
@@ -35,22 +37,21 @@ class IChannelControl
 
   public:
     typedef RadioEntry *RadioRef; // handle for ChannelControl's clients
-    typedef std::list<AirFrame*> TransmissionList;
+    typedef std::list<AirFrame *> TransmissionList;
 
   public:
-    virtual ~IChannelControl() {}
 
-    /** Registers the given radio. If radioInGate==NULL, the "radioIn" gate is assumed */
-    virtual RadioRef registerRadio(omnetpp::cModule *radioModule, omnetpp::cGate *radioInGate = nullptr) = 0;
+    /** Registers the given radio. If radioInGate==nullptr, the "radioIn" gate is assumed */
+    virtual RadioRef registerRadio(cModule *radioModule, cGate *radioInGate = nullptr) = 0;
 
     /** Unregisters the given radio */
     virtual void unregisterRadio(RadioRef r) = 0;
 
     /** Returns the host module that contains the given radio */
-    virtual omnetpp::cModule *getRadioModule(RadioRef r) const = 0;
+    virtual cModule *getRadioModule(RadioRef r) const = 0;
 
     /** Returns the input gate of the host for receiving AirFrames */
-    virtual omnetpp::cGate *getRadioGate(RadioRef r) const = 0;
+    virtual cGate *getRadioGate(RadioRef r) const = 0;
 
     /** Returns the channel the given radio listens on */
     virtual int getRadioChannel(RadioRef r) const = 0;
@@ -70,7 +71,7 @@ class IChannelControl
     /** Called from ChannelAccess, to transmit a frame to the radios in range, on the frame's channel */
     virtual void sendToChannel(RadioRef srcRadio, AirFrame *airFrame) = 0;
 
-    /** Returns the maximal interference distance*/
+    /** Returns the maximal interference distance */
     virtual double getInterferenceRange(RadioRef r) = 0;
 
     /** Disable the reception in the reference module */
@@ -79,10 +80,11 @@ class IChannelControl
     /** Enable the reception in the reference module */
     virtual void enableReception(RadioRef r) = 0;
 
-    /** Returns propagation speed of the signal in meter/sec */
+    /** Returns propagation speed of the signal in meters/sec */
     virtual double getPropagationSpeed() = 0;
 };
 
 } //namespace
 
 #endif
+

@@ -17,6 +17,8 @@
 
 namespace simu5g {
 
+using namespace omnetpp;
+
 class AmTxQueue;
 class AmRxQueue;
 
@@ -29,7 +31,7 @@ class AmRxQueue;
  *
  * TODO
  */
-class LteRlcAm : public omnetpp::cSimpleModule
+class LteRlcAm : public cSimpleModule
 {
   protected:
 
@@ -37,24 +39,21 @@ class LteRlcAm : public omnetpp::cSimpleModule
      * Data structures
      */
 
-    typedef std::map<MacCid, AmTxQueue*> AmTxBuffers;
-    typedef std::map<MacCid, AmRxQueue*> AmRxBuffers;
+    typedef std::map<MacCid, AmTxQueue *> AmTxBuffers;
+    typedef std::map<MacCid, AmRxQueue *> AmRxBuffers;
 
     /**
-     * The buffers map associate each CID with
-     * a TX/RX Buffer , identified by its ID
+     * The buffers map associates each CID with
+     * a TX/RX Buffer, identified by its ID
      */
 
     AmTxBuffers txBuffers_;
     AmRxBuffers rxBuffers_;
 
-    omnetpp::cGate* up_[2];
-    omnetpp::cGate* down_[2];
-
-  public:
-    virtual ~LteRlcAm()
-    {
-    }
+    cGate *upInGate_ = nullptr;
+    cGate *upOutGate_ = nullptr;
+    cGate *downInGate_ = nullptr;
+    cGate *downOutGate_ = nullptr;
 
   protected:
 
@@ -62,10 +61,10 @@ class LteRlcAm : public omnetpp::cSimpleModule
      * Analyze gate of incoming packet
      * and call proper handler
      */
-    virtual void handleMessage(omnetpp::cMessage *msg) override;
+    void handleMessage(cMessage *msg) override;
 
-    virtual void initialize() override;
-    virtual void finish() override
+    void initialize() override;
+    void finish() override
     {
     }
 
@@ -81,27 +80,27 @@ class LteRlcAm : public omnetpp::cSimpleModule
      * getTxBuffer() is used by the sender to gather the TXBuffer
      * for that CID. If TXBuffer was already present, a reference
      * is returned, otherwise a new TXBuffer is created,
-     * added to the tx_buffers map and a reference is returned aswell.
+     * added to the tx_buffers map and a reference is returned as well.
      *
      * @param lcid Logical Connection ID
      * @param nodeId MAC Node Id
      * @return pointer to the TXBuffer for that CID
      *
      */
-    AmTxQueue* getTxBuffer(MacNodeId nodeId, LogicalCid lcid);
+    AmTxQueue *getTxBuffer(MacNodeId nodeId, LogicalCid lcid);
 
     /**
      * getRxBuffer() is used by the receiver to gather the RXBuffer
      * for that CID. If RXBuffer was already present, a reference
      * is returned, otherwise a new RXBuffer is created,
-     * added to the rx_buffers map and a reference is returned aswell.
+     * added to the rx_buffers map and a reference is returned as well.
      *
      * @param lcid Logical Connection ID
      * @param nodeId MAC Node Id
      * @return pointer to the RXBuffer for that CID
      *
      */
-    AmRxQueue* getRxBuffer(MacNodeId nodeId, LogicalCid lcid);
+    AmRxQueue *getRxBuffer(MacNodeId nodeId, LogicalCid lcid);
 
     /**
      * handler for traffic coming
@@ -109,16 +108,16 @@ class LteRlcAm : public omnetpp::cSimpleModule
      *
      * handleUpperMessage() performs the following tasks:
      * - Adds the RLC-Am header to the packet, containing
-     *   the CID, the Traffic Type and the Sequence NAmber
+     *   the CID, the Traffic Type and the Sequence Number
      *   of the packet (extracted from the IP Datagram)
-     * - Search (or add) the proper TXBuffer, depending
+     * - Searches (or adds) the proper TXBuffer, depending
      *   on the packet CID
      * - Calls the TXBuffer, that from now on takes
      *   care of the packet
      *
      * @param pkt packet to process
      */
-    void handleUpperMessage(omnetpp::cPacket *pkt);
+    void handleUpperMessage(cPacket *pkt);
 
     /**
      * Am Mode
@@ -128,61 +127,62 @@ class LteRlcAm : public omnetpp::cSimpleModule
      *
      * handleLowerMessage() performs the following task:
      *
-     * - Search (or add) the proper RXBuffer, depending
+     * - Searches (or adds) the proper RXBuffer, depending
      *   on the packet CID
      * - Calls the RXBuffer, that from now on takes
      *   care of the packet
      *
      * @param pkt packet to process
      */
-    void handleLowerMessage(omnetpp::cPacket *pkt);
+    void handleLowerMessage(cPacket *pkt);
 
   public:
     /**
      * handler for control messages coming
      * from receiver AM entities
      *
-     *   routeControlMessage() performs the following task:
-     * - Search the proper TXBuffer, depending
-     *   on the packet CID and deliver the control packet to it
+     * routeControlMessage() performs the following task:
+     * - Searches the proper TXBuffer, depending
+     *   on the packet CID and delivers the control packet to it
      *
      * @param pkt packet to process
      */
-    void routeControlMessage(omnetpp::cPacket *pkt);
+    void routeControlMessage(cPacket *pkt);
 
     /**
      * sendFragmented() is invoked by the TXBuffer as a direct method
-     * call and used to forward fragments to lower layers. This is needed
-     * since the TXBuffer himself has no output gates
+     * call and is used to forward fragments to lower layers. This is needed
+     * since the TXBuffer itself has no output gates
      *
      * @param pkt packet to forward
      */
-    void sendFragmented(omnetpp::cPacket *pkt);
+    void sendFragmented(cPacket *pkt);
 
     /**
      * bufferControlPdu() is invoked by the RXBuffer as a direct method
-     * call and used to forward control packets to be sent down upon
+     * call and is used to forward control packets to be sent down upon
      * the next MAC request.
      *
      * @param pkt packet to buffer
      */
-    void bufferControlPdu(omnetpp::cPacket *pkt);
+    void bufferControlPdu(cPacket *pkt);
 
     /**
      * sendDefragmented() is invoked by the RXBuffer as a direct method
-     * call and used to forward fragments to upper layers. This is needed
-     * since the RXBuffer himself has no output gates
+     * call and is used to forward fragments to upper layers. This is needed
+     * since the RXBuffer itself has no output gates
      *
      * @param pkt packet to forward
      */
-    void sendDefragmented(omnetpp::cPacket *pkt);
+    void sendDefragmented(cPacket *pkt);
 
     /**
      * informMacOfWaitingData() sends a new data notification to the MAC
      */
-    void indicateNewDataToMac(omnetpp::cPacket *pkt);
+    void indicateNewDataToMac(cPacket *pkt);
 };
 
 } //namespace
 
 #endif
+

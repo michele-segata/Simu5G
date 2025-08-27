@@ -14,7 +14,12 @@
 
 #include "common/LteCommon.h"
 
+#include "stack/mac/LteMacUe.h"
+#include "stack/mac/scheduler/LcgScheduler.h"
+
 namespace simu5g {
+
+using namespace omnetpp;
 
 class LteMacUe;
 class LcgScheduler;
@@ -27,7 +32,7 @@ class LteSchedulerUeUl
   protected:
 
     // MAC module, queried for parameters
-    LteMacUe *mac_;
+    opp_component_ptr<LteMacUe> mac_;
 
     // Schedule List
     LteMacScheduleList scheduleList_;
@@ -35,10 +40,10 @@ class LteSchedulerUeUl
     // Scheduled Bytes List
     LteMacScheduleList scheduledBytesList_;
 
-    // Inner Scheduler - default to Standard LCG
-    LcgScheduler* lcgScheduler_;
+    // Inner Scheduler - defaults to Standard LCG
+    LcgScheduler lcgScheduler_;
 
-    // carrier frequency handled by this scheduler
+    // Carrier frequency handled by this scheduler
     double carrierFrequency_;
 
   public:
@@ -46,30 +51,34 @@ class LteSchedulerUeUl
     /* Performs the standard LCG scheduling algorithm
      * @returns reference to scheduling list
      */
-
-    LteMacScheduleList* schedule();
+    LteMacScheduleList *schedule();
 
     /* After the scheduling, returns the amount of bytes
      * scheduled for each connection
      */
-    LteMacScheduleList* getScheduledBytesList();
+    LteMacScheduleList *getScheduledBytesList();
 
     /*
-     * constructor
+     * Constructor
      */
-    LteSchedulerUeUl(LteMacUe * mac, double carrierFrequency);
+    LteSchedulerUeUl(LteMacUe *mac, double carrierFrequency);
 
     /**
      * Copy constructor and operator=
      */
-    LteSchedulerUeUl(const LteSchedulerUeUl& other)
+    LteSchedulerUeUl(const LteSchedulerUeUl& other) :
+        mac_(other.mac_),
+        scheduleList_(other.scheduleList_),
+        scheduledBytesList_(other.scheduledBytesList_),
+        lcgScheduler_(other.lcgScheduler_),
+        carrierFrequency_(other.carrierFrequency_)
     {
-        operator=(other);
     }
+
     LteSchedulerUeUl& operator=(const LteSchedulerUeUl& other);
 
     /*
-     * destructor
+     * Destructor
      */
     ~LteSchedulerUeUl();
 };
@@ -77,3 +86,4 @@ class LteSchedulerUeUl
 } //namespace
 
 #endif // _LTE_LTE_SCHEDULER_UE_UL_H_
+

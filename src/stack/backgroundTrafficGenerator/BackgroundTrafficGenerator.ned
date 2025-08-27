@@ -11,21 +11,30 @@
 
 package simu5g.stack.backgroundTrafficGenerator;
 
+//
+// This module is part of a ~BackgroundCell module and is responsible for instantiating a
+// configurable number of background UEs (see ~BackgroundUe module) and setting up
+// their method for computing the channel status information required by the
+// ~BackgroundScheduler module.
+//
 module BackgroundTrafficGenerator
 {
     parameters:
         @display("i=block/source");
         int numBgUes = default(0);
-        string bgTrafficManagerType = default("BackgroundTrafficManager");
         bool enablePeriodicCqiUpdate = default(true);
         bool useProbabilisticCqi = default(false);
         bool computeAvgInterference = default(false);
+        *.computeAvgInterference = this.computeAvgInterference;
+        *.enablePeriodicCqiUpdate = this.enablePeriodicCqiUpdate;
+        *.useProbabilisticCqi = this.useProbabilisticCqi;
+        *.numBgUes = this.numBgUes;
 
     submodules:
         bgUE[numBgUes]: BackgroundUe {
             @display("p=77,118");
         }
-        manager: <bgTrafficManagerType> like IBackgroundTrafficManager {
+        manager: <default("BackgroundTrafficManager")> like IBackgroundTrafficManager {
             @display("p=77,41");
         }
 }

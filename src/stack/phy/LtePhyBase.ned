@@ -13,9 +13,16 @@
 package simu5g.stack.phy;
 
 //
-// Base LtePhy module of PHY Layer
+// Base module for the Physical (PHY) layer of the LTE protocol stack.
 //
-simple LtePhyBase like LtePhy
+// This module provides the common functionalities for PHY operations at both the
+// eNodeB and User Equipment (UE) sides, such as the initialization of ChannelModel
+// module instances, one for each Carrier Component (CC) supported by the node, and
+// the transmission of frames over the radio. It provides parameters to configure
+// the transmission power and direction of the node, as well as to enable or disable
+// handover procedures.
+//
+simple LtePhyBase like ILtePhy
 {
     parameters:
         @display("i=block/wrxtx");
@@ -34,6 +41,8 @@ simple LtePhyBase like LtePhy
         // TODO move to LtePhyUeD2D module
         bool enableMulticastD2DRangeCheck = default(false);
         double multicastD2DRange @unit(m) = default(1000m);
+        string binderModule = default("binder");
+        string channelModelModule = default("^.channelModel[0]"); // or "nrChannelModel[0]"
 
     gates:
         input upperGateIn;       // from upper layer

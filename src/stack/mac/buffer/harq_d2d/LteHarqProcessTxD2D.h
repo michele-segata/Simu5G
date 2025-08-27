@@ -30,18 +30,18 @@ class LteHarqProcessTxD2D : public LteHarqProcessTx
   public:
 
     /**
-     * Crates a new H-ARQ process, which is a container of H-ARQ units.
+     * Creates a new H-ARQ process, which is a container of H-ARQ units.
      *
      * @param acid H-ARQ process identifier
      * @param numUnits number of units contained in this process (MAX_CODEWORDS)
      * @param numProcesses number of processes contained in the H-ARQ buffer.
      * @return
      */
-    LteHarqProcessTxD2D(unsigned char acid, unsigned int numUnits, unsigned int numProcesses, LteMacBase *macOwner,  LteMacBase *dstMac);
-    virtual Packet *extractPdu(Codeword cw);
-    virtual ~LteHarqProcessTxD2D();
+    LteHarqProcessTxD2D(Binder *binder, unsigned char acid, unsigned int numUnits, unsigned int numProcesses, LteMacBase *macOwner, LteMacBase *dstMac);
+    Packet *extractPdu(Codeword cw) override;
 };
 
 } //namespace
 
 #endif
+

@@ -11,11 +11,20 @@
 
 package simu5g.nodes.backgroundCell;
 
+//
+// This module is responsible for computing the allocation of time-frequency resources
+// for background UEs in a ~BackgroundCell, taking into account the traffic generated
+// by these UEs and their channel quality.
+//
 simple BackgroundScheduler
 {
     parameters:
         @display("i=block/control");
         @class("BackgroundScheduler");
+
+        string binderModule = default("binder");
+        string trafficManagerModule = default("^.bgTrafficGenerator.manager");
+        string channelModelModule = default("^.bgChannelModel");
 
         // transmission power
         double txPower @unit(dBm) = default(46dBm);

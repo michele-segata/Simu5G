@@ -12,55 +12,51 @@
 #ifndef BACKGROUNDCELLTRAFFICMANAGER_H_
 #define BACKGROUNDCELLTRAFFICMANAGER_H_
 
+#include <inet/common/ModuleRefByPar.h>
+
 #include "common/LteCommon.h"
-#include "stack/backgroundTrafficGenerator/generators/TrafficGeneratorBase.h"
+#include "nodes/backgroundCell/BackgroundCellAmc.h"
+#include "stack/backgroundTrafficGenerator/BackgroundTrafficManagerBase.h"
 
 namespace simu5g {
 
 using namespace omnetpp;
 
-class TrafficGeneratorBase;
-class LteMacEnb;
-class LteChannelModel;
-class BackgroundCellAmc;
-
 //
 // BackgroundCellTrafficManager
 //
-class BackgroundCellTrafficManager : public BackgroundTrafficManager
+class BackgroundCellTrafficManager : public BackgroundTrafficManagerBase
 {
   protected:
 
     // reference to background scheduler
-    BackgroundScheduler* bgScheduler_;
+    inet::ModuleRefByPar<BackgroundScheduler> bgScheduler_;
 
     // reference to class AMC for this cell
-    BackgroundCellAmc* bgAmc_;
+    BackgroundCellAmc *bgAmc_ = nullptr;
 
-    static double nrCqiTable[16];
-    double getCqiFromTable(double snr);
+  protected:
+    double getTtiPeriod() override;
+    bool isSetBgTrafficManagerInfoInit() override;
+    std::vector<double> getSINR(int bgUeIndex, Direction dir, inet::Coord bgUePos, double bgUeTxPower) override;
 
   public:
-    BackgroundCellTrafficManager();
-    virtual ~BackgroundCellTrafficManager();
-    virtual void initialize(int stage);
+    ~BackgroundCellTrafficManager() override;
+    void initialize(int stage) override;
 
     // get the number of RBs
-    virtual unsigned int getNumBands();
+    unsigned int getNumBands() override;
 
-    // returns the CQI based on the given position and power
-    virtual Cqi computeCqi(int bgUeIndex, Direction dir, inet::Coord bgUePos, double bgUeTxPower = 0.0);
+    // returns the bytes per block of the given UE for the given direction
+    unsigned int getBackloggedUeBytesPerBlock(MacNodeId bgUeId, Direction dir) override {
+        throw cRuntimeError("Not implemented");
+    }
 
-    // returns the bytes per block of the given UE for in the given direction
-    virtual  unsigned int getBackloggedUeBytesPerBlock(MacNodeId bgUeId, Direction dir);
-
-    // signal that the RAC for the given UE has been handled
-    virtual void racHandled(MacNodeId bgUeId);
-
-    // Compute received power for a background UE according to pathloss
-    virtual double getReceivedPower_bgUe(double txPower, inet::Coord txPos, inet::Coord rxPos, Direction dir, bool losStatus);
+    // Compute received power for a background UE according to path loss
+    double getReceivedPower_bgUe(double txPower, inet::Coord txPos, inet::Coord rxPos, Direction dir, bool losStatus) override;
 };
 
 } //namespace
 
 #endif
+

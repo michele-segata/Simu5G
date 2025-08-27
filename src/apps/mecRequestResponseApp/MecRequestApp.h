@@ -12,12 +12,14 @@
 #ifndef __MECREQUESTAPP_H_
 #define __MECREQUESTAPP_H_
 
-#include "apps/mecRequestResponseApp/packets/MigrationTimer_m.h"
+#include <inet/common/ModuleRefByPar.h>
+#include <inet/networklayer/common/L3Address.h>
+#include <inet/networklayer/common/L3AddressResolver.h>
+#include <inet/transportlayer/contract/udp/UdpSocket.h>
+
 #include "apps/mecRequestResponseApp/packets/MecRequestResponsePacket_m.h"
-#include "inet/transportlayer/contract/udp/UdpSocket.h"
-#include "inet/networklayer/common/L3Address.h"
-#include "inet/networklayer/common/L3AddressResolver.h"
-#include "stack/phy/layer/NRPhyUe.h"
+#include "apps/mecRequestResponseApp/packets/MigrationTimer_m.h"
+#include "stack/phy/NRPhyUe.h"
 
 namespace simu5g {
 
@@ -29,39 +31,39 @@ class MecRequestApp : public cSimpleModule
     simtime_t period_;
     int localPort_;
     int destPort_;
-    char* sourceSymbolicAddress_;
+    std::string sourceSymbolicAddress_;
     inet::L3Address destAddress_;
 
-    NRPhyUe* nrPhy_;
+    inet::ModuleRefByPar<NRPhyUe> nrPhy_;
 
     unsigned int sno_;
-    unsigned int bsId_;
+    MacNodeId bsId_;
     unsigned int appId_;
 
     bool enableMigration_;
 
-    //scheduling
-    cMessage *selfSender_;
+    // scheduling
+    cMessage *selfSender_ = nullptr;
 
-    static simsignal_t requestSize_;
-    static simsignal_t requestRTT_;
-    static simsignal_t recvResponseSno_;
+    static simsignal_t requestSizeSignal_;
+    static simsignal_t requestRTTSignal_;
+    static simsignal_t recvResponseSnoSignal_;
 
-    public:
-        ~MecRequestApp();
-        MecRequestApp();
+  public:
+    ~MecRequestApp() override;
 
-    protected:
+  protected:
 
-        virtual int numInitStages() const { return inet::NUM_INIT_STAGES; }
-        void initialize(int stage);
-        virtual void handleMessage(cMessage *msg);
-        virtual void finish();
+    int numInitStages() const override { return inet::NUM_INIT_STAGES; }
+    void initialize(int stage) override;
+    void handleMessage(cMessage *msg) override;
+    void finish() override;
 
-        void sendRequest();
-        void recvResponse(cMessage* msg);
+    void sendRequest();
+    void recvResponse(cMessage *msg);
 };
 
 } //namespace
 
 #endif
+

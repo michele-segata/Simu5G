@@ -12,19 +12,24 @@
 #ifndef __BACKGROUNDSCHEDULER_H_
 #define __BACKGROUNDSCHEDULER_H_
 
-#include <omnetpp.h>
+#include <inet/common/INETDefs.h>
+#include <inet/common/ModuleRefByPar.h>
+
 #include "common/LteCommon.h"
 #include "common/binder/Binder.h"
 #include "nodes/backgroundCell/BackgroundCellChannelModel.h"
-#include "stack/backgroundTrafficGenerator/BackgroundTrafficManager.h"
+#include "nodes/ExtCell.h"
+#include "stack/backgroundTrafficGenerator/IBackgroundTrafficManager.h"
 #include "stack/mac/scheduler/LteScheduler.h"  // for SortedDesc
 
 namespace simu5g {
 
+using namespace omnetpp;
+
 typedef SortedDesc<MacCid, unsigned int> ScoreDesc;
 typedef std::priority_queue<ScoreDesc> ScoreList;
 
-class BackgroundScheduler : public omnetpp::cSimpleModule, public cListener
+class BackgroundScheduler : public cSimpleModule, public cListener
 {
     // base station coordinates
     inet::Coord pos_;
@@ -32,41 +37,40 @@ class BackgroundScheduler : public omnetpp::cSimpleModule, public cListener
     // id among all the background cells
     int id_;
 
-    // tx power
+    // tx power [dBm]
     double txPower_;
 
     // tx direction
     TxDirectionType txDirection_;
 
-    // tx angle
+    // tx angle [deg]
     double txAngle_;
 
     // if true, this is a NR base station
-    // if false, this is a LTE base station
+    // if false, this is an LTE base station
     bool isNr_;
 
     // numerology
     unsigned int numerologyIndex_;
 
-    // carrier frequency
+    // carrier frequency [GHz]
     double carrierFrequency_;
 
     // number of logical bands
     unsigned int numBands_;
 
     // reference to the binder
-    Binder* binder_;
+    inet::ModuleRefByPar<Binder> binder_;
 
     // reference to the background traffic manager - one per carrier
-    BackgroundTrafficManager* bgTrafficManager_;
+    inet::ModuleRefByPar<IBackgroundTrafficManager> bgTrafficManager_;
 
     // reference to the channel model for this background base station
-    BackgroundCellChannelModel* bgChannelModel_;
+    inet::ModuleRefByPar<BackgroundCellChannelModel> bgChannelModel_;
 
     // TTI self message
-    omnetpp::cMessage* ttiTick_;
+    cMessage *ttiTick_ = nullptr;
     double ttiPeriod_;
-
 
     /*** ALLOCATION MANAGEMENT ***/
 
@@ -75,9 +79,8 @@ class BackgroundScheduler : public omnetpp::cSimpleModule, public cListener
     BandStatus prevBandStatus_[2];
 
     // for the UL, we need to store which UE uses which block
-    std::vector<int> ulBandAllocation_;
-    std::vector<int> ulPrevBandAllocation_;
-
+    std::vector<MacNodeId> ulBandAllocation_;
+    std::vector<MacNodeId> ulPrevBandAllocation_;
 
     // update the band status. Called at each TTI (not used for FULL_ALLOC)
     virtual void updateAllocation(Direction dir);
@@ -86,26 +89,26 @@ class BackgroundScheduler : public omnetpp::cSimpleModule, public cListener
     /*****************************/
 
     // statistics
-    simsignal_t bgAvgServedBlocksDl_;
-    simsignal_t bgAvgServedBlocksUl_;
+    static simsignal_t bgAvgServedBlocksDlSignal_;
+    static simsignal_t bgAvgServedBlocksUlSignal_;
 
   protected:
-    virtual void initialize(int stage) override;
-    virtual int numInitStages() const override { return inet::INITSTAGE_LOCAL+2; }
-    virtual void handleMessage(omnetpp::cMessage *msg) override;
+    void initialize(int stage) override;
+    int numInitStages() const override { return inet::INITSTAGE_LOCAL + 2; }
+    void handleMessage(cMessage *msg) override;
 
   public:
 
     // This module is subscribed to position changes.
-    virtual void receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj, cObject *) override;
+    void receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj, cObject *) override;
 
-    BackgroundCellChannelModel* getChannelModel() { return bgChannelModel_; }
+    BackgroundCellChannelModel *getChannelModel() { return bgChannelModel_; }
 
     const inet::Coord getPosition() const { return pos_; }
 
     int getId() const { return id_; }
 
-    double getTtiPeriod() const {return ttiPeriod_; }
+    double getTtiPeriod() const { return ttiPeriod_; }
 
     double getTxPower() const { return txPower_; }
 
@@ -120,10 +123,11 @@ class BackgroundScheduler : public omnetpp::cSimpleModule, public cListener
     int getBandStatus(int band, Direction dir) { return bandStatus_[dir].at(band); }
     int getPrevBandStatus(int band, Direction dir) { return prevBandStatus_[dir].at(band); }
 
-    TrafficGeneratorBase* getBandInterferingUe(int band);
-    TrafficGeneratorBase* getPrevBandInterferingUe(int band);
+    TrafficGeneratorBase *getBandInterferingUe(int band);
+    TrafficGeneratorBase *getPrevBandInterferingUe(int band);
 };
 
 } //namespace
 
 #endif
+

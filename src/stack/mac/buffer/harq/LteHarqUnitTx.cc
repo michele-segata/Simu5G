@@ -10,102 +10,36 @@
 //
 
 #include "stack/mac/buffer/harq/LteHarqUnitTx.h"
-#include "stack/mac/layer/LteMacEnb.h"
+#include "stack/mac/LteMacEnb.h"
 #include <omnetpp.h>
 
 namespace simu5g {
 
 using namespace omnetpp;
 
-LteHarqUnitTx::LteHarqUnitTx(unsigned char acid, Codeword cw,
-    LteMacBase *macOwner, LteMacBase *dstMac)
-{
-    pdu_ = nullptr;
-    pduId_ = -1;
-    acid_ = acid;
-    cw_ = cw;
-    transmissions_ = 0;
-    txTime_ = 0;
-    status_ = TXHARQ_PDU_EMPTY;
-    macOwner_ = macOwner;
-    dstMac_ = dstMac;
-    maxHarqRtx_ = macOwner->par("maxHarqRtx");
+simsignal_t LteHarqUnitTx::macPacketLossSignal_[2] = { cComponent::registerSignal("macPacketLossDl"), cComponent::registerSignal("macPacketLossUl") };
+simsignal_t LteHarqUnitTx::macCellPacketLossSignal_[2] = { cComponent::registerSignal("macCellPacketLossDl"), cComponent::registerSignal("macCellPacketLossUl") };
+simsignal_t LteHarqUnitTx::harqErrorRateSignal_[2] = { cComponent::registerSignal("harqErrorRateDl"), cComponent::registerSignal("harqErrorRateUl") };
+simsignal_t LteHarqUnitTx::harqErrorRate_1Signal_[2] = { cComponent::registerSignal("harqErrorRate_1st_Dl"), cComponent::registerSignal("harqErrorRate_1st_Ul") };
+simsignal_t LteHarqUnitTx::harqErrorRate_2Signal_[2] = { cComponent::registerSignal("harqErrorRate_2nd_Dl"), cComponent::registerSignal("harqErrorRate_2nd_Ul") };
+simsignal_t LteHarqUnitTx::harqErrorRate_3Signal_[2] = { cComponent::registerSignal("harqErrorRate_3rd_Dl"), cComponent::registerSignal("harqErrorRate_3rd_Ul") };
+simsignal_t LteHarqUnitTx::harqErrorRate_4Signal_[2] = { cComponent::registerSignal("harqErrorRate_4th_Dl"), cComponent::registerSignal("harqErrorRate_4th_Ul") };
+simsignal_t LteHarqUnitTx::harqTxAttemptsSignal_[2] = { cComponent::registerSignal("harqTxAttemptsDl"), cComponent::registerSignal("harqTxAttemptsUl") };
 
-    if (macOwner_->getNodeType() == ENODEB || macOwner_->getNodeType() == GNODEB)
-    {
+LteHarqUnitTx::LteHarqUnitTx(Binder *binder, unsigned char acid, Codeword cw,
+        LteMacBase *macOwner, LteMacBase *dstMac) :  acid_(acid), cw_(cw),  txTime_(0), macOwner_(macOwner), dstMac_(dstMac), maxHarqRtx_(macOwner->par("maxHarqRtx"))
+{
+
+    if (macOwner_->getNodeType() == ENODEB || macOwner_->getNodeType() == GNODEB) {
         nodeB_ = macOwner_;
-        macPacketLoss_ = dstMac_->registerSignal("macPacketLossDl");
-        macCellPacketLoss_ = macOwner_->registerSignal("macCellPacketLossDl");
-        harqErrorRate_ = dstMac_->registerSignal("harqErrorRateDl");
-        harqErrorRate_1_ = dstMac_->registerSignal("harqErrorRate_1st_Dl");
-        harqErrorRate_2_ = dstMac_->registerSignal("harqErrorRate_2nd_Dl");
-        harqErrorRate_3_ = dstMac_->registerSignal("harqErrorRate_3rd_Dl");
-        harqErrorRate_4_ = dstMac_->registerSignal("harqErrorRate_4th_Dl");
-        harqTxAttempts_ = macOwner->registerSignal("harqTxAttemptsDl");
+        dir_ = DL;
     }
-    else  // UE
-    {
-        nodeB_ = getMacByMacNodeId(macOwner_->getMacCellId());
-        if (dstMac_ == nodeB_)  // UL
-        {
-            macPacketLoss_ = macOwner_->registerSignal("macPacketLossUl");
-            macCellPacketLoss_ = nodeB_->registerSignal("macCellPacketLossUl");
-            harqErrorRate_ = macOwner_->registerSignal("harqErrorRateUl");
-            harqErrorRate_1_ = macOwner_->registerSignal("harqErrorRate_1st_Ul");
-            harqErrorRate_2_ = macOwner_->registerSignal("harqErrorRate_2nd_Ul");
-            harqErrorRate_3_ = macOwner_->registerSignal("harqErrorRate_3rd_Ul");
-            harqErrorRate_4_ = macOwner_->registerSignal("harqErrorRate_4th_Ul");
-            harqTxAttempts_ = macOwner->registerSignal("harqTxAttemptsUl");
-        }
-        else
-        {
-            macPacketLoss_ = 0;
-            macCellPacketLoss_ = 0;
-            harqErrorRate_ = 0;
-            harqErrorRate_1_ = 0;
-            harqErrorRate_2_ = 0;
-            harqErrorRate_3_ = 0;
-            harqErrorRate_4_ = 0;
-            harqTxAttempts_ = 0;
+    else { // UE
+        nodeB_ = getMacByMacNodeId(binder, macOwner_->getMacCellId());
+        if (dstMac_ == nodeB_) { // UL
+            dir_ = UL;
         }
     }
-}
-
-LteHarqUnitTx& LteHarqUnitTx::operator=(const LteHarqUnitTx& other)
-{
-    if (&other == this)
-        return *this;
-
-    pdu_ = other.pdu_;
-    pduId_ = other.pduId_;
-    acid_ = other.acid_;
-    cw_ = other.cw_;
-    transmissions_ = other.transmissions_;
-    txTime_ = other.txTime_;
-    status_ = other.status_;
-    macOwner_ = other.macOwner_;
-    dstMac_ = other.dstMac_;
-    maxHarqRtx_ = other.maxHarqRtx_;
-
-    nodeB_ = other.nodeB_;
-
-    macPacketLoss_ = other.macPacketLoss_;
-    macCellPacketLoss_ = other.macCellPacketLoss_;
-    harqErrorRate_ = other.harqErrorRate_;
-    harqErrorRate_1_ = other.harqErrorRate_1_;
-    harqErrorRate_2_ = other.harqErrorRate_2_;
-    harqErrorRate_3_ = other.harqErrorRate_3_;
-    harqErrorRate_4_ = other.harqErrorRate_4_;
-
-    macCellPacketLossD2D_ = other.macCellPacketLossD2D_;
-    macPacketLossD2D_ = other.macPacketLossD2D_;
-    harqErrorRateD2D_ = other.harqErrorRateD2D_;
-    harqErrorRateD2D_1_ = other.harqErrorRateD2D_1_;
-    harqErrorRateD2D_2_ = other.harqErrorRateD2D_2_;
-    harqErrorRateD2D_3_ = other.harqErrorRateD2D_3_;
-    harqErrorRateD2D_4_ = other.harqErrorRateD2D_4_;
-
-    return *this;
 }
 
 void LteHarqUnitTx::insertPdu(Packet *pkt)
@@ -142,7 +76,7 @@ void LteHarqUnitTx::markSelected()
        << acid_ << " codeword " << cw_ << " for transmission " << endl;
 
     if (!(this->isReady()))
-    throw cRuntimeError("ERROR acid %d codeword %d trying to select for transmission an empty buffer", acid_, cw_);
+        throw cRuntimeError("ERROR acid %d codeword %d trying to select for transmission an empty buffer", acid_, cw_);
 
     status_ = TXHARQ_PDU_SELECTED;
 }
@@ -158,7 +92,7 @@ Packet *LteHarqUnitTx::extractPdu()
 
     auto lteInfo = pdu_->getTagForUpdate<UserControlInfo>();
     lteInfo->setTxNumber(transmissions_);
-    lteInfo->setNdi((transmissions_ == 1) ? true : false);
+    lteInfo->setNdi(transmissions_ == 1);
     EV << "LteHarqUnitTx::extractPdu - ndi set to " << ((transmissions_ == 1) ? "true" : "false") << endl;
 
     auto extractedPdu = pdu_->dup();
@@ -177,19 +111,16 @@ bool LteHarqUnitTx::pduFeedback(HarqAcknowledgment a)
     if (!(status_ == TXHARQ_PDU_WAITING))
         throw cRuntimeError("Feedback sent to an H-ARQ unit not waiting for it");
 
-    if (a == HARQACK)
-    {
+    if (a == HARQACK) {
         // pdu_ has been sent and received correctly
         EV << "\t pdu_ has been sent and received correctly " << endl;
         resetUnit();
         reset = true;
         sample = 0;
     }
-    else if (a == HARQNACK)
-    {
+    else if (a == HARQNACK) {
         sample = 1;
-        if (transmissions_ == (maxHarqRtx_ + 1))
-        {
+        if (transmissions_ == (maxHarqRtx_ + 1)) {
             // discard
             EV << NOW << " LteHarqUnitTx::pduFeedback H-ARQ process  " << (unsigned int)acid_ << " Codeword " << cw_ << " PDU "
                << pdu_->getId() << " discarded (max retransmissions reached) : " << maxHarqRtx_ << endl;
@@ -202,60 +133,53 @@ bool LteHarqUnitTx::pduFeedback(HarqAcknowledgment a)
             resetUnit();
             reset = true;
         }
-        else
-        {
+        else {
             // pdu_ ready for next transmission
             macOwner_->takeObj(pdu_);
             status_ = TXHARQ_PDU_BUFFERED;
-            EV << NOW << " LteHarqUnitTx::pduFeedbackH-ARQ process  " << (unsigned int)acid_ << " Codeword " << cw_ << " PDU "
+            EV << NOW << " LteHarqUnitTx::pduFeedback H-ARQ process  " << (unsigned int)acid_ << " Codeword " << cw_ << " PDU "
                << pdu_->getId() << " set for RTX " << endl;
 
-            if (macOwner_->getNodeType() == ENODEB || macOwner_->getNodeType() == GNODEB)
-            {
+            if (macOwner_->getNodeType() == ENODEB || macOwner_->getNodeType() == GNODEB) {
                 // signal the MAC the need for retransmission
-                check_and_cast<LteMacEnb*>(macOwner_)->signalProcessForRtx(lteInfo->getDestId(), lteInfo->getCarrierFrequency(), (Direction)lteInfo->getDirection());
+                check_and_cast<LteMacEnb *>(macOwner_.get())->signalProcessForRtx(lteInfo->getDestId(), lteInfo->getCarrierFrequency(), (Direction)lteInfo->getDirection());
             }
         }
     }
-    else
-    {
+    else {
         throw cRuntimeError("LteHarqUnitTx::pduFeedback unknown feedback received from process %d , Codeword %d", acid_, cw_);
     }
 
-    LteMacBase* ue;
-    if (dir == DL)
-    {
+    LteMacBase *ue;
+    if (dir == DL) {
         ue = dstMac_;
     }
-    else if (dir == UL)
-    {
+    else if (dir == UL) {
         ue = macOwner_;
     }
-    else
-    {
+    else {
         throw cRuntimeError("LteHarqUnitTx::pduFeedback(): unknown direction");
     }
 
     // emit H-ARQ statistics
-    switch (ntx)
-    {
+    switch (ntx) {
         case 1:
-        ue->emit(harqErrorRate_1_, sample);
-        break;
+            ue->emit(harqErrorRate_1Signal_[dir_], sample);
+            break;
         case 2:
-        ue->emit(harqErrorRate_2_, sample);
-        break;
+            ue->emit(harqErrorRate_2Signal_[dir_], sample);
+            break;
         case 3:
-        ue->emit(harqErrorRate_3_, sample);
-        break;
+            ue->emit(harqErrorRate_3Signal_[dir_], sample);
+            break;
         case 4:
-        ue->emit(harqErrorRate_4_, sample);
-        break;
+            ue->emit(harqErrorRate_4Signal_[dir_], sample);
+            break;
         default:
-        break;
+            break;
     }
 
-    ue->emit(harqErrorRate_, sample);
+    ue->emit(harqErrorRateSignal_[dir_], sample);
 
     if (ntx < 4)
         ue->recordHarqErrorRate(sample, (Direction)dir);
@@ -263,12 +187,11 @@ bool LteHarqUnitTx::pduFeedback(HarqAcknowledgment a)
         ue->recordHarqErrorRate(0, (Direction)dir);
 
     if (a == HARQACK)
-        ue->emit(harqTxAttempts_, ntx);
+        ue->emit(harqTxAttemptsSignal_[dir_], ntx);
 
-    if (reset)
-    {
-        ue->emit(macPacketLoss_, sample);
-        nodeB_->emit(macCellPacketLoss_, sample);
+    if (reset) {
+        ue->emit(macPacketLossSignal_[dir_], sample);
+        nodeB_->emit(macCellPacketLossSignal_[dir_], sample);
     }
 
     return reset;
@@ -276,12 +199,12 @@ bool LteHarqUnitTx::pduFeedback(HarqAcknowledgment a)
 
 bool LteHarqUnitTx::isEmpty()
 {
-    return (status_ == TXHARQ_PDU_EMPTY);
+    return status_ == TXHARQ_PDU_EMPTY;
 }
 
 bool LteHarqUnitTx::isReady()
 {
-    return (status_ == TXHARQ_PDU_BUFFERED);
+    return status_ == TXHARQ_PDU_BUFFERED;
 }
 
 bool LteHarqUnitTx::selfNack()
@@ -309,8 +232,7 @@ void LteHarqUnitTx::dropPdu()
 
 void LteHarqUnitTx::forceDropUnit()
 {
-    if (status_ == TXHARQ_PDU_BUFFERED || status_ == TXHARQ_PDU_SELECTED || status_ == TXHARQ_PDU_WAITING)
-    {
+    if (status_ == TXHARQ_PDU_BUFFERED || status_ == TXHARQ_PDU_SELECTED || status_ == TXHARQ_PDU_WAITING) {
         delete pdu_;
         pdu_ = nullptr;
     }
@@ -332,7 +254,7 @@ void LteHarqUnitTx::resetUnit()
 {
     transmissions_ = 0;
     pduId_ = -1;
-    if(pdu_ != nullptr){
+    if (pdu_ != nullptr) {
         delete pdu_;
         pdu_ = nullptr;
     }

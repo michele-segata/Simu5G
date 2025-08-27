@@ -38,13 +38,13 @@ class LteX2Message : public LteX2Message_Base
   protected:
 
     /// type of the X2 message
-    LteX2MessageType type_;
+    LteX2MessageType type_ = X2_UNKNOWN_MSG;
 
     /// List of X2 IEs
     X2InformationElementsList ieList_;
 
     /// Size of the X2 message
-    int64_t msgLength_;
+    int64_t msgLength_ = 0;
 
   public:
 
@@ -53,9 +53,6 @@ class LteX2Message : public LteX2Message_Base
      */
     LteX2Message() : LteX2Message_Base()
     {
-        type_ = X2_UNKNOWN_MSG;
-        ieList_.clear();
-        msgLength_ = 0;
     }
 
     /*
@@ -63,7 +60,6 @@ class LteX2Message : public LteX2Message_Base
      * FIXME Copy constructors do not preserve ownership
      * Here I should iterate on the list and set all ownerships
      */
-
 
     LteX2Message& operator=(const LteX2Message& other)
     {
@@ -75,8 +71,8 @@ class LteX2Message : public LteX2Message_Base
         // perform deep-copy of element list
         msgLength_ = other.msgLength_;
         ieList_.clear();
-        for (auto it = other.ieList_.begin(); it != other.ieList_.end(); ++it){
-            ieList_.push_back((*it)->dup());
+        for (const auto& ie : other.ieList_) {
+            ieList_.push_back(ie->dup());
         }
 
         return *this;
@@ -86,15 +82,14 @@ class LteX2Message : public LteX2Message_Base
         operator=(other);
     }
 
-
-    virtual LteX2Message *dup() const
+    LteX2Message *dup() const override
     {
         return new LteX2Message(*this);
     }
 
-    virtual ~LteX2Message()
+    ~LteX2Message() override
     {
-        while (!ieList_.empty()){
+        while (!ieList_.empty()) {
             delete ieList_.front();
             ieList_.pop_front();
         }
@@ -112,29 +107,29 @@ class LteX2Message : public LteX2Message_Base
     }
 
     /**
-     * pushIe() stores a IE inside the
-     * X2 IE list in back position and update msg length
+     * pushIe() stores an IE inside the
+     * X2 IE list in back position and updates msg length
      *
      * @param ie IE to store
      */
-    virtual void pushIe(X2InformationElement* ie)
+    virtual void pushIe(X2InformationElement *ie)
     {
         ieList_.push_back(ie);
         msgLength_ += ie->getLength();
         // increase the chunk length by length of IE + 1 Byte (required to store the IE type)
-        setChunkLength(getChunkLength()+inet::b(8*(ie->getLength()+sizeof(uint8_t))));
+        setChunkLength(getChunkLength() + inet::b(8 * (ie->getLength() + sizeof(uint8_t))));
         // EV << "pushIe: pushed an element of length: " << ie->getLength() << " new chunk length: " << getChunkLength() << std::endl;
     }
 
     /**
-     * popIe() pops a IE from front of
+     * popIe() pops an IE from the front of
      * the IE list and returns it
      *
      * @return popped IE
      */
-    virtual X2InformationElement* popIe()
+    virtual X2InformationElement *popIe()
     {
-        X2InformationElement* ie = ieList_.front();
+        X2InformationElement *ie = ieList_.front();
         ieList_.pop_front();
         msgLength_ -= ie->getLength();
         // chunk is immutable during serialization!
@@ -144,13 +139,13 @@ class LteX2Message : public LteX2Message_Base
 
     /**
      * hasIe() verifies if there are other
-     * IEs inside the ie list
+     * IEs inside the IE list
      *
      * @return true if list is not empty, false otherwise
      */
     virtual bool hasIe() const
     {
-        return (!ieList_.empty());
+        return !ieList_.empty();
     }
 
     int64_t getByteLength() const
@@ -160,8 +155,9 @@ class LteX2Message : public LteX2Message_Base
 
     int64_t getBitLength() const
     {
-        return (getByteLength() * 8);
+        return getByteLength() * 8;
     }
+
 };
 
 Register_Class(LteX2Message);

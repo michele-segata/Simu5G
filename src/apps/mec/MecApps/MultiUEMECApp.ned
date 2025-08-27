@@ -26,7 +26,6 @@ simple MultiUEMECApp like IMECApp, IApp
         int packetSize @unit(B) = default(10B);
         string interfaceTableModule = default("");
 
-        int mecAppIndex;
         int mecAppId;
         int localUePort;
 

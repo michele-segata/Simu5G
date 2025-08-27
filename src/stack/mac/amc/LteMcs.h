@@ -28,36 +28,33 @@ struct CQIelem
     double rate_;
 
     /// Constructor, with default set to "out of range CQI"
-    CQIelem(LteMod mod = _QPSK, double rate = 0.0)
+    CQIelem(LteMod mod = _QPSK, double rate = 0.0) : mod_(mod), rate_(rate)
     {
-        mod_ = mod;
-        rate_ = rate;
     }
+
 };
 
 /**
  * <CQI Index [0-15]> , <Modulation> , <Code Rate x 1024>
- * This table contains value taken from the table 7.2.3-1 (TS 36.213)
+ * This table contains values taken from table 7.2.3-1 (TS 36.213)
  */
 extern const CQIelem cqiTable[];
 
 struct MCSelem
 {
     LteMod mod_;       /// modulation
-    Tbs iTbs_;         /// iTbs
-    double threshold_; /// coderate threshold
+    Tbs iTbs_;         /// iTBS
+    double threshold_; /// code rate threshold
 
-    MCSelem(LteMod mod = _QPSK, Tbs iTbs = 0, double threshold = 0.0)
+    MCSelem(LteMod mod = _QPSK, Tbs iTbs = 0, double threshold = 0.0) : mod_(mod), iTbs_(iTbs), threshold_(threshold)
     {
-        mod_ = mod;
-        iTbs_ = iTbs;
-        threshold_ = threshold;
     }
+
 };
 
 /**
  * <MCS Index> , <Modulation> , <I-TBS> , <threshold>
- * This table contains value taken from (TS 36.213)
+ * This table contains values taken from (TS 36.213)
  */
 class McsTable
 {
@@ -66,9 +63,6 @@ class McsTable
     MCSelem table[CQI2ITBSSIZE];
 
     McsTable();
-    ~McsTable()
-    {
-    }
 
     /// MCS table seek operator
     MCSelem& at(Tbs tbs)
@@ -77,12 +71,12 @@ class McsTable
     }
 
     /// MCS Table re-scaling function
-    void rescale(const double scale);
+    void rescale(double scale);
 };
 
 /********************************************
- *      ITBS 2 TBS FRIGHTENING TABLES
- ********************************************/
+*      ITBS 2 TBS FRIGHTENING TABLES
+********************************************/
 
 extern const unsigned int itbs2tbs_qpsk_1[][110];
 extern const unsigned int itbs2tbs_16qam_1[][110];
@@ -100,11 +94,11 @@ extern const unsigned int itbs2tbs_64qam8[][110];
 /**
  * @param mod The modulation.
  * @param txMode The transmission mode.
- * @param txMode The number of layers.
- * @param dir The link direction.
+ * @param layers The number of layers.
+ * @param itbs The information block size.
  * @return A row of table 3-2 or table 3-3 specific for the given iTBS.
  */
-const unsigned int* itbs2tbs(LteMod mod, TxMode txMode, unsigned char layers, unsigned char itbs);
+const unsigned int *itbs2tbs(LteMod mod, TxMode txMode, unsigned char layers, unsigned char itbs);
 
 /**
  * Gives the number of layers for each codeword.
@@ -118,3 +112,4 @@ std::vector<unsigned char> cwMapping(const TxMode& txMode, const Rank& ri, const
 } //namespace
 
 #endif
+

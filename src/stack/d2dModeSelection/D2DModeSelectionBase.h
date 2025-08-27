@@ -12,19 +12,23 @@
 #ifndef LTE_D2DMODESELECTIONBASE_H_
 #define LTE_D2DMODESELECTIONBASE_H_
 
-#include "stack/mac/layer/LteMacEnb.h"
+#include <inet/common/ModuleRefByPar.h>
+
+#include "stack/mac/LteMacEnbD2D.h"
 
 namespace simu5g {
+
+using namespace omnetpp;
 
 //
 // D2DModeSelectionBase
 // Base class for D2D Mode Selection modules
 // To add a new policy for mode selection, extend this class and redefine pure virtual methods
 //
-class D2DModeSelectionBase : public omnetpp::cSimpleModule
+class D2DModeSelectionBase : public cSimpleModule
 {
 
-protected:
+  protected:
 
     typedef std::pair<MacNodeId, MacNodeId> FlowId;
     struct FlowModeInfo {
@@ -37,19 +41,19 @@ protected:
                              // of the flow, whereas the second node represents the receiver
 
     // for each D2D-capable UE, store the list of possible D2D peers and the corresponding communication mode (IM or DM)
-    std::map<MacNodeId, std::map<MacNodeId, LteD2DMode> >* peeringModeMap_;
+    std::map<MacNodeId, std::map<MacNodeId, LteD2DMode>> *peeringModeMap_;
 
     // reference to the MAC layer
-    LteMacEnb* mac_;
+    inet::ModuleRefByPar<LteMacEnbD2D> mac_;
 
     // reference to the binder
-    Binder* binder_;
+    inet::ModuleRefByPar<Binder> binder_;
 
     // period between two selection instances
     double modeSelectionPeriod_;
 
     // Self message
-    omnetpp::cMessage* modeSelectionTick_;
+    cMessage *modeSelectionTick_ = nullptr;
 
     // run the mode selection algorithm. To be implemented by derived classes
     // it must build a switch list (see above)
@@ -59,13 +63,11 @@ protected:
     // switch to the transmitter UE
     void sendModeSwitchNotifications();
 
-public:
-    D2DModeSelectionBase() {}
-    virtual ~D2DModeSelectionBase() {}
+  public:
 
-    virtual void initialize(int stage) override;
-    virtual int numInitStages() const override { return inet::NUM_INIT_STAGES; }
-    virtual void handleMessage(omnetpp::cMessage *msg) override;
+    void initialize(int stage) override;
+    int numInitStages() const override { return inet::NUM_INIT_STAGES; }
+    void handleMessage(cMessage *msg) override;
 
     // this method triggers possible switches after handover
     // if handoverCompleted is false, move all the connections for nodeId to IM
@@ -78,3 +80,4 @@ public:
 } //namespace
 
 #endif /* LTE_D2DMODESELECTIONBASE_H_ */
+

@@ -12,16 +12,19 @@
 package simu5g.apps.vod;
 import inet.applications.contract.IApp;
 
-
 //
-// Video-on-demand (VoD) client application.
+// This module simulates a video-on-demand (VoD) client application
+// that receives video frames over UDP. It is assumed that the transmitted
+// video is encoded using multiple layers according to the Scalable Video
+// Coding (SVC) technique. Hence, the module collects separate statistics
+// (such as throughput and delay) for each layer.
 //
 simple VoDUDPClient like IApp
 {
     parameters:
         int localPort;
         double startStreamTime @unit("s") = default(0s);
-        string startMetrics = default("off");
+        bool startMetrics = default(false);
         string vod_trace_file;
         string bsePath = default("");
         string origVideoYuv = default("");

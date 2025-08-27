@@ -31,7 +31,7 @@ class UserControlInfo : public UserControlInfo_Base
 {
   protected:
 
-    const UserTxParams* userTxParams;
+    const UserTxParams *userTxParams = nullptr;
     RbMap grantedBlocks;
     /** @brief The movement of the sending host.*/
     //Move senderMovement;
@@ -46,7 +46,7 @@ class UserControlInfo : public UserControlInfo_Base
      * @param kind packet kind
      */
     UserControlInfo();
-    virtual ~UserControlInfo();
+    ~UserControlInfo() override;
 
     /*
      * Operator = : packet copy
@@ -69,20 +69,20 @@ class UserControlInfo : public UserControlInfo_Base
      * dup() : packet duplicate
      * @return pointer to duplicate packet
      */
-    virtual UserControlInfo *dup() const
+    UserControlInfo *dup() const override
     {
         return new UserControlInfo(*this);
     }
 
-    void setUserTxParams(const UserTxParams* arg);
+    void setUserTxParams(const UserTxParams *arg);
 
-    const UserTxParams* getUserTxParams() const
+    const UserTxParams *getUserTxParams() const
     {
         return userTxParams;
     }
 
     const unsigned int getBlocks(Remote antenna, Band b) const
-        {
+    {
         return grantedBlocks.at(antenna).at(b);
     }
 

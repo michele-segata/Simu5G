@@ -12,16 +12,18 @@
 package simu5g.apps.d2dMultihop.eventGenerator;
 
 //
-// EventGenerator module
-//
-// This module generate periodic events (e.g. a collision between
-// vehicles) in random positions of the network (or randomly
-// selecting a node) and notifies a MultihopD2D application
-// via direct method call
+// This module is only used in conjunction with UEs running
+// a ~MultihopD2D application instance. It generates periodic
+// "events" (e.g., a collision between vehicles) at random
+// positions within the network (or by randomly selecting a node)
+// and notifies a ~MultihopD2D application via a direct method
+// call. The ~MultihopD2D application, in turn, broadcasts
+// the notification message to surrounding UEs.
 //
 simple EventGenerator
 {
     parameters:
+        string binderModule = default("binder");
         double startTime @unit(s) = default(0.1s);
         volatile double eventPeriod @unit(s) = default(1s);
         bool singleEventSource = default(true);

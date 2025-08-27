@@ -13,19 +13,24 @@ package simu5g.apps.voip;
 
 import inet.applications.contract.IApp;
 
-
+//
+// This module represents a model for the sender of Voice-over-IP (VoIP) traffic.
+// It generates packets by alternating "talk spurts" and "silence" periods, with their respective
+// durations modeled by a Weibull distribution. During talk spurts, fixed-size packets are
+// generated periodically and sent over UDP to a specified destination address and port.
+//
 simple VoIPSender like IApp
 {
     parameters:
         int localPort = default(-1);
         int destPort = default(3000);
         string destAddress;
-        int PacketSize @unit(B) = default(40B);
+        int packetSize @unit(B) = default(40B);
         double shape_talk @unit(s) = default(0.824s); // params for Weibull distribution
         double scale_talk @unit(s) = default(1.423s);
         double shape_sil @unit(s) = default(1.089s);
-        double scale_sil @unit(s) = default(0.899s);
-        bool is_talk = default(true);
+        double scale_sil @unit(s) = default(0.900s);
+        bool is_talk = default(true); // whether transmission starts with talk or silence
         double sampling_time @unit("s") = default(0.02s);
         double startTime @unit("s") = default(0s);
         bool silences = default(true);

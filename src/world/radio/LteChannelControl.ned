@@ -11,6 +11,11 @@
 
 package simu5g.world.radio;
 
+//
+// Utility module that records the position of each LTE radio module in the network.
+// Exactly one instance of this module must be present in the network. Note that
+// channel parameters in this module are obsolete and not utilized.
+//
 simple LteChannelControl extends ChannelControl
 {
     parameters:

@@ -18,36 +18,38 @@
 
 namespace simu5g {
 
+using namespace omnetpp;
+
 class L2MeasBase
 {
-    private:
-        std::string name_;
-        std::vector<double> values_;
-        double sum_;
-        int lastValue_;
-        int mean_;
-        int index_;
-        int period_;
-        int size_;
-        bool movingAverage_;
+  private:
+    std::string name_;
+    std::vector<double> values_;
+    double sum_;
+    int lastValue_;
+    int mean_;
+    int index_;
+    int period_;
+    int size_;
+    bool movingAverage_;
 
-//        ::omnetpp::cOutVector outVector_;
-//        ::omnetpp::cHistogram histogram_;
+//        ::cOutVector outVector_;
+//        ::cHistogram histogram_;
 
-    public:
-        L2MeasBase();
-        virtual void init(std::string name, int period, bool movingAverage);
-        virtual ~L2MeasBase();
-        virtual void addValue(double value);
-        virtual int computeMean();
-        virtual int getMean();
-        virtual int getLastValue()
-        {
-            return lastValue_;
-        }
-        virtual void reset();
+  public:
+    virtual void init(std::string name, int period, bool movingAverage);
+    virtual void addValue(double value);
+    virtual int computeMean();
+    virtual int getMean();
+    virtual int getLastValue()
+    {
+        return lastValue_;
+    }
+
+    virtual void reset();
 };
 
 } //namespace
 
 #endif //_L2MEASBASE_H_
+

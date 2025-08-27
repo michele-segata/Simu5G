@@ -11,46 +11,25 @@
 
 package simu5g.apps.mec.MecRequestResponseApp;
 
-import inet.applications.contract.IApp;
-import simu5g.nodes.mec.MECPlatform.IMECApp;
+import simu5g.apps.mec.MecApps.MecAppBase;
+
 
 //
-//  This is a MEC app that ... TBC
+// This module represents an application that is dynamically instantiated on a MEC host upon request
+// from a ~UERequestApp, via a ~DeviceApp.
+// Upon receiving a request from the UE, it queries the ~LocationService to obtain some
+// information (which is not utilized; it is intended only to "consume" some time), and sends a
+// response message to the UE after a computation time that depends on the current resource utilization at the
+// MEC host.
 //
-simple MECResponseApp like IMECApp, IApp
+simple MECResponseApp extends MecAppBase
 {
     parameters:
+        @class(MecResponseApp);
         @display("i=block/app;is=s");
 
         int responsePacketSize @unit(B) = default(50B);
-        string interfaceTableModule = default("");
-        int mecAppIndex;
-        int mecAppId;
-        int localUePort;
 
         int minInstructions = default(9000000);
         int maxInstructions = default(11000000);
-
-
-        string mp1Address = default("");
-        int mp1Port = default(10021);
-
-		 //resource required info
-        double requiredRam @unit("B");
-        double requiredDisk @unit("B");
-        double requiredCpu;
-
-        // IApp parameters
-        int timeToLive = default(-1); // if not -1, set the TTL (IPv4) or Hop Limit (IPv6) field of sent packets to this value
-        int dscp = default(-1); // if not -1, set the DSCP (IPv4/IPv6) field of sent packets to this value
-        int tos = default(-1); // if not -1, set the Type Of Service (IPv4) / Traffic Class (IPv6) field of sent packets to this value
-
-    gates:
-        input mePlatformIn;
-        output mePlatformOut;
-
-        input socketIn;
-        output socketOut;
-
 }
-

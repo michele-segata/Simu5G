@@ -13,17 +13,23 @@
 package simu5g.stack.pdcp_rrc;
 
 //
-// Base module for the PDCP/RRC layer of LTE Stack.
+// The LtePdcpRrcBase module implements the functionalities of the Packet Data
+// Convergence Protocol (PDCP). It enables header compression and maps incoming IP packets
+// to different Radio Link Control (RLC) modes. This module dynamically creates
+// ~LteTxPdcpEntity and ~LteRxPdcpEntity submodules to handle individual transmission/reception connections
 //
-simple LtePdcpRrcBase like LtePdcpRrc
+simple LtePdcpRrcBase like ILtePdcpRrc
 {
     parameters:
         @display("i=block/fork");
+        string binderModule = default("binder");
+        string packetFlowManagerModule = default("^.packetFlowManager"); // optional
+        string nrPacketFlowManagerModule = default("^.nrPacketFlowManager"); // optional
         int headerCompressedSize @unit(B) = default(-1B);    // Header compressed size (bytes) ( -1B = compression disabled
-        int conversationalRlc @enum(TM,UM,AM,UNKNOWN_RLC_TYPE) = default(1);
-        int streamingRlc @enum(TM,UM,AM,UNKNOWN_RLC_TYPE) = default(1);
-        int interactiveRlc @enum(TM,UM,AM,UNKNOWN_RLC_TYPE) = default(1);
-        int backgroundRlc @enum(TM,UM,AM,UNKNOWN_RLC_TYPE) = default(1);
+        string conversationalRlc @enum(TM,UM,AM,UNKNOWN_RLC_TYPE) = default("UM");
+        string streamingRlc @enum(TM,UM,AM,UNKNOWN_RLC_TYPE) = default("UM");
+        string interactiveRlc @enum(TM,UM,AM,UNKNOWN_RLC_TYPE) = default("UM");
+        string backgroundRlc @enum(TM,UM,AM,UNKNOWN_RLC_TYPE) = default("UM");
 
         //# Statistics
         @signal[receivedPacketFromUpperLayer];

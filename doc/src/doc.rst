@@ -2,6 +2,15 @@
 :hide-footer:
 
 
+References
+----------
+
+.. raw:: html
+   
+   <ul>
+      <li><a href="/neddoc" target="_blank">NED Documentation</a></li>
+   </ul>
+
 User's Guide
 ------------
 
@@ -30,3 +39,4 @@ Tutorials
    :glob:
 
    tutorials/*/doc/index
+

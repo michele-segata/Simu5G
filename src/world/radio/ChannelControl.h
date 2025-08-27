@@ -23,10 +23,12 @@
 
 namespace simu5g {
 
+using namespace omnetpp;
+
 // Forward declarations
 class AirFrame;
 
-#define TRANSMISSION_PURGE_INTERVAL 1.0
+#define TRANSMISSION_PURGE_INTERVAL    1.0
 
 /**
  * Keeps track of radios/NICs, their positions and channels;
@@ -34,18 +36,19 @@ class AirFrame;
  * interference distance).
  */
 struct IChannelControl::RadioEntry {
-    omnetpp::cModule *radioModule;  // the module that registered this radio interface
-    omnetpp::cGate *radioInGate;  // gate on host module used to receive airframes
+    opp_component_ptr<cModule> radioModule;  // the module that registered this radio interface
+    cGate *radioInGate = nullptr;  // gate on host module used to receive airframes
     int channel;
     inet::Coord pos; // cached radio position
 
     struct Compare {
-        bool operator() (const RadioRef &lhs, const RadioRef &rhs) const {
-            ASSERT(lhs && rhs);
+        bool operator()(const RadioRef& lhs, const RadioRef& rhs) const {
+            ASSERT(lhs != nullptr);
+            ASSERT(rhs != nullptr);
             return lhs->radioModule->getId() < rhs->radioModule->getId();
         }
     };
-    // we cache neighbors set in an std::vector, because std::set iteration is slow;
+    // we cache neighbors set in a std::vector, because std::set iteration is slow;
     // std::vector is created and updated on demand
     std::set<RadioRef, Compare> neighbors; // cached neighbor list
     std::vector<RadioRef> neighborList;
@@ -59,7 +62,7 @@ struct IChannelControl::RadioEntry {
  * @ingroup channelControl
  * @see ChannelAccess
  */
-class ChannelControl : public omnetpp::cSimpleModule, public IChannelControl
+class ChannelControl : public cSimpleModule, public IChannelControl
 {
   protected:
     typedef std::list<RadioEntry> RadioList;
@@ -75,7 +78,7 @@ class ChannelControl : public omnetpp::cSimpleModule, public IChannelControl
     ChannelTransmissionLists transmissions; // indexed by channel number (size=numChannels)
 
     /** used to clear the transmission list from time to time */
-    omnetpp::simtime_t lastOngoingTransmissionsUpdate;
+    simtime_t lastOngoingTransmissionsUpdate;
 
     friend std::ostream& operator<<(std::ostream&, const RadioEntry&);
     friend std::ostream& operator<<(std::ostream&, const TransmissionList&);
@@ -83,7 +86,7 @@ class ChannelControl : public omnetpp::cSimpleModule, public IChannelControl
     /** Set debugging for the basic module*/
     bool coreDebug;
 
-    /** the biggest interference distance in the network.*/
+    /** the maximum interference distance in the network.*/
     double maxInterferenceDistance;
 
     /** the number of controlled channels */
@@ -95,8 +98,8 @@ class ChannelControl : public omnetpp::cSimpleModule, public IChannelControl
     /** Calculate interference distance*/
     virtual double calcInterfDist();
 
-    /** Reads init parameters and calculates a maximal interference distance*/
-    virtual void initialize() override;
+    /** Reads init parameters and calculates a maximum interference distance*/
+    void initialize() override;
 
     /** Throws away expired transmissions. */
     virtual void purgeOngoingTransmissions();
@@ -114,52 +117,52 @@ class ChannelControl : public omnetpp::cSimpleModule, public IChannelControl
     virtual RadioRef lookupRadio(cModule *radioModule);
 
   public:
-    ChannelControl();
-    virtual ~ChannelControl();
+    ~ChannelControl() override;
 
     /** Registers the given radio. If radioInGate==NULL, the "radioIn" gate is assumed */
-    virtual RadioRef registerRadio(omnetpp::cModule *radioModule, omnetpp::cGate *radioInGate = nullptr) override;
+    RadioRef registerRadio(cModule *radioModule, cGate *radioInGate = nullptr) override;
 
     /** Unregisters the given radio */
-    virtual void unregisterRadio(RadioRef r) override;
+    void unregisterRadio(RadioRef r) override;
 
     /** Returns the host module that contains the given radio */
-    virtual omnetpp::cModule *getRadioModule(RadioRef r) const override { return r->radioModule; }
+    cModule *getRadioModule(RadioRef r) const override { return r->radioModule; }
 
     /** Returns the input gate of the host for receiving AirFrames */
-    virtual omnetpp::cGate *getRadioGate(RadioRef r) const override { return r->radioInGate; }
+    cGate *getRadioGate(RadioRef r) const override { return r->radioInGate; }
 
     /** Returns the channel the given radio listens on */
-    virtual int getRadioChannel(RadioRef r) const override { return r->channel; }
+    int getRadioChannel(RadioRef r) const override { return r->channel; }
 
     /** To be called when the host moved; updates proximity info */
-    virtual void setRadioPosition(RadioRef r, const inet::Coord& pos) override;
+    void setRadioPosition(RadioRef r, const inet::Coord& pos) override;
 
     /** Called when host switches channel */
-    virtual void setRadioChannel(RadioRef r, int channel) override;
+    void setRadioChannel(RadioRef r, int channel) override;
 
     /** Returns the number of radio channels (frequencies) simulated */
-    virtual int getNumChannels() override { return numChannels; }
+    int getNumChannels() override { return numChannels; }
 
     /** Provides a list of transmissions currently on the air */
-    virtual const TransmissionList& getOngoingTransmissions(int channel) override;
+    const TransmissionList& getOngoingTransmissions(int channel) override;
 
     /** Called from ChannelAccess, to transmit a frame to the radios in range, on the frame's channel */
-    virtual void sendToChannel(RadioRef srcRadio, AirFrame *airFrame) override;
+    void sendToChannel(RadioRef srcRadio, AirFrame *airFrame) override;
 
-    /** Returns the maximal interference distance*/
-    virtual double getInterferenceRange(RadioRef r) override { return maxInterferenceDistance; }
+    /** Returns the maximum interference distance*/
+    double getInterferenceRange(RadioRef r) override { return maxInterferenceDistance; }
 
     /** Disable the reception in the reference module */
-    virtual void disableReception(RadioRef r) override { r->isActive = false; };
+    void disableReception(RadioRef r) override { r->isActive = false; };
 
     /** Enable the reception in the reference module */
-    virtual void enableReception(RadioRef r) override { r->isActive = true; };
+    void enableReception(RadioRef r) override { r->isActive = true; };
 
-    /** Returns propagation speed of the signal in meter/sec */
-    virtual double getPropagationSpeed() override { return SPEED_OF_LIGHT; }
+    /** Returns propagation speed of the signal in meters/sec */
+    double getPropagationSpeed() override { return SPEED_OF_LIGHT; }
 };
 
 } //namespace
 
 #endif
+

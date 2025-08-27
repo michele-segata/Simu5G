@@ -9,32 +9,28 @@
 // and cannot be removed from it.
 //
 
-#include "../../RNIService/resources/Ecgi.h"
+#include "Ecgi.h"
 
 namespace simu5g {
 
-Ecgi::Ecgi():plmn_()
+Ecgi::Ecgi()
 {
-    cellId_ = -1;
 }
 
-Ecgi::Ecgi(MacCellId cellId):plmn_()
+Ecgi::Ecgi(MacCellId cellId)
 {
     setCellId(cellId);
 }
 
-Ecgi::Ecgi(MacCellId cellId, Plmn& plmn):plmn_(plmn)
+Ecgi::Ecgi(MacCellId cellId, Plmn& plmn) : plmn_(plmn)
 {
     setCellId(cellId);
 }
 
 Ecgi::Ecgi(const mec::Ecgi ecgi)
 {
-  setEcgi(ecgi);
+    setEcgi(ecgi);
 }
-
-
-Ecgi::~Ecgi(){}
 
 void Ecgi::setCellId(MacCellId cellId)
 {
@@ -52,6 +48,7 @@ void Ecgi::setPlmn(const Plmn& plmn)
 {
     plmn_ = plmn;
 }
+
 void Ecgi::setPlmn(const mec::Plmn plmn)
 {
     plmn_.setMcc(plmn.mcc);
@@ -68,13 +65,11 @@ Plmn Ecgi::getPlmn() const
     return plmn_;
 }
 
-
 nlohmann::ordered_json Ecgi::toJson() const
 {
     nlohmann::ordered_json val;
     val["cellId"] = cellId_;
     val["plmn"] = plmn_.toJson();
-
 
     return val;
 }

@@ -27,12 +27,14 @@ import simu5g.nodes.NR.NRUe;
 import org.car2x.veins.base.modules.*;
 
 //
-// Car Module
+// This module defines a Car node as a LTE User Equipment (UE) with vehicular-like
+// mobility. This behavior is modeled by utilizing the Veins-Inet project.
+//
+// See https://veins.car2x.org/documentation/modules/#veins_inet
 //
 module Car extends Ue
 {
     parameters:
-
         @display("i=device/car");
 
         //# Mobility
