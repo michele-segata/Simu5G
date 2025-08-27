@@ -20,7 +20,9 @@ namespace simu5g {
 
 class NRPhyUe : public LtePhyUeD2D
 {
-
+  public:
+    // indicates when an handover starts (0) and when it ends (1)
+    static const simsignal_t lte_stack_phy_handover;
   protected:
 
     // reference to the parallel PHY layer
